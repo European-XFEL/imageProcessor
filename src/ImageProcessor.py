@@ -13,7 +13,7 @@ from image_processing import *
 
 from karabo.compute_device import *
 
-@KARABO_CLASSINFO("ImageProcessor", "1.0")
+@KARABO_CLASSINFO("ImageProcessor", "1.0 1.1")
 class ImageProcessor(PythonComputeDevice):
 
     def __init__(self, configuration):
