@@ -19,7 +19,7 @@ from karabo.fsm import *
 import image_processing
 
 
-@KARABO_CLASSINFO("AutoCorrelator", "1.0")
+@KARABO_CLASSINFO("AutoCorrelator", "1.0 1.1")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
