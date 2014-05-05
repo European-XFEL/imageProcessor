@@ -374,8 +374,7 @@ class ImageProcessor(PythonComputeDevice):
             if (h.has("image")):
                 self.log.INFO("image received")
                 image = h.get("image")
-                self.set("image", image) # TODO maybe remove
-                
+
                 self.processImage(image)
     
     
@@ -437,6 +436,9 @@ class ImageProcessor(PythonComputeDevice):
             img = numpy.ndarray(shape=dims, dtype=pixelType, buffer=data)
             imageWidth = dims[0]
             imageHeight = dims[1]
+            
+            rawImageData = RawImageData(img, EncodingType.GRAY)
+            self.set("image", rawImageData) # TODO maybe remove
             
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
