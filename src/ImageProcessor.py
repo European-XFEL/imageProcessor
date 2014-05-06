@@ -433,15 +433,15 @@ class ImageProcessor(PythonComputeDevice):
                 self.log.WARN("Image is not 2d. Skip it.")
                 return
             
-            img = numpy.ndarray(shape=dims, dtype=pixelType, buffer=data)
-            imageWidth = dims[0]
-            imageHeight = dims[1]
-            
-            rawImageData = RawImageData(img, EncodingType.GRAY)
+            rawImageData = RawImageData(image)
             self.set("image", rawImageData) # TODO maybe remove
             
+            imageWidth = dims[0]
+            imageHeight = dims[1]
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
+
+            img = numpy.ndarray(shape=(imageHeight, imageWidth), dtype=pixelType, buffer=data)
             
             self.log.INFO("Image loaded!!!")
             
