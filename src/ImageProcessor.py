@@ -9,9 +9,9 @@ __copyright__="Copyright (c) 2010-2013 European XFEL GmbH Hamburg. All rights re
 import numpy
 import time
 
-from image_processing import *
-
 from karabo.compute_device import *
+
+import image_processing
 
 @KARABO_CLASSINFO("ImageProcessor", "1.0 1.1")
 class ImageProcessor(PythonComputeDevice):
@@ -372,11 +372,10 @@ class ImageProcessor(PythonComputeDevice):
             self.input.read(h, i)
             
             if (h.has("image")):
-                self.log.INFO("image received")
+                self.log.INFO("New image received")
                 image = h.get("image")
 
                 self.processImage(image)
-    
     
     def processImage(self, image):
         range = self.get("fitRange")
@@ -385,70 +384,24 @@ class ImageProcessor(PythonComputeDevice):
         userDefinedRange = self.get("userDefinedRange")
         
         try:
-            encoding = image.get("encoding")
-            if encoding!=EncodingType.GRAY:
-                self.log.WARN("Image encoding is not GRAY. Skip it.")
-                return
-                
-            isBigEndian = image.get("isBigEndian")
-            if isBigEndian==True:
-                self.log.WARN("Image is Big Endian. Skip it.")
-                return
-            
-            channelSpace = image.get("channelSpace")
-            if channelSpace==ChannelSpaceType.u_8_1:
-                pixelType = 'uint8'
-            elif channelSpace==ChannelSpaceType.s_8_1:
-                pixelType = 'int8'
-            elif channelSpace==ChannelSpaceType.u_16_2:
-                pixelType = 'uint16'
-            elif channelSpace==ChannelSpaceType.s_16_2:
-                pixelType = 'int16'
-            elif channelSpace==ChannelSpaceType.u_32_4:
-                pixelType = 'uint32'
-            elif channelSpace==ChannelSpaceType.s_32_4:
-                pixelType = 'int32'
-            elif channelSpace==ChannelSpaceType.u_64_8:
-                pixelType = 'uint64'
-            elif channelSpace==ChannelSpaceType.s_64_8:
-                pixelType = 'int64'
-            elif channelSpace==ChannelSpaceType.f_32_4:
-                pixelType = 'float32'
-            elif channelSpace==ChannelSpaceType.f_64_8:
-                pixelType = 'float64'
-            else:
-                self.log.WARN("Image has unknown Pixel Type. Skip it.")
-                return
-            
-            data = image.get("data")
-            dims = image.get("dims")
-            
-            if len(dims)==2:
-                # 2-d image
-                pass
-            elif len(dims)==3 and dims[2]==1L:
-                # also 2-d image
-                dims = dims[0:2]
-            else:
-                self.log.WARN("Image is not 2d. Skip it.")
-                return
             
             rawImageData = RawImageData(image)
-            self.set("image", rawImageData) # TODO maybe remove
+            self.set("image", rawImageData)
             
+            dims = rawImageData.getDimensions()
             imageWidth = dims[0]
             imageHeight = dims[1]
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
-
-            img = numpy.ndarray(shape=(imageHeight, imageWidth), dtype=pixelType, buffer=data)
+            
+            img = image_processing.rawImageDataToNdarray(rawImageData)
             
             self.log.INFO("Image loaded!!!")
-            
-        except:
-            self.log.WARN("Could not load image. Skip it.")
-            return
         
+        except Exception, e:
+            self.log.WARN("In processImage: %s" % str(e))
+            return
+                    
         # "Background" subtraction
         if self.get("doBackground"):
             t0 = time.time()
@@ -497,7 +450,7 @@ class ImageProcessor(PythonComputeDevice):
         if self.get("doBinCount"):
             t0 = time.time()
             try:
-                pxFreq = imagePixelValueFrequencies(img)
+                pxFreq = image_processing.imagePixelValueFrequencies(img)
 
                 self.log.INFO("Pixel values distribution: done!")
             except:
@@ -519,8 +472,8 @@ class ImageProcessor(PythonComputeDevice):
         if self.get("doProjection"):
             t0 = time.time()
             try:
-                imgX = imageXProjection(img) # projection onto the x-axis
-                imgY = imageYProjection(img) # projection onto the y-axis
+                imgX = image_processing.imageXProjection(img) # projection onto the x-axis
+                imgY = image_processing.imageYProjection(img) # projection onto the y-axis
 
             except:
                 self.log.WARN("Could not project image into x or y axis.")
@@ -548,10 +501,10 @@ class ImageProcessor(PythonComputeDevice):
             t0 = time.time()
             try:
                 # Set a threshold to cut away noise
-                img2 = imageSetThreshold(img, thr*img.max())
+                img2 = image_processing.imageSetThreshold(img, thr*img.max())
                 
                 # Centre-of-mass and widths
-                (x0, y0, sx, sy) = imageCentreOfMass(img2)
+                (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
                 
                 if range=="full":
                     xmin = 0
@@ -598,7 +551,7 @@ class ImageProcessor(PythonComputeDevice):
             t0 = time.time()
             try:
                 if imgX==None:
-                    imgX = imageXProjection(img)
+                    imgX = image_processing.imageXProjection(img)
                 
                 # Select sub-range and substract pedestal
                 data = imgX[xmin:xmax]
@@ -609,9 +562,9 @@ class ImageProcessor(PythonComputeDevice):
                     p0 = (data.max(), x0-xmin, sx)
 
                     # 1-d gaussian fit
-                    pX, successX = fitGauss(data, p0)
+                    pX, successX = image_processing.fitGauss(data, p0)
                 else:
-                    pX, successX = fitGauss(data)
+                    pX, successX = image_processing.fitGauss(data)
                     
             except:
                 self.log.WARN("Could not do 1-d gaussian fit.")
@@ -621,7 +574,7 @@ class ImageProcessor(PythonComputeDevice):
             
             try:
                 if imgY==None:
-                    imgY = imageYProjection(img)
+                    imgY = image_processing.imageYProjection(img)
                 
                 # Select sub-range and substract pedestal
                 data = imgY[ymin:ymax]
@@ -632,9 +585,9 @@ class ImageProcessor(PythonComputeDevice):
                     p0 = (data.max(), y0-ymin, sx)
                     
                     # 1-d gaussian fit
-                    pY, successY = fitGauss(data, p0)
+                    pY, successY = image_processing.fitGauss(data, p0)
                 else:
-                    pY, successY = fitGauss(data)
+                    pY, successY = image_processing.fitGauss(data)
                     
             except:
                 self.log.WARN("Could not do 1-d gaussian fit.")
@@ -678,7 +631,7 @@ class ImageProcessor(PythonComputeDevice):
                         p0 = (data.max(), y0-ymin, x0-xmin, sy, sx, 0.0)
                         
                         # 2-d gaussian fit
-                        pYX, successYX = fitGauss2DRot(data, p0)
+                        pYX, successYX = image_processing.fitGauss2DRot(data, p0)
                     else:
                         pYX, successYX = fitGauss2DRot(data)
 
@@ -688,9 +641,9 @@ class ImageProcessor(PythonComputeDevice):
                         p0 = (data.max(), y0-ymin, x0-xmin, sy, sx)
                         
                         # 2-d gaussian fit
-                        pYX, successYX = fitGauss(data, p0)
+                        pYX, successYX = image_processing.fitGauss(data, p0)
                     else:
-                        pYX, successYX = fitGauss(data)
+                        pYX, successYX = image_processing.fitGauss(data)
                     
             except:
                 self.log.WARN("Could not do 2-d gaussian fit.")
