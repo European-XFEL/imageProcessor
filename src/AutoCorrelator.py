@@ -1,66 +1,42 @@
 #!/usr/bin/env python
 
 __author__="andrea.parenti@xfel.eu"
-__date__ ="February, 2014, 02:13 PM"
-__copyright__="Copyright (c) 2010-2013 European XFEL GmbH Hamburg. All rights reserved."
-
-import sys
-import threading
-import time
+__date__ ="May  9, 2014, 17:01 AM"
+__copyright__="Copyright (c) 2010-2014 European XFEL GmbH Hamburg. All rights reserved."
 
 import numpy
-import scipy
 import scipy.constants
+import time
 
-from karabo.device import *
-from karabo.ok_error_fsm import OkErrorFsm
-from karabo.fsm import *
+from karabo.compute_device import *
 
 import image_processing
 
-
 @KARABO_CLASSINFO("AutoCorrelator", "1.0 1.1")
-class AutoCorrelator(PythonDevice, OkErrorFsm):
+class AutoCorrelator(PythonComputeDevice):
 
     def __init__(self, configuration):
-        # always call PythonDevice constructor first!
+        # always call superclass constructor first!
         super(AutoCorrelator,self).__init__(configuration)
         
-        #**************************************************************
-        #*                        Events                              *
-        #**************************************************************
-        KARABO_FSM_EVENT0(self, 'CalibrateEvent', 'calibrate')
-        
-        #**************************************************************
-        #*                    Transition Actions                      *
-        #**************************************************************
-        KARABO_FSM_ACTION0('CalibrateAction', self.calibrateAction)
-        
-        #**************************************************************
-        #*                 Top Machine (redefinition)                 *
-        #**************************************************************
-
-        #  Source-State    Event     Target-State  Action          Guard
-        stateMachineTransitionTable = [
-            ('Ok',    'ErrorFoundEvent', 'Error', 'ErrorFoundAction', 'none'),
-            ('Ok',    'CalibrateEvent',  'Ok',    'CalibrateAction',  'none'),
-            ('Error', 'ResetEvent',      'Ok',    'none',             'none')
-        ]
-
-        #                           Name                Transition-Table  Initial-State
-        KARABO_FSM_STATE_MACHINE('StateMachine', stateMachineTransitionTable, 'Ok')
-        self.fsm = KARABO_FSM_CREATE_MACHINE('StateMachine')
-
+        self.input = self.KARABO_INPUT_CHANNEL(InputHash, "input", configuration)
         self._ss.registerSlot(self.calibrate)
-    
+        
+    def __del__(self):
+        print "**** AutoCorrelator.__del__() use_count =", self.input.use_count()
+        self.input = None
+        self.log.INFO("dead.")
+        super(AutoCorrelator, self).__del__()
+
     @staticmethod
     def expectedParameters(expected):
-        '''Description of device parameters statically known'''
         (
-        SLOT_ELEMENT(expected).key("calibrate")
-                .displayedName("Calibrate")
-                .description("Calculata calibration constant from two input images.")
-                .allowedStates("Ok")
+        
+        CHOICE_ELEMENT(expected).key("input")
+                .displayedName("Input")
+                .description("Input")
+                .assignmentOptional().defaultValue("Network-Hash")
+                .appendNodesOfConfigurationBase(InputHash)
                 .commit(),
         
         PATH_ELEMENT(expected)
@@ -69,16 +45,14 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("First image used for calibration.")
                 .assignmentOptional().defaultValue("")
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         IMAGE_ELEMENT(expected)
                 .key("image1")
                 .displayedName("Calibration Image 1")
                 .description("Display first image used for calibration.")
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xPeak1")
@@ -86,8 +60,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-position of peak in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM1")
@@ -95,8 +68,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-FWHM in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         PATH_ELEMENT(expected)
                 .key("inputImage2")
@@ -104,16 +76,14 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("Second image used for calibration.")
                 .assignmentOptional().defaultValue("")
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         IMAGE_ELEMENT(expected)
                 .key("image2")
                 .displayedName("Calibration Image 2")
                 .description("Display second image used for calibration.")
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xPeak2")
@@ -121,8 +91,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-position of peak in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM2")
@@ -130,8 +99,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-FWHM in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         STRING_ELEMENT(expected)
                 .key("delayUnit")
@@ -140,19 +108,23 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .assignmentOptional().defaultValue("fs")
                 .options("fs um")
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("delay")
-                .displayedName("Delay")
+                .displayedName("Delay ([fs] or [um])")
                 .description("Delay between calibration images.")
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
+        
+        SLOT_ELEMENT(expected).key("calibrate")
+                .displayedName("Calibrate")
+                .description("Calculate calibration constant from two input images.")
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("calibration")
@@ -161,27 +133,14 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 # .unit(Unit.???) # TODO Unit is fs/px
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
-                
-        # TODO set with input channel
-        PATH_ELEMENT(expected)
-                .key("inputImage3")
-                .displayedName("Input Image")
-                .description("Input image, for which peak width is evaluated.")
-                .assignmentOptional().defaultValue("")
-                .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         IMAGE_ELEMENT(expected)
                 .key("image3")
                 .displayedName("Input Image 3")
                 .description("Input image, for which peak width is evaluated.")
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("shapeFactor")
@@ -190,9 +149,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .assignmentOptional().defaultValue(1.)
                 # .options("1.") # TODO...
                 .reconfigurable()
-                .allowedStates("Ok")
-                .commit()
-                ,
+                .allowedStates("Ok:Ready")
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xPeak3")
@@ -200,8 +158,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-position of peak in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM3")
@@ -209,8 +166,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-FWHM in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
         
         DOUBLE_ELEMENT(expected)
                 .key("xWidth3")
@@ -218,40 +174,19 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("x-Width of the input image.")
                 .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
                 .readOnly()
-                .commit()
-                ,
+                .commit(),
 
         )
-
+    
     ##############################################
     #   Implementation of State Machine methods  #
     ##############################################
-    
-    def calibrateAction(self):
-        '''Calculate calibration constant'''
-        
-        self.log.INFO("Calibrating auto-correlator...")
-        
-        delayUnit = self["delayUnit"]
-        if delayUnit=="fs":
-            delay = self["delay"]
-        elif delayUnit=="um":
-            # Must convert to time
-            delay = 1e+9 * self["delay"] / scipy.constants.c
-        else:
-            errorFound("Unknown delay unit #s" % delayUnit, "")
-        
-        dX = self["xPeak1"] - self["xPeak2"]
-        if dX==0:
-            self.errorFound("Same peak position for the two images", "")
-            
-        calibration = abs(delay / dX)
-        self.set("calibration", calibration)
     
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
         
         if inputConfig.has("inputImage1"):
+            # Load and process calibration image 1
             image1 = None
             filename1 = inputConfig["inputImage1"]
             self.log.INFO("Loading calibration image %s..." % filename1)
@@ -274,6 +209,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 self.errorFound("Cannot process image %s" % filename1, "")
             
         if inputConfig.has("inputImage2"):
+            # Load and process calibration image 1
             image2 = None
             filename2 = inputConfig["inputImage2"]
             self.log.INFO("Loading calibration image %s..." % filename2)
@@ -291,42 +227,35 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 (x2, s2) = self.findPeakFWHM(image2)
                 self.set("xPeak2", x2)
                 self.set("xFWHM2", s2)
-            
+                
             except:
                 self.errorFound("Cannot process image %s" % filename2, "")
-        
-        if inputConfig.has("inputImage3"):
-            image3 = None
-            filename3 = inputConfig["inputImage3"]
-            self.log.INFO("Loading calibration image %s..." % filename3)
-            try:
-                image3 = numpy.load(filename3)
-                dimX = image3.shape[1]
-                dimY = image3.shape[0]
-                rawImage3 = RawImageData(image3.reshape(dimX, dimY), EncodingType.GRAY)
-                self.set("image3", rawImage3)
-                
-            except:
-                self.errorFound("Cannot load image %s" % filename3, "")
-                
-            try:
-                (x3, s3) = self.findPeakFWHM(image3)
-                self.set("xPeak3", x3)
-                self.set("xFWHM3", s3)
-            
-            except:
-                self.errorFound("Cannot process image %s" % filename3, "")
     
-    def postReconfigure(self):
-        self.log.INFO("postReconfigure")
+    def calibrate(self):
+        '''Calculate calibration constant'''
         
-        s3 = self.get("xFWHM3")
-        calibration = self.get("calibration")
-        shapeFactor = self.get("shapeFactor")
-        w3 = s3 * shapeFactor * calibration
+        self.log.INFO("Calibrating auto-correlator...")
         
-        self.set("xWidth3", w3)
-        
+        try:
+            delayUnit = self["delayUnit"]
+            if delayUnit=="fs":
+                delay = self["delay"]
+            elif delayUnit=="um":
+                # Must convert to time
+                delay = 1e+9 * self["delay"] / scipy.constants.c
+            else:
+                errorFound("Unknown delay unit #s" % delayUnit, "")
+
+            dX = self["xPeak1"] - self["xPeak2"]
+            if dX==0:
+                self.errorFound("Same peak position for the two images", "")
+
+            calibration = abs(delay / dX)
+            self.set("calibration", calibration)
+            
+        except:
+            self.errorFound("Cannot calculate calibration constant", "")
+    
     def findPeakFWHM(self, image, threshold=0.5):
         """Find x-position of peak in 2-d image, and FWHM along x direction"""
         if type(image)!=numpy.ndarray or image.ndim!=2:
@@ -362,10 +291,40 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         sx = float(nz[-1] - nz[0])
 
         return (x0, sx)
+    
+    def compute(self):
+        h = Hash()
+        
+        for i in range(0, self.input.size()):
+            self.input.read(h, i)
+            
+            if (h.has("image")):
+                self.log.INFO("New image received")
+                image3 = h.get("image")
+                self.processImage(image3)
+    
+    def processImage(self, image3):
+        
+        try:
+            calibration = self.get("calibration")
+            shapeFactor = self.get("shapeFactor")
+            rawImageData = RawImageData(image3)
+            
+            self.set("image3", rawImageData)
+            
+            imgArray = image_processing.rawImageDataToNdarray(rawImageData)
+            
+            (x3, s3) = self.findPeakFWHM(imgArray)
+            w3 = s3 * shapeFactor * calibration
+            
+            self.set("xPeak3", x3)
+            self.set("xFWHM3", s3)
+            self.set("xWidth3", w3)
+            
+            self.log.INFO("Image processed!!!")
 
-
-    # Put here more state machibe actioins if needed... . See FSM API
-   
-# This entry used by device server
+        except Exception, e:
+            self.log.ERROR("In processImage: %s" % str(e))
+    
 if __name__ == "__main__":
     launchPythonDevice()
