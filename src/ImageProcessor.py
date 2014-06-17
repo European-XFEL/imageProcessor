@@ -9,17 +9,19 @@ __copyright__="Copyright (c) 2010-2013 European XFEL GmbH Hamburg. All rights re
 import numpy
 import time
 
-from karabo.compute_device import *
+from karabo.device import *
+from karabo.ok_error_fsm import OkErrorFsm
 
 import image_processing
 
 @KARABO_CLASSINFO("ImageProcessor", "1.0 1.1")
-class ImageProcessor(PythonComputeDevice):
+class ImageProcessor(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageProcessor,self).__init__(configuration)
-        self.input = self.KARABO_INPUT_CHANNEL(InputHash, "input", configuration)
+        self.input = self._ss.createInputChannelRawImageData("input", configuration, self.onRead, self.onEndOfStream)
+        self._ss.connectInputChannels()
         
     def __del__(self):
         print "**** ImageProcessor.__del__() use_count =", self.input.use_count()
@@ -31,11 +33,10 @@ class ImageProcessor(PythonComputeDevice):
     
     @staticmethod
     def expectedParameters(expected):
-        e = CHOICE_ELEMENT(expected).key("input")
+        e = INPUT_ELEMENT(expected).key("input")
         e.displayedName("Input")
         e.description("Input")
-        e.assignmentOptional().defaultValue("Network-Hash")
-        e.appendNodesOfConfigurationBase(InputHash)
+        e.setInputType(InputRawImageData)
         e.commit()
         
         e = IMAGE_ELEMENT(expected).key("image")
@@ -218,19 +219,19 @@ class ImageProcessor(PythonComputeDevice):
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgBinCount")
         e.displayedName("Pixel counts distribution")
         e.description("Distribution of the image pixel counts.")
-        e.readOnly()
+        e.readOnly().initialValue([0])
         e.commit()
         
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgX")
         e.displayedName("Image x-projection")
         e.description("Projection of the input image onto the x axis.")
-        e.readOnly()
+        e.readOnly().initialValue([0])
         e.commit()
         
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgY")
         e.displayedName("Image y-projection")
         e.description("Projection of the input image onto the y axis.")
-        e.readOnly()
+        e.readOnly().initialValue([0])
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("x0")
@@ -365,27 +366,23 @@ class ImageProcessor(PythonComputeDevice):
         self.set("theta2d", 0.0)
         
     
-    def compute(self):
-        h = Hash()
-        
-        for i in range(0, self.input.size()):
-            self.input.read(h, i)
-            
-            if (h.has("image")):
-                self.log.INFO("New image received")
-                image = h.get("image")
-
-                self.processImage(image)
+    def onRead(self, input):
+        r = RawImageData()
+        for i in range(0, input.size()):
+            input.read(r, i)
+            self.processImage(r)
+        input.update()
     
-    def processImage(self, image):
+    def onEndOfStream(self):
+        print "onEndOfStream called"
+        
+    def processImage(self, rawImageData):
         range = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
         
-        try:
-            
-            rawImageData = RawImageData(image)
+        try:            
             self.set("image", rawImageData)
             
             dims = rawImageData.getDimensions()
@@ -394,8 +391,7 @@ class ImageProcessor(PythonComputeDevice):
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
             
-            img = image_processing.rawImageDataToNdarray(rawImageData)
-            
+            img = rawImageData.getData()
             self.log.INFO("Image loaded!!!")
         
         except Exception, e:
