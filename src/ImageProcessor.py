@@ -135,7 +135,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = BOOL_ELEMENT(expected).key("do2DFit")
         e.displayedName("2-D Gaussian Fit")
         e.description("Perform a 2-d gaussian fits.")
-        e.assignmentOptional().defaultValue(True)
+        e.assignmentOptional().defaultValue(False)
         e.reconfigurable()
         e.commit()
         
