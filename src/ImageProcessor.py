@@ -14,7 +14,7 @@ from karabo.ok_error_fsm import OkErrorFsm
 
 import image_processing
 
-@KARABO_CLASSINFO("ImageProcessor", "1.0 1.1")
+@KARABO_CLASSINFO("ImageProcessor", "1.2")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
@@ -51,9 +51,23 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.readOnly()
         e.commit()
         
+        e = INT32_ELEMENT(expected).key("imageOffsetX")
+        e.displayedName("Image Offset X")
+        e.description("The image offset in X direction, i.e. the Y position of its top-left corner.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+        
         e = INT32_ELEMENT(expected).key("imageHeight")
         e.displayedName("Image Height")
         e.description("The image height.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+        
+        e = INT32_ELEMENT(expected).key("imageOffsetY")
+        e.displayedName("Image Offset Y")
+        e.description("The image offset in Y direction, i.e. the Y position of its top-left corner.")
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
@@ -77,6 +91,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.displayedName("User Defined Range")
         e.description("The user-defined range for centre-of-gravity and gaussian fit(s).")
         e.assignmentOptional().defaultValue([0, 400, 0, 400])
+        e.reconfigurable()
+        e.commit()
+        
+        e = BOOL_ELEMENT(expected).key("absolutePositions")
+        e.displayedName("Peak Absolute Position")
+        e.description("If True, the peak position will be w.r.t. to the full frame, not to the ROI.")
+        e.assignmentOptional().defaultValue(True)
         e.reconfigurable()
         e.commit()
         
@@ -381,6 +402,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         sigmas = self.get("rangeForAuto")
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
+        absolutePositions = self.get("absolutePositions")
         
         try:            
             self.set("image", rawImageData)
@@ -390,6 +412,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             imageHeight = dims[1]
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
+            
+            roiOffsets = rawImageData.getROIOffsets()
+            imageOffsetX = roiOffsets[0]
+            imageOffsetY = roiOffsets[1]
+            self.set("imageOffsetX", imageOffsetX)
+            self.set("imageOffsetY", imageOffsetY)
             
             img = rawImageData.getData()
             self.log.INFO("Image loaded!!!")
@@ -527,9 +555,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
             
             self.set("cOfMTime", (t1-t0))
-            self.set("x0", x0)
+            if absolutePositions:
+                self.set("x0", x0+imageOffsetX)
+                self.set("y0", y0+imageOffsetY)
+            else:
+                self.set("x0", x0)
+                self.set("y0", y0)
             self.set("sx", sx)
-            self.set("y0", y0)
             self.set("sy", sy)
             self.log.INFO("Centre-of-mass and widths: done!")  
         
@@ -594,10 +626,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("xFitTime", (t1-t0))
             self.set("yFitTime", (t2-t1))
             self.set("xFitSuccess", successX)
-            self.set("x01d", xmin+pX[1])
+            if absolutePositions:
+                self.set("x01d", xmin+pX[1]+imageOffsetX)
+                self.set("y01d", ymin+pY[1]+imageOffsetY)
+            else:
+                self.set("x01d", xmin+pX[1])
+                self.set("y01d", ymin+pY[1])
             self.set("sx1d", pX[2])
             self.set("yFitSuccess", successY)
-            self.set("y01d", ymin+pY[1])
             self.set("sy1d", pY[2])
             self.log.INFO("1-d gaussian fit: done!")
         else:
@@ -649,9 +685,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         
             self.set("fitTime", (t1-t0))
             self.set("fitSuccess", successYX)
-            self.set("x02d", xmin+pYX[2])
+            if absolutePositions:
+                self.set("x02d", xmin+pYX[2]+imageOffsetX)
+                self.set("y02d", ymin+pYX[1]+imageOffsetY)
+            else:
+                self.set("x02d", xmin+pYX[2])
+                self.set("y02d", ymin+pYX[1])
             self.set("sx2d", pYX[4])
-            self.set("y02d", ymin+pYX[1])
             self.set("sy2d", pYX[3])
             if rotation:
                 self.set("theta2d", pYX[5])
