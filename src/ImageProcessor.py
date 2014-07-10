@@ -6,6 +6,7 @@ __author__="andrea.parenti@xfel.eu"
 __date__ ="October 10, 2013, 10:29 AM"
 __copyright__="Copyright (c) 2010-2013 European XFEL GmbH Hamburg. All rights reserved."
 
+import math
 import numpy
 import time
 
@@ -622,19 +623,27 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 return
                 
             t2 = time.time()
-        
+            
             self.set("xFitTime", (t1-t0))
-            self.set("yFitTime", (t2-t1))
             self.set("xFitSuccess", successX)
-            if absolutePositions:
-                self.set("x01d", xmin+pX[1]+imageOffsetX)
-                self.set("y01d", ymin+pY[1]+imageOffsetY)
-            else:
-                self.set("x01d", xmin+pX[1])
-                self.set("y01d", ymin+pY[1])
-            self.set("sx1d", pX[2])
+            if successX in (1, 2, 3, 4):
+                # Successful fit
+                if absolutePositions:
+                    self.set("x01d", xmin+pX[1]+imageOffsetX)
+                else:
+                    self.set("x01d", xmin+pX[1])
+                self.set("sx1d", pX[2])
+            
+            self.set("yFitTime", (t2-t1))
             self.set("yFitSuccess", successY)
-            self.set("sy1d", pY[2])
+            if successY in (1, 2, 3, 4):
+                # Successful fit
+                if absolutePositions:
+                    self.set("y01d", ymin+pY[1]+imageOffsetY)
+                else:
+                    self.set("y01d", ymin+pY[1])
+                self.set("sy1d", pY[2])
+            
             self.log.INFO("1-d gaussian fit: done!")
         else:
             self.set("xFitTime", 0.0)
@@ -685,18 +694,21 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         
             self.set("fitTime", (t1-t0))
             self.set("fitSuccess", successYX)
-            if absolutePositions:
-                self.set("x02d", xmin+pYX[2]+imageOffsetX)
-                self.set("y02d", ymin+pYX[1]+imageOffsetY)
-            else:
-                self.set("x02d", xmin+pYX[2])
-                self.set("y02d", ymin+pYX[1])
-            self.set("sx2d", pYX[4])
-            self.set("sy2d", pYX[3])
-            if rotation:
-                self.set("theta2d", pYX[5])
-            else:
-                self.set("theta2d", 0.0)
+            if successY in (1, 2, 3, 4):
+                # Successful fit
+                if absolutePositions:
+                    self.set("x02d", xmin+pYX[2]+imageOffsetX)
+                    self.set("y02d", ymin+pYX[1]+imageOffsetY)
+                else:
+                    self.set("x02d", xmin+pYX[2])
+                    self.set("y02d", ymin+pYX[1])
+                self.set("sx2d", pYX[4])
+                self.set("sy2d", pYX[3])
+                if rotation:
+                    self.set("theta2d", pYX[5]%math.pi)
+                else:
+                    self.set("theta2d", 0.0)
+            
             self.log.INFO("2-d gaussian fit: done!")
         else:
             self.set("fitTime", 0.0)
