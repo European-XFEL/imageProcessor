@@ -6,20 +6,22 @@ __copyright__="Copyright (c) 2010-2014 European XFEL GmbH Hamburg. All rights re
 
 import numpy
 import scipy.constants
-import time
 
-from karabo.compute_device import *
+from karabo.device import *
+from karabo.ok_error_fsm import OkErrorFsm
 
 import image_processing
 
-@KARABO_CLASSINFO("AutoCorrelator", "1.0 1.1")
-class AutoCorrelator(PythonComputeDevice):
+@KARABO_CLASSINFO("AutoCorrelator", "1.2")
+class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(AutoCorrelator,self).__init__(configuration)
-        
-        self.input = self.KARABO_INPUT_CHANNEL(InputHash, "input", configuration)
+
+        self.input = self._ss.createInputChannelRawImageData("input", configuration, self.onRead, self.onEndOfStream)
+        self._ss.connectInputChannels()
+
         self._ss.registerSlot(self.calibrate)
         
     def __del__(self):
@@ -32,12 +34,11 @@ class AutoCorrelator(PythonComputeDevice):
     def expectedParameters(expected):
         (
         
-        CHOICE_ELEMENT(expected).key("input")
-                .displayedName("Input")
-                .description("Input")
-                .assignmentOptional().defaultValue("Network-Hash")
-                .appendNodesOfConfigurationBase(InputHash)
-                .commit(),
+        INPUT_ELEMENT(expected).key("input")
+        .displayedName("Input")
+        .description("Input")
+        .setInputType(InputRawImageData)
+        .commit(),
         
         PATH_ELEMENT(expected)
                 .key("inputImage1")
@@ -45,7 +46,7 @@ class AutoCorrelator(PythonComputeDevice):
                 .description("First image used for calibration.")
                 .assignmentOptional().defaultValue("")
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         IMAGE_ELEMENT(expected)
@@ -76,7 +77,7 @@ class AutoCorrelator(PythonComputeDevice):
                 .description("Second image used for calibration.")
                 .assignmentOptional().defaultValue("")
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         IMAGE_ELEMENT(expected)
@@ -108,7 +109,7 @@ class AutoCorrelator(PythonComputeDevice):
                 .assignmentOptional().defaultValue("fs")
                 .options("fs um")
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         DOUBLE_ELEMENT(expected)
@@ -117,13 +118,13 @@ class AutoCorrelator(PythonComputeDevice):
                 .description("Delay between calibration images.")
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         SLOT_ELEMENT(expected).key("calibrate")
                 .displayedName("Calibrate")
                 .description("Calculate calibration constant from two input images.")
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         DOUBLE_ELEMENT(expected)
@@ -133,7 +134,7 @@ class AutoCorrelator(PythonComputeDevice):
                 # .unit(Unit.???) # TODO Unit is fs/px
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         IMAGE_ELEMENT(expected)
@@ -149,7 +150,7 @@ class AutoCorrelator(PythonComputeDevice):
                 .assignmentOptional().defaultValue(1.)
                 # .options("1.") # TODO...
                 .reconfigurable()
-                .allowedStates("Ok:Ready")
+                .allowedStates("Ok")
                 .commit(),
         
         DOUBLE_ELEMENT(expected)
@@ -292,23 +293,22 @@ class AutoCorrelator(PythonComputeDevice):
 
         return (x0, sx)
     
-    def compute(self):
-        h = Hash()
-        
-        for i in range(0, self.input.size()):
-            self.input.read(h, i)
-            
-            if (h.has("image")):
-                self.log.INFO("New image received")
-                image3 = h.get("image")
-                self.processImage(image3)
+    def onRead(self, input):
+        r = RawImageData()
+        for i in range(0, input.size()):
+            self.log.INFO("New image received") # TODO change to DEBUG
+            input.read(r, i)
+            self.processImage(r)
+        input.update()
     
-    def processImage(self, image3):
+    def onEndOfStream(self):
+        print "onEndOfStream called"
+    
+    def processImage(self, rawImageData):
         
         try:
             calibration = self.get("calibration")
             shapeFactor = self.get("shapeFactor")
-            rawImageData = RawImageData(image3)
             
             self.set("image3", rawImageData)
             
