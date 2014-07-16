@@ -193,9 +193,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.log.INFO("Loading calibration image %s..." % filename1)
             try:
                 image1 = numpy.load(filename1)
-                dimX = image1.shape[1]
-                dimY = image1.shape[0]
-                rawImage1 = RawImageData(image1.reshape(dimX, dimY), EncodingType.GRAY)
+                rawImage1 = RawImageData(image1, EncodingType.GRAY)
                 self.set("image1", rawImage1)
                 
             except:
@@ -216,9 +214,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.log.INFO("Loading calibration image %s..." % filename2)
             try:
                 image2 = numpy.load(filename2)
-                dimX = image2.shape[1]
-                dimY = image2.shape[0]
-                rawImage2 = RawImageData(image2.reshape(dimX, dimY), EncodingType.GRAY)
+                rawImage2 = RawImageData(image2, EncodingType.GRAY)
                 self.set("image2", rawImage2)
                 
             except:
