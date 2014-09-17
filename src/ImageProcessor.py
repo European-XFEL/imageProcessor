@@ -286,6 +286,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.readOnly()
         e.commit()
         
+        e = DOUBLE_ELEMENT(expected).key("ax1d")
+        e.displayedName("Ax (1D Fit)")
+        e.description("Amplitude Ax from 1D Fit.")
+        e.readOnly()
+        e.commit()
+        
         e = DOUBLE_ELEMENT(expected).key("x01d")
         e.displayedName("x0 (1D Fit)")
         e.description("x0 from 1D Fit.")
@@ -304,6 +310,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.readOnly()
         e.commit()
         
+        e = DOUBLE_ELEMENT(expected).key("ay1d")
+        e.displayedName("Ay (1D Fit)")
+        e.description("Amplitude Ay from 1D Fit.")
+        e.readOnly()
+        e.commit()
+        
         e = DOUBLE_ELEMENT(expected).key("y01d")
         e.displayedName("y0 (1D Fit)")
         e.description("y0 from 1D Fit.")
@@ -319,6 +331,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = INT32_ELEMENT(expected).key("fitSuccess")
         e.displayedName("Success (2D Fit)")
         e.description("2-D Gaussian Fit Success (1-4 if fit converged).")
+        e.readOnly()
+        e.commit()
+        
+        e = DOUBLE_ELEMENT(expected).key("a2d")
+        e.displayedName("A (2D Fit)")
+        e.description("Amplitude A from 2D Fit.")
         e.readOnly()
         e.commit()
         
@@ -375,12 +393,15 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.set("y0", 0.0)
         self.set("sy", 0.0)
         self.set("xFitSuccess", 0)
+        self.set("ax1d", 0.0)
         self.set("x01d", 0.0)
         self.set("sx1d", 0.0)
         self.set("yFitSuccess", 0)
+        self.set("ay1d", 0.0)
         self.set("y01d", 0.0)
         self.set("sy1d", 0.0)
         self.set("fitSuccess", 0)
+        self.set("a2d", 0.0)
         self.set("x02d", 0.0)
         self.set("sx2d", 0.0)
         self.set("y02d", 0.0)
@@ -644,14 +665,22 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     self.set("y01d", ymin+pY[1])
                 self.set("sy1d", pY[2])
             
+            if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
+                ax1d = pX[0]/pY[2]/math.sqrt(2*math.pi)
+                ay1d = pY[0]/pX[2]/math.sqrt(2*math.pi)
+                self.set("ax1d", ax1d)
+                self.set("ay1d", ay1d)
+            
             self.log.INFO("1-d gaussian fit: done!")
         else:
             self.set("xFitTime", 0.0)
             self.set("yFitTime", 0.0)
             self.set("xFitSuccess", 0)
+            self.set("ax1d", 0.0)
             self.set("x01d", 0.0)
             self.set("sx1d", 0.0)
             self.set("yFitSuccess", 0)
+            self.set("ay1d", 0.0)
             self.set("y01d", 0.0)
             self.set("sy1d", 0.0)
             
@@ -695,6 +724,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("fitTime", (t1-t0))
             self.set("fitSuccess", successYX)
             if successY in (1, 2, 3, 4):
+                self.set("a2d", pYX[0])
                 # Successful fit
                 if absolutePositions:
                     self.set("x02d", xmin+pYX[2]+imageOffsetX)
@@ -713,6 +743,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         else:
             self.set("fitTime", 0.0)
             self.set("fitSuccess", 0)
+            self.set("a2d", 0.0)
             self.set("x02d", 0.0)
             self.set("sx2d", 0.0)
             self.set("y02d", 0.0)
