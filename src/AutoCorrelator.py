@@ -25,7 +25,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self._ss.registerSlot(self.calibrate)
         
     def __del__(self):
-        print "**** AutoCorrelator.__del__() use_count =", self.input.use_count()
+        print(("**** AutoCorrelator.__del__() use_count = %s" % self.input.use_count()))
         self.input = None
         self.log.INFO("dead.")
         super(AutoCorrelator, self).__del__()
@@ -298,7 +298,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         input.update()
     
     def onEndOfStream(self):
-        print "onEndOfStream called"
+        print("onEndOfStream called")
     
     def processImage(self, rawImageData):
         
@@ -319,7 +319,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             
             self.log.INFO("Image processed!!!")
 
-        except Exception, e:
+        except Exception as e:
             self.log.ERROR("In processImage: %s" % str(e))
     
 if __name__ == "__main__":
