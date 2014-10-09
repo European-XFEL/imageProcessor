@@ -25,7 +25,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self._ss.connectInputChannels()
         
     def __del__(self):
-        print("**** ImageProcessor.__del__() use_count =", self.input.use_count())
+        print(("**** ImageProcessor.__del__() use_count = %s" % self.input.use_count()))
         self.input = None
         self.log.INFO("dead.")
         super(ImageProcessor, self).__del__()
