@@ -442,6 +442,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("imageOffsetY", imageOffsetY)
             
             img = rawImageData.getData()
+            if img.ndim==3 and img.shape[0]==1:
+                # Image has 3rd dimension, but it's 1
+                self.log.INFO("Reshaping image...")
+                img = img.reshape((img.shape[1], img.shape[2]))
+            
             self.log.INFO("Image loaded!!!")
         
         except Exception as e:
@@ -524,7 +529,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             except:
                 self.log.WARN("Could not project image into x or y axis.")
                 return
-                
+            
+            if imgX is None or imgY is None:
+                self.log.WARN("Could not project image into x or y axis.")
+                return
+            
             t1 = time.time()
             
             self.set("projectionTime", (t1-t0))
