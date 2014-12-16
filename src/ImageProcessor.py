@@ -18,6 +18,9 @@ import image_processing
 @KARABO_CLASSINFO("ImageProcessor", "1.2")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
+    # Numerical factor to convert gaussian standard deviation to beam size
+    stdDev2BeamSize = 4.0
+
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageProcessor,self).__init__(configuration)
@@ -71,6 +74,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.description("The image offset in Y direction, i.e. the Y position of its top-left corner.")
         e.unit(PIXEL)
         e.readOnly()
+        e.commit()
+        
+        e = FLOAT_ELEMENT(expected).key("pixelSize")
+        e.displayedName("Pixel Size")
+        e.description("The pixel size.")
+        e.assignmentOptional().noDefaultValue()
+        e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+        e.reconfigurable()
         e.commit()
         
         e = STRING_ELEMENT(expected).key("fitRange")
@@ -223,24 +234,28 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = DOUBLE_ELEMENT(expected).key("minPxValue")
         e.displayedName("Min Px Value")
         e.description("Minimun pixel value.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("maxPxValue")
         e.displayedName("Max Pixel Value")
         e.description("Maximun pixel value.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("meanPxValue")
         e.displayedName("Mean Pixel Value")
         e.description("Mean pixel value.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgBinCount")
         e.displayedName("Pixel counts distribution")
         e.description("Distribution of the image pixel counts.")
+        e.unit(NUMBER)
         e.readOnly().initialValue([0])
         e.commit()
         
@@ -259,48 +274,63 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = DOUBLE_ELEMENT(expected).key("x0")
         e.displayedName("x0 (Centre-Of-Mass)")
         e.description("x0 from centre-of-mass.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sx")
         e.displayedName("sigma_x (Centre-Of-Mass)")
         e.description("sigma_x from centre-of-mass.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("y0")
         e.displayedName("y0 (Centre-Of-Mass)")
         e.description("y0 from Centre-Of-Mass.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sy")
         e.displayedName("sigma_y (Centre-Of-Mass)")
         e.description("sigma_y from Centre-Of-Mass.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = INT32_ELEMENT(expected).key("xFitSuccess")
         e.displayedName("x Success (1D Fit)")
         e.description("1-D Gaussian Fit Success (1-4 if fit converged).")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("ax1d")
         e.displayedName("Ax (1D Fit)")
         e.description("Amplitude Ax from 1D Fit.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("x01d")
         e.displayedName("x0 (1D Fit)")
         e.description("x0 from 1D Fit.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sx1d")
         e.displayedName("sigma_x (1D Fit)")
         e.description("sigma_x from 1D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+        
+        e = DOUBLE_ELEMENT(expected).key("beamWidth1d")
+        e.displayedName("Beam Width (1D Fit)")
+        e.description("Beam width from 1D Fit. Defined as 4x sigma_x.")
+        e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
         e.readOnly()
         e.commit()
         
@@ -313,21 +343,31 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = DOUBLE_ELEMENT(expected).key("ay1d")
         e.displayedName("Ay (1D Fit)")
         e.description("Amplitude Ay from 1D Fit.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("y01d")
         e.displayedName("y0 (1D Fit)")
         e.description("y0 from 1D Fit.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sy1d")
         e.displayedName("sigma_y (1D Fit)")
         e.description("sigma_y from 1D Fit.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
-                
+        
+        e = DOUBLE_ELEMENT(expected).key("beamHeight1d")
+        e.displayedName("Beam Height (1D Fit)")
+        e.description("Beam heigth from 1D Fit. Defined as 4x sigma_y.")
+        e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+        e.readOnly()
+        e.commit()
+        
         e = INT32_ELEMENT(expected).key("fitSuccess")
         e.displayedName("Success (2D Fit)")
         e.description("2-D Gaussian Fit Success (1-4 if fit converged).")
@@ -337,30 +377,49 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = DOUBLE_ELEMENT(expected).key("a2d")
         e.displayedName("A (2D Fit)")
         e.description("Amplitude A from 2D Fit.")
+        e.unit(NUMBER)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("x02d")
         e.displayedName("x0 (2D Fit)")
         e.description("x0 from 2D Fit.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sx2d")
         e.displayedName("sigma_x (2D Fit)")
         e.description("sigma_x from 2D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+        
+        e = DOUBLE_ELEMENT(expected).key("beamWidth2d")
+        e.displayedName("Beam Width (2D Fit)")
+        e.description("Beam width from 2D Fit. Defined as 4x sigma_x.")
+        e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("y02d")
         e.displayedName("y0 (2D Fit)")
         e.description("y0 from 2D Fit.")
+        e.unit(PIXEL)
         e.readOnly()
         e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sy2d")
         e.displayedName("sigma_y (2D Fit)")
         e.description("sigma_y from 2D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+        
+        e = DOUBLE_ELEMENT(expected).key("beamHeight2d")
+        e.displayedName("Beam Height (2D Fit)")
+        e.description("Beam height from 2D Fit. Defined as 4x sigma_y.")
+        e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
         e.readOnly()
         e.commit()
         
@@ -396,18 +455,22 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.set("ax1d", 0.0)
         self.set("x01d", 0.0)
         self.set("sx1d", 0.0)
+        self.set("beamWidth1d", 0.0)
         self.set("yFitSuccess", 0)
         self.set("ay1d", 0.0)
         self.set("y01d", 0.0)
         self.set("sy1d", 0.0)
+        self.set("beamHeight1d", 0.0)
         self.set("fitSuccess", 0)
         self.set("a2d", 0.0)
         self.set("x02d", 0.0)
         self.set("sx2d", 0.0)
+        self.set("beamWidth2d", 0.0)
         self.set("y02d", 0.0)
         self.set("sy2d", 0.0)
         self.set("theta2d", 0.0)
-        
+        self.set("beamHeight2d", 0.0)
+    
     
     def onRead(self, input):
         r = RawImageData()
@@ -425,7 +488,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
         absolutePositions = self.get("absolutePositions")
-        
+        try:
+            pixelSize = self.get("pixelSize")
+        except:
+            # No pixel size
+            pixelSize = None
+                
         try:            
             self.set("image", rawImageData)
             
@@ -663,6 +731,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 else:
                     self.set("x01d", xmin+pX[1])
                 self.set("sx1d", pX[2])
+                if pixelSize is not None:
+                    beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
+                    self.set("beamWidth1d", beamWidth)
             
             self.set("yFitTime", (t2-t1))
             self.set("yFitSuccess", successY)
@@ -673,6 +744,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 else:
                     self.set("y01d", ymin+pY[1])
                 self.set("sy1d", pY[2])
+                if pixelSize is not None:
+                    beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
+                    self.set("beamHeight1d", beamHeight)
             
             if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
                 ax1d = pX[0]/pY[2]/math.sqrt(2*math.pi)
@@ -688,10 +762,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("ax1d", 0.0)
             self.set("x01d", 0.0)
             self.set("sx1d", 0.0)
+            self.set("beamWidth1d", 0.0)
             self.set("yFitSuccess", 0)
             self.set("ay1d", 0.0)
             self.set("y01d", 0.0)
             self.set("sy1d", 0.0)
+            self.set("beamHeight1d", 0.0)
             
         
         # 2-D Gaussian Fits
@@ -743,6 +819,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     self.set("y02d", ymin+pYX[1])
                 self.set("sx2d", pYX[4])
                 self.set("sy2d", pYX[3])
+                if pixelSize is not None:
+                    beamWidth = self.stdDev2BeamSize * pixelSize * pYX[4]
+                    self.set("beamWidth2d", beamWidth)
+                    beamHeight = self.stdDev2BeamSize * pixelSize * pYX[3]
+                    self.set("beamHeight2d", beamHeight)
                 if rotation:
                     self.set("theta2d", pYX[5]%math.pi)
                 else:
@@ -755,8 +836,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("a2d", 0.0)
             self.set("x02d", 0.0)
             self.set("sx2d", 0.0)
+            self.set("beamWidth2d", 0.0)
             self.set("y02d", 0.0)
             self.set("sy2d", 0.0)
+            self.set("beamHeight2d", 0.0)
             self.set("theta2d", 0.0)
     
         
