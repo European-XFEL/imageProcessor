@@ -84,6 +84,21 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.reconfigurable()
         e.commit()
         
+        e = BOOL_ELEMENT(expected).key("filterImagesByThreshold")
+        e.displayedName("Filter Images by Threshold")
+        e.description("If True, images will be fitted only if maximum pixel value exceeds user's defined threshold.")
+        e.assignmentOptional().defaultValue(False)
+        e.reconfigurable()
+        e.commit()
+        
+        e = FLOAT_ELEMENT(expected).key("imageThreshold")
+        e.displayedName("Image Threshold")
+        e.description("The threshold for image fitting.")
+        e.assignmentOptional().defaultValue(0.)
+        e.unit(NUMBER)
+        e.reconfigurable()
+        e.commit()
+        
         e = STRING_ELEMENT(expected).key("fitRange")
         e.displayedName("Fit Range")
         e.description("The range to be used for fitting. Can be the full image, auto-determined range, user-defined range.")
@@ -483,6 +498,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         print("onEndOfStream called")
         
     def processImage(self, rawImageData):
+        filterImagesByThreshold = self.get("filterImagesByThreshold")
+        imageThreshold = self.get("imageThreshold")
         range = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
         thr = self.get("threshold")
@@ -520,7 +537,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         except Exception as e:
             self.log.WARN("In processImage: %s" % str(e))
             return
-                    
+        
+        # Filter by Threshold
+        if filterImagesByThreshold:
+            if img.max()<imageThreshold:
+                self.log.INFO("Max pixel value below threshold: image discared!!!")
+                return
+        
         # "Background" subtraction
         if self.get("doBackground"):
             t0 = time.time()
