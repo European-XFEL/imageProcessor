@@ -22,7 +22,12 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.input = self._ss.createInputChannelRawImageData("input", configuration, self.onRead, self.onEndOfStream)
         self._ss.connectInputChannels()
 
+        self._ss.registerSlot(self.useAsCalibrationImage1)
+        self._ss.registerSlot(self.useAsCalibrationImage2)
         self._ss.registerSlot(self.calibrate)
+        
+        self.currentPeak = None
+        self.currentFwhm = None
         
     def __del__(self):
         print(("**** AutoCorrelator.__del__() use_count = %s" % self.input.use_count()))
@@ -40,24 +45,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         .setInputType(InputRawImageData)
         .commit(),
         
-        PATH_ELEMENT(expected)
-                .key("inputImage1")
-                .displayedName("Calibration Image 1")
-                .description("First image used for calibration.")
-                .assignmentOptional().defaultValue("")
-                .reconfigurable()
-                .allowedStates("Ok")
-                .commit(),
-        
-        IMAGE_ELEMENT(expected)
-                .key("image1")
-                .displayedName("Calibration Image 1")
-                .description("Display first image used for calibration.")
-                .commit(),
-        
         DOUBLE_ELEMENT(expected)
                 .key("xPeak1")
-                .displayedName("Image1 xPeak")
+                .displayedName("Image1 Peak (x)")
                 .description("x-position of peak in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -65,30 +55,15 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM1")
-                .displayedName("Image1 xFWHM")
+                .displayedName("Image1 FWHM (x)")
                 .description("x-FWHM in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
         
-        PATH_ELEMENT(expected)
-                .key("inputImage2")
-                .displayedName("Calibration Image 2")
-                .description("Second image used for calibration.")
-                .assignmentOptional().defaultValue("")
-                .reconfigurable()
-                .allowedStates("Ok")
-                .commit(),
-        
-        IMAGE_ELEMENT(expected)
-                .key("image2")
-                .displayedName("Calibration Image 2")
-                .description("Display second image used for calibration.")
-                .commit(),
-        
         DOUBLE_ELEMENT(expected)
                 .key("xPeak2")
-                .displayedName("Image2 xPeak")
+                .displayedName("Image2 Peak (x)")
                 .description("x-position of peak in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -96,7 +71,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM2")
-                .displayedName("Image2 xFWHM")
+                .displayedName("Image2 FWHM (x)")
                 .description("x-FWHM in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -121,6 +96,16 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .allowedStates("Ok")
                 .commit(),
         
+        SLOT_ELEMENT(expected).key("useAsCalibrationImage1")
+                .displayedName("Current Image as 1st Calibration")
+                .description("Use the current image as 1st calibration image.")
+                .commit(),
+
+        SLOT_ELEMENT(expected).key("useAsCalibrationImage2")
+                .displayedName("Current Image as 2nd Calibration")
+                .description("Use the current image as 2nd calibration image.")
+                .commit(),
+        
         SLOT_ELEMENT(expected).key("calibrate")
                 .displayedName("Calibrate")
                 .description("Calculate calibration constant from two input images.")
@@ -128,7 +113,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .commit(),
         
         DOUBLE_ELEMENT(expected)
-                .key("calibration")
+                .key("calibrationFactor")
                 .displayedName("Calibration constant [fs/px]")
                 .description("The calibration constant.")
                 # .unit(Unit.???) # TODO Unit is fs/px
@@ -139,7 +124,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         IMAGE_ELEMENT(expected)
                 .key("image3")
-                .displayedName("Input Image 3")
+                .displayedName("Input Image")
                 .description("Input image, for which peak width is evaluated.")
                 .commit(),
         
@@ -155,7 +140,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         DOUBLE_ELEMENT(expected)
                 .key("xPeak3")
-                .displayedName("Image3 xPeak")
+                .displayedName("Input Image Peak (x)")
                 .description("x-position of peak in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -163,7 +148,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         DOUBLE_ELEMENT(expected)
                 .key("xFWHM3")
-                .displayedName("Image3 xFWHM")
+                .displayedName("Input Image FWHM (x)")
                 .description("x-FWHM in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -171,7 +156,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         DOUBLE_ELEMENT(expected)
                 .key("xWidth3")
-                .displayedName("Image3 Peak Width")
+                .displayedName("Input Image Peak Width")
                 .description("x-Width of the input image.")
                 .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
                 .readOnly()
@@ -186,47 +171,24 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
         
-        if inputConfig.has("inputImage1"):
-            # Load and process calibration image 1
-            image1 = None
-            filename1 = inputConfig["inputImage1"]
-            self.log.INFO("Loading calibration image %s..." % filename1)
-            try:
-                image1 = numpy.load(filename1)
-                rawImage1 = RawImageData(image1, EncodingType.GRAY)
-                self.set("image1", rawImage1)
-                
-            except:
-                self.errorFound("Cannot load image %s" % filename1, "")
-            
-            try:
-                (x1, s1) = self.findPeakFWHM(image1)
-                self.set("xPeak1", x1)
-                self.set("xFWHM1", s1)
-            
-            except:
-                self.errorFound("Cannot process image %s" % filename1, "")
-            
-        if inputConfig.has("inputImage2"):
-            # Load and process calibration image 1
-            image2 = None
-            filename2 = inputConfig["inputImage2"]
-            self.log.INFO("Loading calibration image %s..." % filename2)
-            try:
-                image2 = numpy.load(filename2)
-                rawImage2 = RawImageData(image2, EncodingType.GRAY)
-                self.set("image2", rawImage2)
-                
-            except:
-                self.errorFound("Cannot load image %s" % filename2, "")
-                
-            try:
-                (x2, s2) = self.findPeakFWHM(image2)
-                self.set("xPeak2", x2)
-                self.set("xFWHM2", s2)
-                
-            except:
-                self.errorFound("Cannot process image %s" % filename2, "")
+        recalculateWidth = False
+        calibrationFactor = self.get("calibrationFactor")
+        shapeFactor = self.get("shapeFactor")
+        
+        if inputConfig.has("calibrationFactor"):
+            # Calibration factor has changed
+            calibrationFactor = inputConfig.get("calibrationFactor")
+            recalculateWidth = True
+        
+        if inputConfig.has("shapeFactor"):
+            # Shape factor has changed
+            shapeFactor = inputConfig.get("shapeFactor")
+            recalculateWidth = True
+        
+        if recalculateWidth is True and self.currentFwhm is not None:
+            w3 = self.currentFwhm * shapeFactor * calibrationFactor
+            self.set("xWidth3", w3)
+            self.log.INFO("Image re-processed!!!")
     
     def calibrate(self):
         '''Calculate calibration constant'''
@@ -247,8 +209,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             if dX==0:
                 self.errorFound("Same peak position for the two images", "")
 
-            calibration = abs(delay / dX)
-            self.set("calibration", calibration)
+            calibrationFactor = abs(delay / dX)
+            self.set("calibrationFactor", calibrationFactor)
             
         except:
             self.errorFound("Cannot calculate calibration constant", "")
@@ -289,6 +251,24 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         return (x0, sx)
     
+    def useAsCalibrationImage1(self):
+        """Use current image as calibration image 1"""
+        
+        if self.currentPeak is None or self.currentFwhm is None:
+            self.errorFound("No image available", "")
+        
+        self.set("xPeak1", self.currentPeak)
+        self.set("xFWHM1", self.currentFwhm)
+    
+    def useAsCalibrationImage2(self):
+        """Use current image as calibration image 2"""
+        
+        if self.currentPeak is None or self.currentFwhm is None:
+            self.errorFound("No image available", "")
+        
+        self.set("xPeak2", self.currentPeak)
+        self.set("xFWHM2", self.currentFwhm)
+    
     def onRead(self, input):
         r = RawImageData()
         for i in range(0, input.size()):
@@ -303,7 +283,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     def processImage(self, rawImageData):
         
         try:
-            calibration = self.get("calibration")
+            calibrationFactor = self.get("calibrationFactor")
             shapeFactor = self.get("shapeFactor")
             
             self.set("image3", rawImageData)
@@ -311,7 +291,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             imgArray = image_processing.rawImageDataToNdarray(rawImageData)
             
             (x3, s3) = self.findPeakFWHM(imgArray)
-            w3 = s3 * shapeFactor * calibration
+            self.currentPeak = x3
+            self.currentFwhm = s3
+            w3 = s3 * shapeFactor * calibrationFactor
             
             self.set("xPeak3", x3)
             self.set("xFWHM3", s3)
