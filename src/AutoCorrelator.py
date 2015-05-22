@@ -12,16 +12,13 @@ from karabo.ok_error_fsm import OkErrorFsm
 
 import image_processing
 
-@KARABO_CLASSINFO("AutoCorrelator", "1.2")
+@KARABO_CLASSINFO("AutoCorrelator", "1.3")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(AutoCorrelator,self).__init__(configuration)
-
-        self.input = self._ss.createInputChannelRawImageData("input", configuration, self.onRead, self.onEndOfStream)
-        self._ss.connectInputChannels()
-
+        
         self._ss.registerSlot(self.useAsCalibrationImage1)
         self._ss.registerSlot(self.useAsCalibrationImage2)
         self._ss.registerSlot(self.calibrate)
@@ -30,21 +27,23 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.currentFwhm = None
         
     def __del__(self):
-        print(("**** AutoCorrelator.__del__() use_count = %s" % self.input.use_count()))
-        self.input = None
-        self.log.INFO("dead.")
         super(AutoCorrelator, self).__del__()
 
     @staticmethod
     def expectedParameters(expected):
+        
+        data = Schema()
         (
+        IMAGEDATA(data).key("image")
+                .commit(),
         
-        INPUT_ELEMENT(expected).key("input")
-        .displayedName("Input")
-        .description("Input")
-        .setInputType(InputRawImageData)
-        .commit(),
+        INPUT_CHANNEL(expected).key("input")
+                .displayedName("Input")
+                .dataSchema(data)
+                .commit(),
+        )
         
+        (
         DOUBLE_ELEMENT(expected)
                 .key("xPeak1")
                 .displayedName("Image1 Peak (x)")
@@ -122,12 +121,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .allowedStates("Ok")
                 .commit(),
         
-        IMAGE_ELEMENT(expected)
-                .key("image3")
-                .displayedName("Input Image")
-                .description("Input image, for which peak width is evaluated.")
-                .commit(),
-        
         DOUBLE_ELEMENT(expected)
                 .key("shapeFactor")
                 .displayedName("Shape Factor")
@@ -167,6 +160,12 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     ##############################################
     #   Implementation of State Machine methods  #
     ##############################################
+    
+    def okStateOnEntry(self):
+        
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
     
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
@@ -269,28 +268,27 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.set("xPeak2", self.currentPeak)
         self.set("xFWHM2", self.currentFwhm)
     
-    def onRead(self, input):
-        r = RawImageData()
-        for i in range(0, input.size()):
-            self.log.INFO("New image received") # TODO change to DEBUG
-            input.read(r, i)
-            self.processImage(r)
+    def onData(self, input):
+        
+        for i in range(input.size()):
+            data = input.read(i)
+            if data.has('image'):
+                self.processImage(data['image'])
+        
+        # Signal that we are done with the current data
         input.update()
     
     def onEndOfStream(self):
         print("onEndOfStream called")
     
-    def processImage(self, rawImageData):
+    def processImage(self, image):
         
         try:
             calibrationFactor = self.get("calibrationFactor")
             shapeFactor = self.get("shapeFactor")
             
-            self.set("image3", rawImageData)
-            
-            imgArray = image_processing.rawImageDataToNdarray(rawImageData)
-            
-            (x3, s3) = self.findPeakFWHM(imgArray)
+            imageArray = NDArray(image).getData()
+            (x3, s3) = self.findPeakFWHM(imageArray)
             self.currentPeak = x3
             self.currentFwhm = s3
             w3 = s3 * shapeFactor * calibrationFactor
