@@ -15,7 +15,7 @@ from karabo.ok_error_fsm import OkErrorFsm
 
 import image_processing
 
-@KARABO_CLASSINFO("ImageProcessor", "1.2")
+@KARABO_CLASSINFO("ImageProcessor", "1.3")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
     # Numerical factor to convert gaussian standard deviation to beam size
@@ -24,29 +24,23 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageProcessor,self).__init__(configuration)
-        self.input = self._ss.createInputChannelRawImageData("input", configuration, self.onRead, self.onEndOfStream)
-        self._ss.connectInputChannels()
         
     def __del__(self):
-        print(("**** ImageProcessor.__del__() use_count = %s" % self.input.use_count()))
-        self.input = None
-        self.log.INFO("dead.")
         super(ImageProcessor, self).__del__()
 
-    
-    
     @staticmethod
     def expectedParameters(expected):
-        e = INPUT_ELEMENT(expected).key("input")
-        e.displayedName("Input")
-        e.description("Input")
-        e.setInputType(InputRawImageData)
-        e.commit()
-        
-        e = IMAGE_ELEMENT(expected).key("image")
-        e.displayedName("Image")
-        e.description("Image")
-        e.commit()
+        data = Schema()
+
+        (
+        IMAGEDATA(data).key("image")
+        .commit(),
+
+        INPUT_CHANNEL(expected).key("input")
+                .displayedName("Input")
+                .dataSchema(data)
+                .commit(),
+        )
 
         e = INT32_ELEMENT(expected).key("imageWidth")
         e.displayedName("Image Width")
@@ -450,7 +444,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     #   Implementation of State Machine methods  #
     ##############################################
 
-    def initializationStateOnEntry(self):
+    def okStateOnEntry(self):
+        
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
+
         self.set("minMaxMeanTime", 0.0)
         self.set("binCountTime", 0.0)
         self.set("projectionTime", 0.0)
@@ -487,17 +486,20 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.set("beamHeight2d", 0.0)
     
     
-    def onRead(self, input):
-        r = RawImageData()
-        for i in range(0, input.size()):
-            input.read(r, i)
-            self.processImage(r)
+    def onData(self, input):
+
+        for i in range(input.size()):
+            data = input.read(i)
+            if data.has('image'):
+                self.processImage(data['image'])
+
+        # Signal that we are done with the current data
         input.update()
     
     def onEndOfStream(self):
         print("onEndOfStream called")
-        
-    def processImage(self, rawImageData):
+    
+    def processImage(self, image):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
         imageThreshold = self.get("imageThreshold")
         range = self.get("fitRange")
@@ -511,22 +513,23 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             # No pixel size
             pixelSize = None
                 
-        try:            
-            self.set("image", rawImageData)
+        try:
+            imageArray = NDArray(image)
+            imageData = ImageData(image)
             
-            dims = rawImageData.getDimensions()
+            dims = imageData.getDimensions()
             imageWidth = dims[0]
             imageHeight = dims[1]
             self.set("imageWidth", imageWidth)
             self.set("imageHeight", imageHeight)
             
-            roiOffsets = rawImageData.getROIOffsets()
+            roiOffsets = imageData.getROIOffsets()
             imageOffsetX = roiOffsets[0]
             imageOffsetY = roiOffsets[1]
             self.set("imageOffsetX", imageOffsetX)
             self.set("imageOffsetY", imageOffsetY)
-            
-            img = rawImageData.getData()
+
+            img = imageArray.getData()
             if img.ndim==3 and img.shape[0]==1:
                 # Image has 3rd dimension, but it's 1
                 self.log.INFO("Reshaping image...")
