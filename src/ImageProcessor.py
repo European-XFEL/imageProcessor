@@ -450,41 +450,45 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
-        self.set("minMaxMeanTime", 0.0)
-        self.set("binCountTime", 0.0)
-        self.set("projectionTime", 0.0)
-        self.set("xFitTime", 0.0)
-        self.set("yFitTime", 0.0)
-        self.set("cOfMTime", 0.0)
-        self.set("fitTime", 0.0)
+        h = Hash()
 
-        self.set("minPxValue", 0.0)
-        self.set("maxPxValue", 0.0)
-        self.set("meanPxValue", 0.0)
-        self.set("x0", 0.0)
-        self.set("sx", 0.0)
-        self.set("y0", 0.0)
-        self.set("sy", 0.0)
-        self.set("xFitSuccess", 0)
-        self.set("ax1d", 0.0)
-        self.set("x01d", 0.0)
-        self.set("sx1d", 0.0)
-        self.set("beamWidth1d", 0.0)
-        self.set("yFitSuccess", 0)
-        self.set("ay1d", 0.0)
-        self.set("y01d", 0.0)
-        self.set("sy1d", 0.0)
-        self.set("beamHeight1d", 0.0)
-        self.set("fitSuccess", 0)
-        self.set("a2d", 0.0)
-        self.set("x02d", 0.0)
-        self.set("sx2d", 0.0)
-        self.set("beamWidth2d", 0.0)
-        self.set("y02d", 0.0)
-        self.set("sy2d", 0.0)
-        self.set("theta2d", 0.0)
-        self.set("beamHeight2d", 0.0)
+        h.set("minMaxMeanTime", 0.0)
+        h.set("binCountTime", 0.0)
+        h.set("projectionTime", 0.0)
+        h.set("xFitTime", 0.0)
+        h.set("yFitTime", 0.0)
+        h.set("cOfMTime", 0.0)
+        h.set("fitTime", 0.0)
+
+        h.set("minPxValue", 0.0)
+        h.set("maxPxValue", 0.0)
+        h.set("meanPxValue", 0.0)
+        h.set("x0", 0.0)
+        h.set("sx", 0.0)
+        h.set("y0", 0.0)
+        h.set("sy", 0.0)
+        h.set("xFitSuccess", 0)
+        h.set("ax1d", 0.0)
+        h.set("x01d", 0.0)
+        h.set("sx1d", 0.0)
+        h.set("beamWidth1d", 0.0)
+        h.set("yFitSuccess", 0)
+        h.set("ay1d", 0.0)
+        h.set("y01d", 0.0)
+        h.set("sy1d", 0.0)
+        h.set("beamHeight1d", 0.0)
+        h.set("fitSuccess", 0)
+        h.set("a2d", 0.0)
+        h.set("x02d", 0.0)
+        h.set("sx2d", 0.0)
+        h.set("beamWidth2d", 0.0)
+        h.set("y02d", 0.0)
+        h.set("sy2d", 0.0)
+        h.set("theta2d", 0.0)
+        h.set("beamHeight2d", 0.0)
     
+        # Reset device parameters (all at once)
+        self.set(h)
     
     def onData(self, input):
 
@@ -507,6 +511,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
         absolutePositions = self.get("absolutePositions")
+        
+        h = Hash() # Empty hash
+        
         try:
             pixelSize = self.get("pixelSize")
         except:
@@ -520,14 +527,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             dims = imageData.getDimensions()
             imageWidth = dims[0]
             imageHeight = dims[1]
-            self.set("imageWidth", imageWidth)
-            self.set("imageHeight", imageHeight)
+            h.set("imageWidth", imageWidth)
+            h.set("imageHeight", imageHeight)
             
             roiOffsets = imageData.getROIOffsets()
             imageOffsetX = roiOffsets[0]
             imageOffsetY = roiOffsets[1]
-            self.set("imageOffsetX", imageOffsetX)
-            self.set("imageOffsetY", imageOffsetY)
+            h.set("imageOffsetX", imageOffsetX)
+            h.set("imageOffsetY", imageOffsetY)
 
             img = imageArray.getData()
             if img.ndim==3 and img.shape[0]==1:
@@ -559,10 +566,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
                 
             
-            self.set("backgroundTime", (t1-t0))
+            h.set("backgroundTime", (t1-t0))
             self.log.DEBUG("Background subtraction: done!")
         else:
-            self.set("backgroundTime", 0.0)
+            h.set("backgroundTime", 0.0)
         
         
         # Get pixel min/max/mean values
@@ -579,16 +586,16 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
             
             
-            self.set("minMaxMeanTime", (t1-t0))
-            self.set("minPxValue", float(imgMin))
-            self.set("maxPxValue", float(imgMax))
-            self.set("meanPxValue", float(imgMean))
+            h.set("minMaxMeanTime", (t1-t0))
+            h.set("minPxValue", float(imgMin))
+            h.set("maxPxValue", float(imgMax))
+            h.set("meanPxValue", float(imgMean))
             self.log.DEBUG("Pixel min/max/mean: done!")
         else:
-            self.set("minMaxMeanTime", 0.0)
-            self.set("minPxValue", 0.0)
-            self.set("maxPxValue", 0.0)
-            self.set("meanPxValue", 0.0)
+            h.set("minMaxMeanTime", 0.0)
+            h.set("minPxValue", 0.0)
+            h.set("maxPxValue", 0.0)
+            h.set("meanPxValue", 0.0)
         
         
         # Frequency of Pixel Values
@@ -604,11 +611,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             
             t1 = time.time()
             
-            self.set("binCountTime", (t1-t0))
-            self.set("imgBinCount", pxFreq)
+            h.set("binCountTime", (t1-t0))
+            h.set("imgBinCount", pxFreq)
         else:
-            self.set("binCountTime", 0.0)
-            self.set("imgBinCount", [0.0])
+            h.set("binCountTime", 0.0)
+            h.set("imgBinCount", [0.0])
         
         
         # Project the image onto the x- and y-axes
@@ -630,14 +637,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             
             t1 = time.time()
             
-            self.set("projectionTime", (t1-t0))
-            self.set("imgX", imgX)
-            self.set("imgY", imgY)
+            h.set("projectionTime", (t1-t0))
+            h.set("imgX", imgX)
+            h.set("imgY", imgY)
             self.log.DEBUG("Image 1D projections: done!")
         else:
-            self.set("projectionTime", 0.0)
-            self.set("imgX", [0.0])
-            self.set("imgY", [0.0])
+            h.set("projectionTime", 0.0)
+            h.set("imgX", [0.0])
+            h.set("imgY", [0.0])
             
         
         # Centre-Of-Mass and widths
@@ -679,23 +686,23 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             
             t1 = time.time()
             
-            self.set("cOfMTime", (t1-t0))
+            h.set("cOfMTime", (t1-t0))
             if absolutePositions:
-                self.set("x0", x0+imageOffsetX)
-                self.set("y0", y0+imageOffsetY)
+                h.set("x0", x0+imageOffsetX)
+                h.set("y0", y0+imageOffsetY)
             else:
-                self.set("x0", x0)
-                self.set("y0", y0)
-            self.set("sx", sx)
-            self.set("sy", sy)
+                h.set("x0", x0)
+                h.set("y0", y0)
+            h.set("sx", sx)
+            h.set("sy", sy)
             self.log.DEBUG("Centre-of-mass and widths: done!")  
         
         else:
-            self.set("cOfMTime", 0.0)
-            self.set("x0", 0.0)
-            self.set("sx", 0.0)
-            self.set("y0", 0.0)
-            self.set("sx", 0.0)
+            h.set("cOfMTime", 0.0)
+            h.set("x0", 0.0)
+            h.set("sx", 0.0)
+            h.set("y0", 0.0)
+            h.set("sx", 0.0)
         
         
         # 1-D Gaussian Fits
@@ -748,52 +755,52 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 
             t2 = time.time()
             
-            self.set("xFitTime", (t1-t0))
-            self.set("xFitSuccess", successX)
+            h.set("xFitTime", (t1-t0))
+            h.set("xFitSuccess", successX)
             if successX in (1, 2, 3, 4):
                 # Successful fit
                 if absolutePositions:
-                    self.set("x01d", xmin+pX[1]+imageOffsetX)
+                    h.set("x01d", xmin+pX[1]+imageOffsetX)
                 else:
-                    self.set("x01d", xmin+pX[1])
-                self.set("sx1d", pX[2])
+                    h.set("x01d", xmin+pX[1])
+                h.set("sx1d", pX[2])
                 if pixelSize is not None:
                     beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
-                    self.set("beamWidth1d", beamWidth)
+                    h.set("beamWidth1d", beamWidth)
             
-            self.set("yFitTime", (t2-t1))
-            self.set("yFitSuccess", successY)
+            h.set("yFitTime", (t2-t1))
+            h.set("yFitSuccess", successY)
             if successY in (1, 2, 3, 4):
                 # Successful fit
                 if absolutePositions:
-                    self.set("y01d", ymin+pY[1]+imageOffsetY)
+                    h.set("y01d", ymin+pY[1]+imageOffsetY)
                 else:
-                    self.set("y01d", ymin+pY[1])
-                self.set("sy1d", pY[2])
+                    h.set("y01d", ymin+pY[1])
+                h.set("sy1d", pY[2])
                 if pixelSize is not None:
                     beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
-                    self.set("beamHeight1d", beamHeight)
+                    h.set("beamHeight1d", beamHeight)
             
             if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
                 ax1d = pX[0]/pY[2]/math.sqrt(2*math.pi)
                 ay1d = pY[0]/pX[2]/math.sqrt(2*math.pi)
-                self.set("ax1d", ax1d)
-                self.set("ay1d", ay1d)
+                h.set("ax1d", ax1d)
+                h.set("ay1d", ay1d)
             
             self.log.DEBUG("1-d gaussian fit: done!")
         else:
-            self.set("xFitTime", 0.0)
-            self.set("yFitTime", 0.0)
-            self.set("xFitSuccess", 0)
-            self.set("ax1d", 0.0)
-            self.set("x01d", 0.0)
-            self.set("sx1d", 0.0)
-            self.set("beamWidth1d", 0.0)
-            self.set("yFitSuccess", 0)
-            self.set("ay1d", 0.0)
-            self.set("y01d", 0.0)
-            self.set("sy1d", 0.0)
-            self.set("beamHeight1d", 0.0)
+            h.set("xFitTime", 0.0)
+            h.set("yFitTime", 0.0)
+            h.set("xFitSuccess", 0)
+            h.set("ax1d", 0.0)
+            h.set("x01d", 0.0)
+            h.set("sx1d", 0.0)
+            h.set("beamWidth1d", 0.0)
+            h.set("yFitSuccess", 0)
+            h.set("ay1d", 0.0)
+            h.set("y01d", 0.0)
+            h.set("sy1d", 0.0)
+            h.set("beamHeight1d", 0.0)
             
         
         # 2-D Gaussian Fits
@@ -832,42 +839,44 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             
             t1 = time.time()
         
-            self.set("fitTime", (t1-t0))
-            self.set("fitSuccess", successYX)
+            h.set("fitTime", (t1-t0))
+            h.set("fitSuccess", successYX)
             if successY in (1, 2, 3, 4):
-                self.set("a2d", pYX[0])
+                h.set("a2d", pYX[0])
                 # Successful fit
                 if absolutePositions:
-                    self.set("x02d", xmin+pYX[2]+imageOffsetX)
-                    self.set("y02d", ymin+pYX[1]+imageOffsetY)
+                    h.set("x02d", xmin+pYX[2]+imageOffsetX)
+                    h.set("y02d", ymin+pYX[1]+imageOffsetY)
                 else:
-                    self.set("x02d", xmin+pYX[2])
-                    self.set("y02d", ymin+pYX[1])
-                self.set("sx2d", pYX[4])
-                self.set("sy2d", pYX[3])
+                    h.set("x02d", xmin+pYX[2])
+                    h.set("y02d", ymin+pYX[1])
+                h.set("sx2d", pYX[4])
+                h.set("sy2d", pYX[3])
                 if pixelSize is not None:
                     beamWidth = self.stdDev2BeamSize * pixelSize * pYX[4]
-                    self.set("beamWidth2d", beamWidth)
+                    h.set("beamWidth2d", beamWidth)
                     beamHeight = self.stdDev2BeamSize * pixelSize * pYX[3]
-                    self.set("beamHeight2d", beamHeight)
+                    h.set("beamHeight2d", beamHeight)
                 if rotation:
-                    self.set("theta2d", pYX[5]%math.pi)
+                    h.set("theta2d", pYX[5]%math.pi)
                 else:
-                    self.set("theta2d", 0.0)
+                    h.set("theta2d", 0.0)
             
             self.log.DEBUG("2-d gaussian fit: done!")
         else:
-            self.set("fitTime", 0.0)
-            self.set("fitSuccess", 0)
-            self.set("a2d", 0.0)
-            self.set("x02d", 0.0)
-            self.set("sx2d", 0.0)
-            self.set("beamWidth2d", 0.0)
-            self.set("y02d", 0.0)
-            self.set("sy2d", 0.0)
-            self.set("beamHeight2d", 0.0)
-            self.set("theta2d", 0.0)
+            h.set("fitTime", 0.0)
+            h.set("fitSuccess", 0)
+            h.set("a2d", 0.0)
+            h.set("x02d", 0.0)
+            h.set("sx2d", 0.0)
+            h.set("beamWidth2d", 0.0)
+            h.set("y02d", 0.0)
+            h.set("sy2d", 0.0)
+            h.set("beamHeight2d", 0.0)
+            h.set("theta2d", 0.0)
     
+        # Update device parameters (all at once)
+        self.set(h)
         
 if __name__ == "__main__":
     launchPythonDevice()
