@@ -532,10 +532,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             img = imageArray.getData()
             if img.ndim==3 and img.shape[0]==1:
                 # Image has 3rd dimension, but it's 1
-                self.log.INFO("Reshaping image...")
+                self.log.DEBUG("Reshaping image...")
                 img = img.reshape((img.shape[1], img.shape[2]))
             
-            self.log.INFO("Image loaded!!!")
+            self.log.DEBUG("Image loaded!!!")
         
         except Exception as e:
             self.log.WARN("In processImage: %s" % str(e))
@@ -544,7 +544,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         # Filter by Threshold
         if filterImagesByThreshold:
             if img.max()<imageThreshold:
-                self.log.INFO("Max pixel value below threshold: image discared!!!")
+                self.log.DEBUG("Max pixel value below threshold: image discared!!!")
                 return
         
         # "Background" subtraction
@@ -560,7 +560,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 
             
             self.set("backgroundTime", (t1-t0))
-            self.log.INFO("Background subtraction: done!")
+            self.log.DEBUG("Background subtraction: done!")
         else:
             self.set("backgroundTime", 0.0)
         
@@ -583,7 +583,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("minPxValue", float(imgMin))
             self.set("maxPxValue", float(imgMax))
             self.set("meanPxValue", float(imgMean))
-            self.log.INFO("Pixel min/max/mean: done!")
+            self.log.DEBUG("Pixel min/max/mean: done!")
         else:
             self.set("minMaxMeanTime", 0.0)
             self.set("minPxValue", 0.0)
@@ -597,7 +597,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             try:
                 pxFreq = image_processing.imagePixelValueFrequencies(img)
 
-                self.log.INFO("Pixel values distribution: done!")
+                self.log.DEBUG("Pixel values distribution: done!")
             except:
                 self.log.WARN("Could not evaluate the pixel value frequency.")
                 return
@@ -633,7 +633,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             self.set("projectionTime", (t1-t0))
             self.set("imgX", imgX)
             self.set("imgY", imgY)
-            self.log.INFO("Image 1D projections: done!")
+            self.log.DEBUG("Image 1D projections: done!")
         else:
             self.set("projectionTime", 0.0)
             self.set("imgX", [0.0])
@@ -688,7 +688,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 self.set("y0", y0)
             self.set("sx", sx)
             self.set("sy", sy)
-            self.log.INFO("Centre-of-mass and widths: done!")  
+            self.log.DEBUG("Centre-of-mass and widths: done!")  
         
         else:
             self.set("cOfMTime", 0.0)
@@ -780,7 +780,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 self.set("ax1d", ax1d)
                 self.set("ay1d", ay1d)
             
-            self.log.INFO("1-d gaussian fit: done!")
+            self.log.DEBUG("1-d gaussian fit: done!")
         else:
             self.set("xFitTime", 0.0)
             self.set("yFitTime", 0.0)
@@ -855,7 +855,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 else:
                     self.set("theta2d", 0.0)
             
-            self.log.INFO("2-d gaussian fit: done!")
+            self.log.DEBUG("2-d gaussian fit: done!")
         else:
             self.set("fitTime", 0.0)
             self.set("fitSuccess", 0)
