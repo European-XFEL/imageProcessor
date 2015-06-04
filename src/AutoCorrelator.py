@@ -187,7 +187,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         if recalculateWidth is True and self.currentFwhm is not None:
             w3 = self.currentFwhm * shapeFactor * calibrationFactor
             self.set("xWidth3", w3)
-            self.log.INFO("Image re-processed!!!")
+            self.log.DEBUG("Image re-processed!!!")
     
     def calibrate(self):
         '''Calculate calibration constant'''
@@ -293,11 +293,16 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.currentFwhm = s3
             w3 = s3 * shapeFactor * calibrationFactor
             
-            self.set("xPeak3", x3)
-            self.set("xFWHM3", s3)
-            self.set("xWidth3", w3)
+            h = Hash()
             
-            self.log.INFO("Image processed!!!")
+            h.set("xPeak3", x3)
+            h.set("xFWHM3", s3)
+            h.set("xWidth3", w3)
+            
+            # Set all properties at once
+            self.set(h)
+            
+            self.log.DEBUG("Image processed!!!")
 
         except Exception as e:
             self.log.ERROR("In processImage: %s" % str(e))
