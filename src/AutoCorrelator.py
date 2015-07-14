@@ -10,7 +10,7 @@ import scipy.constants
 from karabo.device import *
 from karabo.ok_error_fsm import OkErrorFsm
 
-import image_processing
+from image_processing import image_processing
 
 @KARABO_CLASSINFO("AutoCorrelator", "1.3")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
