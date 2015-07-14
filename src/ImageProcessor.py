@@ -13,7 +13,7 @@ import time
 from karabo.device import *
 from karabo.ok_error_fsm import OkErrorFsm
 
-import image_processing
+from image_processing import image_processing
 
 @KARABO_CLASSINFO("ImageProcessor", "1.3")
 class ImageProcessor(PythonDevice, OkErrorFsm):
