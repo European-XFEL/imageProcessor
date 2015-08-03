@@ -270,13 +270,16 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     
     def onData(self, input):
         
-        for i in range(input.size()):
-            data = input.read(i)
-            if data.has('image'):
-                self.processImage(data['image'])
-        
-        # Signal that we are done with the current data
-        input.update()
+        try:
+            for i in range(input.size()):
+                data = input.read(i)
+                if data.has('image'):
+                    self.processImage(data['image'])
+            
+            # Signal that we are done with the current data
+            input.update()
+        except Exception as e:
+            self.log.ERROR("Exception caught in onData: %s" % str(e))
     
     def onEndOfStream(self):
         print("onEndOfStream called")
