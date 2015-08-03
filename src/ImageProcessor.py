@@ -490,29 +490,30 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         # Reset device parameters (all at once)
         self.set(h)
 
-    # [AP] Till Karabo 1.3.7 onData callback received InputChannel object as input
-    def onData(self, input):
-        
-        try:
-            for i in range(input.size()):
-                data = input.read(i)
-                if data.has('image'):
-                    self.processImage(data['image'])
-    
-            # Signal that we are done with the current data
-            input.update()
-        
-        except Exception as e:
-            self.log.ERROR("Exception caught in onData: %s" % str(e))
-    
-#    # [AP] From Karabo 1.3.8 onData callback receives Data object as input
+#    # [AP] Till Karabo 1.3.7 onData callback received InputChannel object as input
 #    def onData(self, input):
 #        
 #        try:
-#            self.processImage(input['image'])
+#            for i in range(input.size()):
+#                data = input.read(i)
+#                if data.has('image'):
+#                    self.processImage(data['image'])
+#    
+#            # Signal that we are done with the current data
+#            input.update()
+#        
 #        except Exception as e:
 #            self.log.ERROR("Exception caught in onData: %s" % str(e))
-#    
+    
+    # [AP] From Karabo 1.3.8 onData callback receives Data object as input
+    def onData(self, data):
+        
+        try:
+            if data.has('image'):
+                self.processImage(data['image'])
+        except Exception as e:
+            self.log.ERROR("Exception caught in onData: %s" % str(e))
+    
     def onEndOfStream(self):
         print("onEndOfStream called")
     
