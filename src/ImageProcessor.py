@@ -24,6 +24,22 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageProcessor,self).__init__(configuration)
+
+        # 1d gaussian fit parameters
+        self.ax1d = None
+        self.x01d = None
+        self.sx1d = None
+        self.ay1d = None
+        self.y01d = None
+        self.sy1d = None
+
+        # 2d gaussian fit parameters
+        self.a2d = None
+        self.x02d = None
+        self.sx2d = None
+        self.y02d = None
+        self.sy2d = None
+        self.theta2d = None
         
     def __del__(self):
         super(ImageProcessor, self).__del__()
@@ -152,10 +168,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.assignmentOptional().defaultValue(True)
         e.reconfigurable()
         e.commit()
-        
-        e = BOOL_ELEMENT(expected).key("doProjection")
-        e.displayedName("X-Y Projections")
-        e.description("Project the image onto the x- and y-axes.")
+
+        e = BOOL_ELEMENT(expected).key("doXYSum")
+        e.displayedName("Sum along X-Y Axes")
+        e.description("Sum image along the x- and y-axes.")
         e.assignmentOptional().defaultValue(True)
         e.reconfigurable()
         e.commit()
@@ -169,7 +185,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         
         e = BOOL_ELEMENT(expected).key("do1DFit")
         e.displayedName("1-D Gaussian Fits")
-        e.description("Perform a 1-d gaussian fit of the x- and y-projections.")
+        e.description("Perform a 1-d gaussian fit of the x- and y-distributions.")
         e.assignmentOptional().defaultValue(True)
         e.reconfigurable()
         e.commit()
@@ -208,8 +224,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.readOnly()
         e.commit()
         
-        e = FLOAT_ELEMENT(expected).key("projectionTime")
-        e.displayedName("Image Projection Time")
+        e = FLOAT_ELEMENT(expected).key("xYSumTime")
+        e.displayedName("Image X-Y Sums Time")
         e.unit(SECOND)
         e.readOnly()
         e.commit()
@@ -221,13 +237,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.commit()
         
         e = FLOAT_ELEMENT(expected).key("xFitTime")
-        e.displayedName("1D Gaussian Fit Time (X projection)")
+        e.displayedName("1D Gaussian Fit Time (X distribution)")
         e.unit(SECOND)
         e.readOnly()
         e.commit()
         
         e = FLOAT_ELEMENT(expected).key("yFitTime")
-        e.displayedName("1D Gaussian Fit Time (Y projection)")
+        e.displayedName("1D Gaussian Fit Time (Y distribution)")
         e.unit(SECOND)
         e.readOnly()
         e.commit()
@@ -269,14 +285,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.commit()
         
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgX")
-        e.displayedName("Image x-projection")
-        e.description("Projection of the input image onto the x axis.")
+        e.displayedName("X Distribution")
+        e.description("Image sum along the Y-axis.")
         e.readOnly().initialValue([0])
         e.commit()
         
         e = VECTOR_DOUBLE_ELEMENT(expected).key("imgY")
-        e.displayedName("Image y-projection")
-        e.description("Projection of the input image onto the y axis.")
+        e.displayedName("Y Distribution")
+        e.description("Image sum along the X-axis.")
         e.readOnly().initialValue([0])
         e.commit()
         
@@ -321,10 +337,18 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(NUMBER)
         e.readOnly()
         e.commit()
-        
+
         e = DOUBLE_ELEMENT(expected).key("x01d")
         e.displayedName("x0 (1D Fit)")
         e.description("x0 from 1D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("ex01d")
+        e.displayedName("sigma(x0) (1D Fit)")
+        e.description("Uncertainty on x0 from 1D Fit.")
+        e.expertAccess()
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
@@ -332,6 +356,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = DOUBLE_ELEMENT(expected).key("sx1d")
         e.displayedName("sigma_x (1D Fit)")
         e.description("sigma_x from 1D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("esx1d")
+        e.displayedName("sigma(sigma_x) (1D Fit)")
+        e.description("Uncertainty on sigma_x from 1D Fit.")
+        e.expertAccess()
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
@@ -362,10 +394,26 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("ey01d")
+        e.displayedName("sigma(y0) (1D Fit)")
+        e.description("Uncertainty on y0 from 1D Fit.")
+        e.expertAccess()
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sy1d")
         e.displayedName("sigma_y (1D Fit)")
         e.description("sigma_y from 1D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("esy1d")
+        e.displayedName("sigma(sigma_y) (1D Fit)")
+        e.description("Uncertainty on sigma_y from 1D Fit.")
+        e.expertAccess()
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
@@ -396,10 +444,26 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("ex02d")
+        e.displayedName("sigma(x0) (2D Fit)")
+        e.description("Uncertainty on x0 from 2D Fit.")
+        e.expertAccess()
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
         
         e = DOUBLE_ELEMENT(expected).key("sx2d")
         e.displayedName("sigma_x (2D Fit)")
         e.description("sigma_x from 2D Fit.")
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
+        e = DOUBLE_ELEMENT(expected).key("esx2d")
+        e.displayedName("sigma(sigma_x) (2D Fit)")
+        e.description("Uncertainty on sigma_x from 2D Fit.")
+        e.expertAccess()
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
@@ -417,14 +481,30 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
-        
+
+        e = DOUBLE_ELEMENT(expected).key("ey02d")
+        e.displayedName("sigma(y0) (2D Fit)")
+        e.description("Uncertainty on y0 from 2D Fit.")
+        e.expertAccess()
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
         e = DOUBLE_ELEMENT(expected).key("sy2d")
         e.displayedName("sigma_y (2D Fit)")
         e.description("sigma_y from 2D Fit.")
         e.unit(PIXEL)
         e.readOnly()
         e.commit()
-        
+
+        e = DOUBLE_ELEMENT(expected).key("esy2d")
+        e.displayedName("sigma(sigma_y) (2D Fit)")
+        e.description("Uncertainty on sigma_y from 2D Fit.")
+        e.expertAccess()
+        e.unit(PIXEL)
+        e.readOnly()
+        e.commit()
+
         e = DOUBLE_ELEMENT(expected).key("beamHeight2d")
         e.displayedName("Beam Height (2D Fit)")
         e.description("Beam height from 2D Fit. Defined as 4x sigma_y.")
@@ -438,7 +518,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(DEGREE)
         e.readOnly()
         e.commit()
-        
+
+        e = DOUBLE_ELEMENT(expected).key("etheta2d")
+        e.displayedName("sigma(theta) (2D Fit)")
+        e.description("Uncertianty on rotation angle from 2D Fit.")
+        e.expertAccess()
+        e.unit(DEGREE)
+        e.readOnly()
+        e.commit()
     
     ##############################################
     #   Implementation of State Machine methods  #
@@ -454,7 +541,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
         h.set("minMaxMeanTime", 0.0)
         h.set("binCountTime", 0.0)
-        h.set("projectionTime", 0.0)
+        h.set("xYSumTime", 0.0)
         h.set("xFitTime", 0.0)
         h.set("yFitTime", 0.0)
         h.set("cOfMTime", 0.0)
@@ -470,7 +557,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         h.set("xFitSuccess", 0)
         h.set("ax1d", 0.0)
         h.set("x01d", 0.0)
+        h.set("ex01d", 0.0)
         h.set("sx1d", 0.0)
+        h.set("esx1d", 0.0)
         h.set("beamWidth1d", 0.0)
         h.set("yFitSuccess", 0)
         h.set("ay1d", 0.0)
@@ -480,11 +569,16 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         h.set("fitSuccess", 0)
         h.set("a2d", 0.0)
         h.set("x02d", 0.0)
+        h.set("ex02d", 0.0)
         h.set("sx2d", 0.0)
+        h.set("esx2d", 0.0)
         h.set("beamWidth2d", 0.0)
         h.set("y02d", 0.0)
+        h.set("ey02d", 0.0)
         h.set("sy2d", 0.0)
+        h.set("esy2d", 0.0)
         h.set("theta2d", 0.0)
+        h.set("etheta2d", 0.0)
         h.set("beamHeight2d", 0.0)
     
         # Reset device parameters (all at once)
@@ -535,8 +629,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             pixelSize = None
                 
         try:
-            imageArray = NDArray(image)
-            imageData = ImageData(image)
+            imageArray = NDArray(image, copy=False)
+            imageData = ImageData(image, copy=False)
             
             dims = imageData.getDimensions()
             imageWidth = dims[0]
@@ -550,7 +644,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("imageOffsetX", imageOffsetX)
             h.set("imageOffsetY", imageOffsetY)
 
-            img = imageArray.getData()
+            img = imageArray.getData() # data buffer will be converted to np.ndarray
             if img.ndim==3 and img.shape[0]==1:
                 # Image has 3rd dimension, but it's 1
                 self.log.DEBUG("Reshaping image...")
@@ -572,9 +666,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         if self.get("doBackground"):
             t0 = time.time()
             try:
-                img = img-img.min()
-            except:
-                self.log.WARN("Could not subtract background.")
+                imgMin = img.min()
+                if imgMin>0:
+                    img = img-imgMin
+            except Exception as e:
+                self.log.WARN("Could not subtract background: %s." % str(e))
                 return
                 
             t1 = time.time()
@@ -593,8 +689,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 imgMin = img.min()
                 imgMax = img.max()
                 imgMean = img.mean()
-            except:
-                self.log.WARN("Could not read min, max, mean.")
+            except Exception as e:
+                self.log.WARN("Could not read min, max, mean: %s." % str(e))
                 return
                 
             t1 = time.time()
@@ -619,8 +715,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 pxFreq = image_processing.imagePixelValueFrequencies(img)
 
                 self.log.DEBUG("Pixel values distribution: done!")
-            except:
-                self.log.WARN("Could not evaluate the pixel value frequency.")
+            except Exception as e:
+                self.log.WARN("Could not evaluate the pixel value frequency: %s." % str(e))
                 return
             
             t1 = time.time()
@@ -632,31 +728,31 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("imgBinCount", [0.0])
         
         
-        # Project the image onto the x- and y-axes
+        # Sum the image along the x- and y-axes
         imgX = None
         imgY = None
-        if self.get("doProjection"):
+        if self.get("doXYSum"):
             t0 = time.time()
             try:
-                imgX = image_processing.imageXProjection(img) # projection onto the x-axis
-                imgY = image_processing.imageYProjection(img) # projection onto the y-axis
+                imgX = image_processing.imageSumAlongY(img) # sum along y axis
+                imgY = image_processing.imageSumAlongX(img) # sum along x axis
 
-            except:
-                self.log.WARN("Could not project image into x or y axis.")
+            except Exception as e:
+                self.log.WARN("Could not sum image along x or y axis: %s." % str(e))
                 return
             
             if imgX is None or imgY is None:
-                self.log.WARN("Could not project image into x or y axis.")
+                self.log.WARN("Could not sum image along x or y axis.")
                 return
             
             t1 = time.time()
             
-            h.set("projectionTime", (t1-t0))
+            h.set("xYSumTime", (t1-t0))
             h.set("imgX", imgX)
             h.set("imgY", imgY)
-            self.log.DEBUG("Image 1D projections: done!")
+            self.log.DEBUG("Image X-Y sums: done!")
         else:
-            h.set("projectionTime", 0.0)
+            h.set("xYSumTime", 0.0)
             h.set("imgX", [0.0])
             h.set("imgY", [0.0])
             
@@ -694,8 +790,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     ymin = numpy.maximum(int(y0 - sigmas*sy), 0)
                     ymax = numpy.minimum(int(y0 + sigmas*sy), imageHeight)
             
-            except:
-                self.log.WARN("Could not calculate centre-of-mass.")
+            except Exception as e:
+                self.log.WARN("Could not calculate centre-of-mass: %s." % str(e))
                 return
             
             t1 = time.time()
@@ -724,47 +820,73 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             t0 = time.time()
             try:
-                if imgX==None:
-                    imgX = image_processing.imageXProjection(img)
+                if imgX is None:
+                    imgX = image_processing.imageSumAlongY(img)
                 
                 # Select sub-range and substract pedestal
                 data = imgX[xmin:xmax]
-                data = data - data.min()
+                imgMin = data.min()
+                if imgMin>0:
+                    data -= data.min()
 
-                if x0!=None and sx!=None:
-                    # Initial parameters
+                # Initial parameters
+                if None not in (self.ax1d, self.x01d, self.sx1d):
+                    # Use last fit's parameters as initial estimate
+                    p0 = (self.ax1d, self.x01d-xmin, self.sx1d)
+                elif None not in (x0, sx):
+                    # Use CoM for initial parameter estimate
                     p0 = (data.max(), x0-xmin, sx)
-
-                    # 1-d gaussian fit
-                    pX, successX = image_processing.fitGauss(data, p0)
                 else:
-                    pX, successX = image_processing.fitGauss(data)
+                    # No initial parameters
+                    p0 = None
+
+                # 1-d gaussian fit
+                out = image_processing.fitGauss(data, p0)
+                pX = out[0] # parameters
+                cX = out[1] # covariance
+                successX = out[2] # error
+
+                # Save fit's parameters
+                self.ax1d, self.x01d, self.sx1d = pX[0], pX[1]+xmin, pX[2]
                     
-            except:
-                self.log.WARN("Could not do 1-d gaussian fit.")
+            except Exception as e:
+                self.log.WARN("Could not do 1-d gaussian fit [x]: %s." % str(e))
                 return
                 
             t1 = time.time()
             
             try:
-                if imgY==None:
-                    imgY = image_processing.imageYProjection(img)
+                if imgY is None:
+                    imgY = image_processing.imageSumAlongX(img)
                 
                 # Select sub-range and substract pedestal
                 data = imgY[ymin:ymax]
-                data = data - data.min()
-                
-                if y0!=None and sy!=None:
-                    # Initial parameters
-                    p0 = (data.max(), y0-ymin, sx)
-                    
-                    # 1-d gaussian fit
-                    pY, successY = image_processing.fitGauss(data, p0)
+                imgMin = data.min()
+                if imgMin>0:
+                    data -= data.min()
+
+                # Initial parameters
+                if None not in (self.ay1d, self.y01d, self.sy1d):
+                    # Use last fit's parameters as initial estimate
+                    p0 = (self.ay1d, self.y01d-ymin, self.sy1d)
+                elif None not in (y0, sy):
+                    # Use CoM for initial parameter estimate
+                    p0 = (data.max(), y0-ymin, sy)
                 else:
-                    pY, successY = image_processing.fitGauss(data)
-                    
-            except:
-                self.log.WARN("Could not do 1-d gaussian fit.")
+                    # No initial parameters
+                    p0 = None
+
+                # 1-d gaussian fit
+                out = image_processing.fitGauss(data, p0)
+                pY = out[0] # parameters
+                cY = out[1] # covariance
+                successY = out[2] # error
+
+                # Save fit's parameters
+                self.ay1d, self.y01d, self.sy1d = pY[0], pY[1]+ymin, pY[2]
+
+            except Exception as e:
+                self.log.WARN("Could not do 1-d gaussian fit [y]: %s." % str(e))
                 return
                 
             t2 = time.time()
@@ -777,7 +899,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     h.set("x01d", xmin+pX[1]+imageOffsetX)
                 else:
                     h.set("x01d", xmin+pX[1])
+                ex01d = math.sqrt(cX[1][1])
+                h.set("ex01d", ex01d)
                 h.set("sx1d", pX[2])
+                esx1d = math.sqrt(cX[2][2])
+                h.set("esx1d", esx1d)
                 if pixelSize is not None:
                     beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
                     h.set("beamWidth1d", beamWidth)
@@ -790,7 +916,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     h.set("y01d", ymin+pY[1]+imageOffsetY)
                 else:
                     h.set("y01d", ymin+pY[1])
+                ey01d = math.sqrt(cY[1][1])
+                h.set("ey01d", ey01d)
                 h.set("sy1d", pY[2])
+                esy1d = math.sqrt(cY[2][2])
+                h.set("esy1d", esy1d)
                 if pixelSize is not None:
                     beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
                     h.set("beamHeight1d", beamHeight)
@@ -808,7 +938,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("xFitSuccess", 0)
             h.set("ax1d", 0.0)
             h.set("x01d", 0.0)
+            h.set("ex01d", 0.0)
             h.set("sx1d", 0.0)
+            h.set("esx1d", 0.0)
             h.set("beamWidth1d", 0.0)
             h.set("yFitSuccess", 0)
             h.set("ay1d", 0.0)
@@ -821,60 +953,91 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         rotation = self.get("doGaussRotation")
         if self.get("do2DFit"):
             t0 = time.time()
-            
+
             try:
                 # Input data
                 data = img[ymin:ymax, xmin:xmax]
-                data = data - data.min()
+                imgMin = data.min()
+                if imgMin>0:
+                    data -= data.min()
 
                 if rotation:
-                    if x0!=None and y0!=None and sx!=None and sy!=None:
-                        # Initial parameters
-                        p0 = (data.max(), y0-ymin, x0-xmin, sy, sx, 0.0)
-                        
-                        # 2-d gaussian fit
-                        pYX, successYX = image_processing.fitGauss2DRot(data, p0)
+
+                    # Initial parameters
+                    if None not in (self.a2d, self.x02d, self.y02d, self.sx2d, self.sy2d, self.theta2d):
+                        # Use last fit's parameters as initial estimate
+                        p0 = (self.a2d, self.x02d-xmin, self.y02d-ymin, self.sx2d, self.sy2d, self.theta2d)
+                    elif None not in (x0, y0, sx, sy):
+                        # Use CoM for initial parameter estimate
+                        p0 = (data.max(), x0-xmin, y0-ymin, sx, sy, 0.0)
                     else:
-                        pYX, successYX = fitGauss2DRot(data)
+                        p0 = None
+
+                    # 2-d gaussian fit
+                    out = image_processing.fitGauss2DRot(data, p0)
+                    pXY = out[0] # parameters: A, x0, y0, sx, sy, theta
+                    cXY = out[1] # covariance
+                    successXY = out[2] # error
+
+                    # Save fit's parameters
+                    self.a2d, self.x02d, self.y02d, self.sx2d, self.sy2d = pXY[0], pXY[1]+xmin, pXY[2]+ymin, pXY[3], pXY[4]
+                    self.theta2d = pXY[5]
 
                 else:
-                    if x0!=None and y0!=None and sx!=None and sy!=None:
-                        # Initial parameters
-                        p0 = (data.max(), y0-ymin, x0-xmin, sy, sx)
-                        
-                        # 2-d gaussian fit
-                        pYX, successYX = image_processing.fitGauss(data, p0)
+
+                    # Initial parameters
+                    if None not in (self.a2d, self.x02d, self.y02d, self.sx2d, self.sy2d):
+                        # Use last fit's parameters as initial estimate
+                        p0 = (self.a2d, self.x02d-xmin, self.y02d-ymin, self.sx2d, self.sy2d)
+                    elif None not in (x0, y0, sx, sy):
+                        # Use CoM for initial parameter estimate
+                        p0 = (data.max(), x0-xmin, y0-ymin, sx, sy)
                     else:
-                        pYX, successYX = image_processing.fitGauss(data)
-                    
-            except:
-                self.log.WARN("Could not do 2-d gaussian fit.")
+                        p0 = None
+
+                    # 2-d gaussian fit
+                    out = image_processing.fitGauss(data, p0)
+                    pXY = out[0] # parameters: A, x0, y0, sx, sy
+                    cXY = out[1] # covariance
+                    successXY = out[2] # error
+
+                    # Save fit's parameters
+                    self.a2d, self.x02d, self.y02d, self.sx2d, self.sy2d = pXY[0], pXY[1]+xmin, pXY[2]+ymin, pXY[3], pXY[4]
+
+            except Exception as e:
+                self.log.WARN("Could not do 2-d gaussian fit: %s." % str(e))
                 return
             
             t1 = time.time()
         
             h.set("fitTime", (t1-t0))
-            h.set("fitSuccess", successYX)
-            if successY in (1, 2, 3, 4):
-                h.set("a2d", pYX[0])
+            h.set("fitSuccess", successXY)
+            if successXY in (1, 2, 3, 4):
+                h.set("a2d", pXY[0])
                 # Successful fit
                 if absolutePositions:
-                    h.set("x02d", xmin+pYX[2]+imageOffsetX)
-                    h.set("y02d", ymin+pYX[1]+imageOffsetY)
+                    h.set("x02d", xmin+pXY[1]+imageOffsetX)
+                    h.set("y02d", ymin+pXY[2]+imageOffsetY)
                 else:
-                    h.set("x02d", xmin+pYX[2])
-                    h.set("y02d", ymin+pYX[1])
-                h.set("sx2d", pYX[4])
-                h.set("sy2d", pYX[3])
+                    h.set("x02d", xmin+pXY[1])
+                    h.set("y02d", ymin+pXY[2])
+                h.set("ex02d", math.sqrt(cXY[1][1]))
+                h.set("ey02d", math.sqrt(cXY[2][2]))
+                h.set("sx2d", pXY[3])
+                h.set("sy2d", pXY[4])
+                h.set("esx2d", math.sqrt(cXY[3][3]))
+                h.set("esy2d", math.sqrt(cXY[4][4]))
                 if pixelSize is not None:
-                    beamWidth = self.stdDev2BeamSize * pixelSize * pYX[4]
+                    beamWidth = self.stdDev2BeamSize * pixelSize * pXY[3]
                     h.set("beamWidth2d", beamWidth)
-                    beamHeight = self.stdDev2BeamSize * pixelSize * pYX[3]
+                    beamHeight = self.stdDev2BeamSize * pixelSize * pXY[4]
                     h.set("beamHeight2d", beamHeight)
                 if rotation:
-                    h.set("theta2d", pYX[5]%math.pi)
+                    h.set("theta2d", pXY[5]%math.pi)
+                    h.set("etheta2d", math.sqrt(cXY[5][5]))
                 else:
                     h.set("theta2d", 0.0)
+                    h.set("etheta2d", 0.0)
             
             self.log.DEBUG("2-d gaussian fit: done!")
         else:
@@ -882,12 +1045,17 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("fitSuccess", 0)
             h.set("a2d", 0.0)
             h.set("x02d", 0.0)
+            h.set("ex02d", 0.0)
             h.set("sx2d", 0.0)
+            h.set("esx2d", 0.0)
             h.set("beamWidth2d", 0.0)
             h.set("y02d", 0.0)
+            h.set("ey02d", 0.0)
             h.set("sy2d", 0.0)
+            h.set("esy2d", 0.0)
             h.set("beamHeight2d", 0.0)
             h.set("theta2d", 0.0)
+            h.set("etheta2d", 0.0)
     
         # Update device parameters (all at once)
         self.set(h)
