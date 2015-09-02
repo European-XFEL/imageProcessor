@@ -216,13 +216,13 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     
     def findPeakFWHM(self, image, threshold=0.5):
         """Find x-position of peak in 2-d image, and FWHM along x direction"""
-        if type(image)!=numpy.ndarray or image.ndim!=2:
+        if not isinstance(image, numpy.ndarray) or image.ndim!=2:
             return None
 
-        ### First work on y-projection ###
+        ### First work on y distribution ###
 
-        # y-projection
-        imgY = image_processing.imageYProjection(image)
+        # sum along X
+        imgY = image_processing.imageSumAlongX(image)
 
         # Threshold level
         thr = threshold*imgY.max()
@@ -232,11 +232,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         y1 = nz[0]
         y2 = nz[-1]
 
-        ### Then work on the x-projection ###
+        ### Then work on the x distribution ###
 
-        # Cut away y-side-bands and project image onto x axis
+        # Cut away y-side-bands and sum along Y
         img2 = image[y1:y2,:]
-        imgX = image_processing.imageXProjection(img2)
+        imgX = image_processing.imageSumAlongY(img2)
 
         # Find centre-of-gravity and witdh
         (x0, sx) = image_processing.imageCentreOfMass(imgX)
