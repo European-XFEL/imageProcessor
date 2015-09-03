@@ -40,13 +40,28 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.y02d = None
         self.sy2d = None
         self.theta2d = None
-        
+
+        # Current image
+        self.currentImage = None
+
+        # Background image
+        self.bkgImage = None
+
+        # Register additional slots
+        self._ss.registerSlot(self.useAsBackgroundImage)
+        # TODO: save/load bkg image slots
+
     def __del__(self):
         super(ImageProcessor, self).__del__()
 
     @staticmethod
     def expectedParameters(expected):
         data = Schema()
+
+        e = SLOT_ELEMENT(expected).key("useAsBackgroundImage")
+        e.displayedName("Current Image as Background")
+        e.description("Use the current image as background image.")
+        e.commit()
 
         (
         IMAGEDATA(data).key("image")
@@ -148,13 +163,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 
         # Image processing enable bits
         
-        e = BOOL_ELEMENT(expected).key("doBackground")
-        e.displayedName("Subtract Background")
-        e.description("Subtract the background.")
-        e.assignmentOptional().defaultValue(True)
-        e.reconfigurable()
-        e.commit()
-        
         e = BOOL_ELEMENT(expected).key("doMinMaxMean")
         e.displayedName("Min/Max/Mean")
         e.description("Get the following information from the pixels: min, max, mean value.")
@@ -169,7 +177,21 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.reconfigurable()
         e.commit()
 
-        e = BOOL_ELEMENT(expected).key("doXYSum")
+        e = BOOL_ELEMENT(expected).key("subtractBkgImage")
+        e.displayedName("Subtract Background Image")
+        e.description("Subtract the background image.")
+        e.assignmentOptional().defaultValue(False)
+        e.reconfigurable()
+        e.commit()
+
+        e = BOOL_ELEMENT(expected).key("subtractImagePedestal")  # was "doBackground"
+        e.displayedName("Subtract Image Pedestal")
+        e.description("Subtract the image pedestal (ie image = image - image.min()).")
+        e.assignmentOptional().defaultValue(True)
+        e.reconfigurable()
+        e.commit()
+
+        e = BOOL_ELEMENT(expected).key("doXYSum")  # was "doProjection"
         e.displayedName("Sum along X-Y Axes")
         e.description("Sum image along the x- and y-axes.")
         e.assignmentOptional().defaultValue(True)
@@ -206,12 +228,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         
         # Image processing times
         
-        e = FLOAT_ELEMENT(expected).key("backgroundTime")
-        e.displayedName("Background Subtraction Time")
-        e.unit(SECOND)
-        e.readOnly()
-        e.commit()
-        
         e = FLOAT_ELEMENT(expected).key("minMaxMeanTime")
         e.displayedName("Min/Max/Mean Evaluation Time")
         e.unit(SECOND)
@@ -223,7 +239,19 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.unit(SECOND)
         e.readOnly()
         e.commit()
-        
+
+        e = FLOAT_ELEMENT(expected).key("subtractBkgImageTime")
+        e.displayedName("Background Image Subtraction Time")
+        e.unit(SECOND)
+        e.readOnly()
+        e.commit()
+
+        e = FLOAT_ELEMENT(expected).key("subtractPedestalTime")  # was "backgroundTime"
+        e.displayedName("Pedestal Subtraction Time")
+        e.unit(SECOND)
+        e.readOnly()
+        e.commit()
+
         e = FLOAT_ELEMENT(expected).key("xYSumTime")
         e.displayedName("Image X-Y Sums Time")
         e.unit(SECOND)
@@ -531,6 +559,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     #   Implementation of State Machine methods  #
     ##############################################
 
+    def useAsBackgroundImage(self):
+        self.log.INFO("Use current image as background.")
+        self.bkgImage = numpy.array(self.currentImage)  # Copy current image to background image
+
     def okStateOnEntry(self):
         
         # Register call-backs
@@ -541,10 +573,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
         h.set("minMaxMeanTime", 0.0)
         h.set("binCountTime", 0.0)
+        h.set("subtractBkgImageTime", 0.0)
+        h.set("subtractPedestalTime", 0.0)
         h.set("xYSumTime", 0.0)
+        h.set("cOfMTime", 0.0)
         h.set("xFitTime", 0.0)
         h.set("yFitTime", 0.0)
-        h.set("cOfMTime", 0.0)
         h.set("fitTime", 0.0)
 
         h.set("minPxValue", 0.0)
@@ -648,8 +682,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if img.ndim==3 and img.shape[0]==1:
                 # Image has 3rd dimension, but it's 1
                 self.log.DEBUG("Reshaping image...")
-                img = img.reshape((img.shape[1], img.shape[2]))
-            
+                img = img.squeeze()
+
+            self.currentImage = numpy.array(img) # Copy current image, before doing any processing
             self.log.DEBUG("Image loaded!!!")
         
         except Exception as e:
@@ -661,27 +696,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if img.max()<imageThreshold:
                 self.log.DEBUG("Max pixel value below threshold: image discared!!!")
                 return
-        
-        # "Background" subtraction
-        if self.get("doBackground"):
-            t0 = time.time()
-            try:
-                imgMin = img.min()
-                if imgMin>0:
-                    img = img-imgMin
-            except Exception as e:
-                self.log.WARN("Could not subtract background: %s." % str(e))
-                return
-                
-            t1 = time.time()
-                
-            
-            h.set("backgroundTime", (t1-t0))
-            self.log.DEBUG("Background subtraction: done!")
-        else:
-            h.set("backgroundTime", 0.0)
-        
-        
+
+
         # Get pixel min/max/mean values
         if self.get("doMinMaxMean"):
             t0 = time.time()
@@ -726,8 +742,52 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         else:
             h.set("binCountTime", 0.0)
             h.set("imgBinCount", [0.0])
-        
-        
+
+
+        # Background image subtraction
+        if self.get("subtractBkgImage"):
+            t0 = time.time()
+            try:
+                if self.bkgImage is not None and self.bkgImage.shape==img.shape:
+                    # Subtract background image
+                    m = (img>self.bkgImage)  # img is above bkg
+                    n = (img<= self.bkgImage)  # image is below bkg
+
+                    img[m] -= self.bkgImage[m] # subtract bkg from img, where img is above bkg
+                    img[n] = 0 # zero img, where its is below bkg
+
+            except Exception as e:
+                self.log.WARN("Could not subtract background image: %s." % str(e))
+                return
+
+            t1 = time.time()
+
+            h.set("subtractBkgImageTime", (t1-t0))
+            self.log.DEBUG("Background image subtraction: done!")
+        else:
+            h.set("subtractBkgImageTime", 0.0)
+
+
+        # Pedestal subtraction
+        if self.get("subtractImagePedestal"):  # was "doBackground"
+            t0 = time.time()
+            try:
+                imgMin = img.min()
+                if imgMin>0:
+                    # Subtract image pedestal
+                    img = img-imgMin
+            except Exception as e:
+                self.log.WARN("Could not subtract image pedestal: %s." % str(e))
+                return
+
+            t1 = time.time()
+
+            h.set("subtractPedestalTime", (t1-t0))  # was "backgroundTime"
+            self.log.DEBUG("Image pedestal subtraction: done!")
+        else:
+            h.set("subtractPedestalTime", 0.0)  # was "backgroundTime"
+
+
         # Sum the image along the x- and y-axes
         imgX = None
         imgY = None
