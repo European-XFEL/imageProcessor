@@ -267,32 +267,31 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         
         self.set("xPeak2", self.currentPeak)
         self.set("xFWHM2", self.currentFwhm)
-    
-#    # [AP] Till Karabo 1.3.7 onData callback received InputChannel object as input
-#    def onData(self, input):
-#        
-#        try:
-#            for i in range(input.size()):
-#                data = input.read(i)
-#                if data.has('image'):
-#                    self.processImage(data['image'])
-#            
-#            # Signal that we are done with the current data
-#            input.update()
-#        except Exception as e:
-#            self.log.ERROR("Exception caught in onData: %s" % str(e))
 
-    # [AP] From Karabo 1.3.8 onData callback receives Data object as input
     def onData(self, data):
-        
+
         try:
-            if data.has('image'):
-                self.processImage(data['image'])
+            if isinstance(data, Data):
+                # From Karabo 1.3.8 onData callback receives Data object as input
+                if data.has('image'):
+                    self.processImage(data['image'])
+            elif isinstance(data, InputChannel):
+                # Till Karabo 1.3.7 onData callback received InputChannel object as input
+                for i in range(data.size()):
+                    data_ = data.read(i)
+                    if data_.has('image'):
+                        self.processImage(data_['image'])
+
+                # Signal that we are done with the current data
+                data.update()
+            else:
+                raise ValueError("onData received wrong data type: %s" % type(data))
+
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
-    
+
     def onEndOfStream(self):
-        print("onEndOfStream called")
+        self.log.INFO("onEndOfStream called")
     
     def processImage(self, image):
         
