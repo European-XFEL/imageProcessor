@@ -71,6 +71,11 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("Input")
                 .dataSchema(data)
                 .commit(),
+
+        # Images should be dropped if processor is too slow
+        OVERWRITE_ELEMENT(expected).key("input.onSlowness")
+                .setNewDefaultValue("drop")
+                .commit(),
         )
 
         e = INT32_ELEMENT(expected).key("imageWidth")
