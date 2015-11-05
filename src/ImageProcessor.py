@@ -674,10 +674,15 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             imageHeight = dims[1]
             h.set("imageWidth", imageWidth)
             h.set("imageHeight", imageHeight)
-            
-            roiOffsets = imageData.getROIOffsets()
-            imageOffsetX = roiOffsets[0]
-            imageOffsetY = roiOffsets[1]
+
+            try:
+                roiOffsets = imageData.getROIOffsets()
+                imageOffsetX = roiOffsets[0]
+                imageOffsetY = roiOffsets[1]
+            except:
+                # Image has no ROI offset
+                imageOffsetX = 0
+                imageOffsetY = 0
             h.set("imageOffsetX", imageOffsetX)
             h.set("imageOffsetY", imageOffsetY)
 
