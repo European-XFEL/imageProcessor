@@ -7,13 +7,23 @@ __date__ ="October 10, 2013, 10:29 AM"
 __copyright__="Copyright (c) 2010-2013 European XFEL GmbH Hamburg. All rights reserved."
 
 import math
-import numpy
 import time
 
-from karabo.device import *
+import numpy
+
+from karabo.decorators import KARABO_CLASSINFO
+from karabo.device import PythonDevice, launchPythonDevice
 from karabo.ok_error_fsm import OkErrorFsm
+from karathon import (
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA, INPUT_CHANNEL,
+    INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
+    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
+    DEGREE, NUMBER, PIXEL, SECOND,
+    Data, Hash, ImageData, InputChannel, MetricPrefix, NDArray, Schema, Unit
+)
 
 from image_processing import image_processing
+
 
 @KARABO_CLASSINFO("ImageProcessor", "1.3")
 class ImageProcessor(PythonDevice, OkErrorFsm):
