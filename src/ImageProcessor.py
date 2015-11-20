@@ -24,7 +24,7 @@ from karathon import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("ImageProcessor", "1.3")
+@KARABO_CLASSINFO("ImageProcessor", "1.4")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
     # Numerical factor to convert gaussian standard deviation to beam size
