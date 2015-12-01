@@ -7,10 +7,8 @@ __copyright__="Copyright (c) 2010-2014 European XFEL GmbH Hamburg. All rights re
 import numpy
 import scipy.constants
 
-from karabo.decorators import KARABO_CLASSINFO
-from karabo.device import PythonDevice, launchPythonDevice
-from karabo.ok_error_fsm import OkErrorFsm
-from karathon import (
+from karabo.api_1 import (
+    KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
     DOUBLE_ELEMENT, IMAGEDATA, INPUT_CHANNEL, OVERWRITE_ELEMENT, SLOT_ELEMENT,
     STRING_ELEMENT, Data, Hash, InputChannel, MetricPrefix, NDArray, Schema,
     Unit
