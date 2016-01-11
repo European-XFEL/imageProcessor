@@ -10,4 +10,3 @@ if [ -z $KARABO ]; then
 fi
 
 $KARABO/bin/.bundle-pythonplugin.sh $@
-
