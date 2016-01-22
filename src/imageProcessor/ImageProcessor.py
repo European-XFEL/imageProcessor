@@ -22,7 +22,7 @@ from karabo.api_1 import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("ImageProcessor", "1.4")
+@KARABO_CLASSINFO("ImageProcessor", "1.5")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
     # Numerical factor to convert gaussian standard deviation to beam size
@@ -54,6 +54,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         # Background image
         self.bkgImage = None
 
+        # frames per second
+        self.lastTime = None
+        self.counter = 0
+
         # Register additional slots
         self._ss.registerSlot(self.useAsBackgroundImage)
         # TODO: save/load bkg image slots
@@ -84,6 +88,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .setNewDefaultValue("drop")
                 .commit(),
         )
+
+        e = DOUBLE_ELEMENT(expected).key("frameRate")
+        e.displayedName("Frame Rate")
+        e.description("The actual frame rate.")
+        e.unit(Unit.HERTZ)
+        e.readOnly()
+        e.commit()
 
         e = INT32_ELEMENT(expected).key("imageWidth")
         e.displayedName("Image Width")
@@ -665,7 +676,22 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         absolutePositions = self.get("absolutePositions")
         
         h = Hash() # Empty hash
-        
+
+        try:
+            self.counter += 1
+            currentTime = time.time()
+            if self.lastTime is None:
+                self.counter = 0
+                self.lastTime = currentTime
+            elif self.lastTime is not None and (currentTime-self.lastTime)>1.:
+                fps = self.counter / (currentTime-self.lastTime)
+                self.set("frameRate", fps)
+                self.log.DEBUG("Acquisition rate %f Hz" % fps)
+                self.counter = 0
+                self.lastTime = currentTime
+        except Exception as e:
+            self.log.ERROR("Exception caught in processImage: %s" % str(e))
+
         try:
             pixelSize = self.get("pixelSize")
         except:
