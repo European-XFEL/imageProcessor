@@ -120,6 +120,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                              "will be processed.")
                 .assignmentOptional().defaultValue(0.)
                 .unit(Unit.NUMBER)
+                .expertAccess()
                 .init()
                 .commit(),
         
@@ -128,6 +129,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .description("The range for the gaussian fit (in standard "
                              "deviations).")
                 .assignmentOptional().defaultValue(3.0)
+                .expertAccess()
                 .init()
                 .commit(),
         
@@ -138,6 +140,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                              "below threshold will be discarded.")
                 .assignmentOptional().defaultValue(0.10)
                 .minInc(0.0).maxInc(1.0)
+                .expertAccess()
                 .init()
                 .commit(),
 
@@ -147,6 +150,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                              "image.min()) before centre-of-mass and gaussian "
                              "fit.")
                 .assignmentOptional().defaultValue(True)
+                .expertAccess()
                 .init()
                 .commit(),
         
@@ -163,6 +167,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("x0 (Centre-Of-Mass)")
                 .description("x0 from centre-of-mass.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
         
@@ -170,6 +175,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("sigma_x (Centre-Of-Mass)")
                 .description("sigma_x from centre-of-mass.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
         
@@ -177,6 +183,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("y0 (Centre-Of-Mass)")
                 .description("y0 from Centre-Of-Mass.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
         
@@ -184,6 +191,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("sigma_y (Centre-Of-Mass)")
                 .description("sigma_y from Centre-Of-Mass.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
         
@@ -213,6 +221,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("sigma_x (1D Fit)")
                 .description("sigma_x from 1D Fit.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
 
@@ -257,6 +266,7 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .displayedName("sigma_y (1D Fit)")
                 .description("sigma_y from 1D Fit.")
                 .unit(Unit.PIXEL)
+                .expertAccess()
                 .readOnly()
                 .commit(),
 
