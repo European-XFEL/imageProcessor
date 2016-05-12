@@ -234,8 +234,8 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .commit(),
         
         DOUBLE_ELEMENT(expected).key("beamWidth1d")
-                .displayedName("Beam Width (1D Fit)")
-                .description("Beam width from 1D Fit. Defined as 4x sigma_x.")
+                .displayedName("Beam Diameter in X")
+                .description("Beam diameter in X, from 1D Fit. Defined as 4x sigma_x.")
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .readOnly()
                 .commit(),
@@ -279,8 +279,8 @@ class SimpleImageProcessor(PythonDevice, OkErrorFsm):
                 .commit(),
         
         DOUBLE_ELEMENT(expected).key("beamHeight1d")
-                .displayedName("Beam Height (1D Fit)")
-                .description("Beam heigth from 1D Fit. Defined as 4x sigma_y.")
+                .displayedName("Beam Diameter in Y")
+                .description("Beam diameter in Y, from 1D Fit. Defined as 4x sigma_y.")
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .readOnly()
                 .commit(),
