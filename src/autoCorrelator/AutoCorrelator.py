@@ -7,7 +7,7 @@ __copyright__="Copyright (c) 2010-2014 European XFEL GmbH Hamburg. All rights re
 import numpy
 import scipy.constants
 
-from karabo.api_1 import (
+from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
     DOUBLE_ELEMENT, IMAGEDATA, INPUT_CHANNEL, OVERWRITE_ELEMENT, SLOT_ELEMENT,
     STRING_ELEMENT, Data, Hash, InputChannel, MetricPrefix, NDArray, Schema,
@@ -17,7 +17,7 @@ from karabo.api_1 import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("AutoCorrelator", "1.3")
+@KARABO_CLASSINFO("AutoCorrelator", "1.4 1.5")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     def __init__(self, configuration):
