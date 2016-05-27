@@ -6,10 +6,8 @@ import math
 import numpy
 import time
 
-from karabo.decorators import KARABO_CLASSINFO
-from karabo.device import PythonDevice, launchPythonDevice
-from karabo.ok_error_fsm import OkErrorFsm
-from karabo.karathon import (
+from karabo.bound import (
+    KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA, INPUT_CHANNEL,
     INT32_ELEMENT, OVERWRITE_ELEMENT,
     Data, Hash, ImageData, InputChannel, MetricPrefix, NDArray, Schema, Unit
@@ -18,7 +16,7 @@ from karabo.karathon import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("SimpleImageProcessor", "1.3 1.4")
+@KARABO_CLASSINFO("SimpleImageProcessor", "1.4 1.5")
 class SimpleImageProcessor(PythonDevice, OkErrorFsm):
 
     # Numerical factor to convert gaussian standard deviation to beam size
