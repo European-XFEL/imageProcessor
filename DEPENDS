@@ -1,3 +1,3 @@
 # type     category     package         tag
-dependency dependencies imageProcessing branches/2.2
+dependency dependencies imageProcessing tags/2.2.0
 
