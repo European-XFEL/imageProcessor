@@ -13,16 +13,16 @@ import numpy
 
 from karabo.bound import (
     KARABO_CLASSINFO,  PythonDevice, launchPythonDevice, OkErrorFsm,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA, INPUT_CHANNEL,
-    INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
-    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
-    Data, Hash, ImageData, InputChannel, MetricPrefix, NDArray, Schema, Unit
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
+    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
+    Hash, ImageData, InputChannel, MetricPrefix, Schema, Unit
 )
 
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("ImageProcessor", "1.4 1.5")
+@KARABO_CLASSINFO("ImageProcessor", "2.0")
 class ImageProcessor(PythonDevice, OkErrorFsm):
 
     # Numerical factor to convert gaussian standard deviation to beam size
@@ -75,7 +75,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e.commit()
 
         (
-        IMAGEDATA(data).key("image")
+        IMAGEDATA_ELEMENT(data).key("image")
         .commit(),
 
         INPUT_CHANNEL(expected).key("input")
@@ -127,7 +127,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         e = FLOAT_ELEMENT(expected).key("pixelSize")
         e.displayedName("Pixel Size")
         e.description("The pixel size.")
-        e.assignmentOptional().noDefaultValue()
+        e.assignmentOptional().defaultValue(0.)
         e.unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
         e.reconfigurable()
         e.commit()
@@ -644,29 +644,17 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     def onData(self, data):
 
         try:
-            if isinstance(data, Data):
-                # From Karabo 1.3.8 onData callback receives Data object as input
-                if data.has('image'):
-                    self.processImage(data['image'])
-            elif isinstance(data, InputChannel):
-                # Till Karabo 1.3.7 onData callback received InputChannel object as input
-                for i in range(data.size()):
-                    data_ = data.read(i)
-                    if data_.has('image'):
-                        self.processImage(data_['image'])
-
-                # Signal that we are done with the current data
-                data.update()
+            if data.has('image'):
+                self.processImage(data['image'])
             else:
-                raise ValueError("onData received wrong data type: %s" % type(data))
-
+                self.log.DEBUG("data does not have any image")
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
     
     def onEndOfStream(self):
         self.log.INFO("onEndOfStream called")
     
-    def processImage(self, image):
+    def processImage(self, imageData):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
         imageThreshold = self.get("imageThreshold")
         range = self.get("fitRange")
@@ -697,17 +685,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         except:
             # No pixel size
             pixelSize = None
-                
-        try:
-            imageArray = NDArray(image, copy=False)
-            imageData = ImageData(image, copy=False)
-            
+
+        try:            
             dims = imageData.getDimensions()
             imageWidth = dims[0]
             imageHeight = dims[1]
             h.set("imageWidth", imageWidth)
             h.set("imageHeight", imageHeight)
-
             try:
                 roiOffsets = imageData.getROIOffsets()
                 imageOffsetX = roiOffsets[0]
@@ -719,7 +703,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("imageOffsetX", imageOffsetX)
             h.set("imageOffsetY", imageOffsetY)
 
-            img = imageArray.getData() # data buffer will be converted to np.ndarray
+            img = imageData.getData() # np.ndarray
             if img.ndim==3 and img.shape[0]==1:
                 # Image has 3rd dimension, but it's 1
                 self.log.DEBUG("Reshaping image...")
@@ -731,13 +715,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         except Exception as e:
             self.log.WARN("In processImage: %s" % str(e))
             return
-        
+
         # Filter by Threshold
         if filterImagesByThreshold:
             if img.max()<imageThreshold:
                 self.log.DEBUG("Max pixel value below threshold: image discared!!!")
                 return
-
 
         # Get pixel min/max/mean values
         if self.get("doMinMaxMean"):
@@ -752,7 +735,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 
             t1 = time.time()
             
-            
             h.set("minMaxMeanTime", (t1-t0))
             h.set("minPxValue", float(imgMin))
             h.set("maxPxValue", float(imgMax))
@@ -763,7 +745,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("minPxValue", 0.0)
             h.set("maxPxValue", 0.0)
             h.set("meanPxValue", 0.0)
-        
         
         # Frequency of Pixel Values
         if self.get("doBinCount"):
@@ -783,7 +764,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         else:
             h.set("binCountTime", 0.0)
             h.set("imgBinCount", [0.0])
-
 
         # Background image subtraction
         if self.get("subtractBkgImage"):
