@@ -760,7 +760,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
             
             h.set("binCountTime", (t1-t0))
-            h.set("imgBinCount", pxFreq)
+            h.set("imgBinCount", pxFreq.tolist())
         else:
             h.set("binCountTime", 0.0)
             h.set("imgBinCount", [0.0])
@@ -829,8 +829,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
             
             h.set("xYSumTime", (t1-t0))
-            h.set("imgX", imgX)
-            h.set("imgY", imgY)
+            h.set("imgX", imgX.tolist())
+            h.set("imgY", imgY.tolist())
             self.log.DEBUG("Image X-Y sums: done!")
         else:
             h.set("xYSumTime", 0.0)
@@ -895,7 +895,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("y0", 0.0)
             h.set("sx", 0.0)
         
-        
+
         # 1-D Gaussian Fits
         if self.get("do1DFit"):
 
@@ -1028,8 +1028,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("y01d", 0.0)
             h.set("sy1d", 0.0)
             h.set("beamHeight1d", 0.0)
-            
-        
+
+
         # 2-D Gaussian Fits
         rotation = self.get("doGaussRotation")
         if self.get("do2DFit"):
@@ -1137,7 +1137,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("beamHeight2d", 0.0)
             h.set("theta2d", 0.0)
             h.set("etheta2d", 0.0)
-    
+
         # Update device parameters (all at once)
         self.set(h)
         
