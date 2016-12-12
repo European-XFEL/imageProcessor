@@ -9,9 +9,8 @@
 #############################################################################
 
 import math
+import numpy as np
 import time
-
-import numpy
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
@@ -602,7 +601,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     def useAsBackgroundImage(self):
         self.log.INFO("Use current image as background.")
         # Copy current image to background image
-        self.bkgImage = numpy.array(self.currentImage)
+        self.bkgImage = np.array(self.currentImage)
 
     def okStateOnEntry(self):
 
@@ -729,7 +728,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 img = img.squeeze()
 
             # Copy current image, before doing any processing
-            self.currentImage = numpy.array(img)
+            self.currentImage = np.array(img)
             self.log.DEBUG("Image loaded!!!")
 
         except Exception as e:
@@ -883,17 +882,17 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     ymin = 0
                     ymax = imageHeight
                 elif range == "user-defined":
-                    xmin = numpy.maximum(userDefinedRange[0], 0)
-                    xmax = numpy.minimum(userDefinedRange[1], imageWidth)
-                    ymin = numpy.maximum(userDefinedRange[2], 0)
-                    ymax = numpy.minimum(userDefinedRange[3], imageHeight)
+                    xmin = np.maximum(userDefinedRange[0], 0)
+                    xmax = np.minimum(userDefinedRange[1], imageWidth)
+                    ymin = np.maximum(userDefinedRange[2], 0)
+                    ymax = np.minimum(userDefinedRange[3], imageHeight)
                     # TODO check that xmin<xmax and ymin<ymax
                 else:
                     # "auto"
-                    xmin = numpy.maximum(int(x0 - sigmas * sx), 0)
-                    xmax = numpy.minimum(int(x0 + sigmas * sx), imageWidth)
-                    ymin = numpy.maximum(int(y0 - sigmas * sy), 0)
-                    ymax = numpy.minimum(int(y0 + sigmas * sy), imageHeight)
+                    xmin = np.maximum(int(x0 - sigmas * sx), 0)
+                    xmax = np.minimum(int(x0 + sigmas * sx), imageWidth)
+                    ymin = np.maximum(int(y0 - sigmas * sy), 0)
+                    ymax = np.minimum(int(y0 + sigmas * sy), imageHeight)
 
             except Exception as e:
                 self.log.WARN("Could not calculate centre-of-mass: %s." %
