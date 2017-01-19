@@ -284,7 +284,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             if data.has('image'):
                 self.processImage(data['image'])
             else:
-                self.log.DEBUG("data does not have any image")
+                self.log.WARN("data does not have any image")
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
