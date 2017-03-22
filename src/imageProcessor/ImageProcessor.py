@@ -23,7 +23,7 @@ from karabo.bound import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("ImageProcessor", "2.0")
+@KARABO_CLASSINFO("ImageProcessor", "2.1")
 class ImageProcessor(PythonDevice, OkErrorFsm):
     # Numerical factor to convert gaussian standard deviation to beam size
     stdDev2BeamSize = 4.0
@@ -658,7 +658,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         # Reset device parameters (all at once)
         self.set(h)
 
-    def onData(self, data):
+    def onData(self, data, metaData):
 
         try:
             if data.has('image'):
