@@ -19,7 +19,7 @@ from karabo.bound import (
 from image_processing import image_processing
 
 
-@KARABO_CLASSINFO("AutoCorrelator", "2.0")
+@KARABO_CLASSINFO("AutoCorrelator", "2.1")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -278,7 +278,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.set("xPeak2", self.currentPeak)
         self.set("xFWHM2", self.currentFwhm)
 
-    def onData(self, data):
+    def onData(self, data, metaData):
 
         try:
             if data.has('image'):
