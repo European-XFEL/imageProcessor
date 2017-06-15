@@ -75,9 +75,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .description("Use the current image as background image.")
                 .commit(),
 
-            IMAGEDATA_ELEMENT(data).key("image")
-                .commit(),
-
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
                 .dataSchema(data)
@@ -661,7 +658,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     def onData(self, data, metaData):
 
         try:
-            if data.has('image'):
+            if data.has('data.image'):
+                self.processImage(data['data.image'])
+            elif data.has('image'):
+                # To ensure backward compatibility with older versions of cameras
                 self.processImage(data['image'])
             else:
                 self.log.DEBUG("data does not have any image")
