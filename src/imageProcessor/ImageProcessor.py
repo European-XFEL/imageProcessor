@@ -14,7 +14,7 @@ import time
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
     STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
     Hash, MetricPrefix, Schema, Unit
@@ -656,12 +656,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.set(h)
 
     def onData(self, data, metaData):
-
         try:
             if data.has('data.image'):
                 self.processImage(data['data.image'])
             elif data.has('image'):
-                # To ensure backward compatibility with older versions of cameras
+                # To ensure backward compatibility
+                # with older versions of cameras
                 self.processImage(data['image'])
             else:
                 self.log.DEBUG("data does not have any image")
@@ -688,8 +688,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if self.lastTime is None:
                 self.counter = 0
                 self.lastTime = currentTime
-            elif (self.lastTime is not None
-                  and (currentTime - self.lastTime) > 1.):
+            elif (self.lastTime is not None and
+                  (currentTime - self.lastTime) > 1.):
                 fps = self.counter / (currentTime - self.lastTime)
                 self.set("frameRate", fps)
                 self.log.DEBUG("Acquisition rate %f Hz" % fps)
@@ -790,8 +790,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         if self.get("subtractBkgImage"):
             t0 = time.time()
             try:
-                if (self.bkgImage is not None and self.bkgImage.shape
-                        == img.shape):
+                if(self.bkgImage is not None and
+                   self.bkgImage.shape == img.shape):
                     # Subtract background image
                     m = (img > self.bkgImage)  # img is above bkg
                     n = (img <= self.bkgImage)  # image is below bkg
@@ -999,37 +999,77 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             h.set("xFitTime", (t1 - t0))
             h.set("xFitSuccess", successX)
+
             if successX in (1, 2, 3, 4):
                 # Successful fit
-                if absolutePositions:
-                    h.set("x01d", xmin + pX[1] + imageOffsetX)
-                else:
-                    h.set("x01d", xmin + pX[1])
-                ex01d = math.sqrt(cX[1][1])
-                h.set("ex01d", ex01d)
-                h.set("sx1d", pX[2])
-                esx1d = math.sqrt(cX[2][2])
-                h.set("esx1d", esx1d)
-                if pixelSize is not None:
-                    beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
-                    h.set("beamWidth1d", beamWidth)
+                if cX is None:
+                    self.log.WARN("Successful X fit with singular covariance "
+                                  "matrix. Resetting initial fit values.")
+                    self.ax1d = None
+                    self.x01d = None
+                    self.sx1d = None
+
+                try:
+                    if absolutePositions:
+                        h.set("x01d", xmin + pX[1] + imageOffsetX)
+                    else:
+                        h.set("x01d", xmin + pX[1])
+
+                    if cX is not None:
+                        ex01d = math.sqrt(cX[1][1])
+                        esx1d = math.sqrt(cX[2][2])
+                    else:
+                        ex01d = 0.0
+                        esx1d = 0.0
+
+                    h.set("ex01d", ex01d)
+                    h.set("esx1d", esx1d)
+                    h.set("sx1d", pX[2])
+
+                    if pixelSize is not None:
+                        beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
+                        h.set("beamWidth1d", beamWidth)
+
+                except Exception as e:
+                    self.log.WARN("Exception caught after successful X fit: %s"
+                                  % str(e))
 
             h.set("yFitTime", (t2 - t1))
             h.set("yFitSuccess", successY)
+
             if successY in (1, 2, 3, 4):
                 # Successful fit
-                if absolutePositions:
-                    h.set("y01d", ymin + pY[1] + imageOffsetY)
-                else:
-                    h.set("y01d", ymin + pY[1])
-                ey01d = math.sqrt(cY[1][1])
-                h.set("ey01d", ey01d)
-                h.set("sy1d", pY[2])
-                esy1d = math.sqrt(cY[2][2])
-                h.set("esy1d", esy1d)
-                if pixelSize is not None:
-                    beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
-                    h.set("beamHeight1d", beamHeight)
+                if cY is None:
+                    self.log.WARN("Successful Y fit with singular covariance "
+                                  "matrix.. Resetting initial fit values.")
+                    self.ay1d = None
+                    self.y01d = None
+                    self.sy1d = None
+
+                try:
+                    if absolutePositions:
+                        h.set("y01d", ymin + pY[1] + imageOffsetY)
+                    else:
+                        h.set("y01d", ymin + pY[1])
+
+                    if cY is not None:
+                        ey01d = math.sqrt(cY[1][1])
+                        esy1d = math.sqrt(cY[2][2])
+                    else:
+                        ey01d = 0.0
+                        esy1d = 0.0
+                    h.set("ey01d", ey01d)
+                    h.set("esy1d", esy1d)
+
+                    h.set("sy1d", pY[2])
+
+                    if pixelSize is not None:
+                        beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
+                        h.set("beamHeight1d", beamHeight)
+
+                except Exception as e:
+                    self.log.WARN("Exception caught after successful Y fit: %s"
+                                  % str(e))
 
             if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
                 ax1d = pX[0] / pY[2] / math.sqrt(2 * math.pi)
@@ -1126,18 +1166,38 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if successXY in (1, 2, 3, 4):
                 h.set("a2d", pXY[0])
                 # Successful fit
+                if cXY is None:
+                    self.log.WARN("Successful XY fit with singular covariance "
+                                  "matrix. Resetting initial fit values.")
+                    self.a2d = None
+                    self.x02d = None
+                    self.y02d = None
+                    self.sx2d = None
+                    self.sy2d = None
+                    if rotation:
+                        self.theta2d = None
+
                 if absolutePositions:
                     h.set("x02d", xmin + pXY[1] + imageOffsetX)
                     h.set("y02d", ymin + pXY[2] + imageOffsetY)
                 else:
                     h.set("x02d", xmin + pXY[1])
                     h.set("y02d", ymin + pXY[2])
-                h.set("ex02d", math.sqrt(cXY[1][1]))
-                h.set("ey02d", math.sqrt(cXY[2][2]))
+
+                if cXY is not None:
+                    h.set("ex02d", math.sqrt(cXY[1][1]))
+                    h.set("ey02d", math.sqrt(cXY[2][2]))
+                    h.set("esx2d", math.sqrt(cXY[3][3]))
+                    h.set("esy2d", math.sqrt(cXY[4][4]))
+                else:
+                    h.set("ex02d", 0.0)
+                    h.set("ey02d", 0.0)
+                    h.set("esx2d", 0.0)
+                    h.set("esy2d", 0.0)
+
                 h.set("sx2d", pXY[3])
                 h.set("sy2d", pXY[4])
-                h.set("esx2d", math.sqrt(cXY[3][3]))
-                h.set("esy2d", math.sqrt(cXY[4][4]))
+
                 if pixelSize is not None:
                     beamWidth = self.stdDev2BeamSize * pixelSize * pXY[3]
                     h.set("beamWidth2d", beamWidth)
@@ -1145,7 +1205,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     h.set("beamHeight2d", beamHeight)
                 if rotation:
                     h.set("theta2d", pXY[5] % math.pi)
-                    h.set("etheta2d", math.sqrt(cXY[5][5]))
+                    if cXY is not None:
+                        h.set("etheta2d", math.sqrt(cXY[5][5]))
                 else:
                     h.set("theta2d", 0.0)
                     h.set("etheta2d", 0.0)
