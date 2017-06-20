@@ -17,7 +17,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
     STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
-    Hash, MetricPrefix, Schema, Unit, InputChannel
+    Hash, MetricPrefix, Schema, Unit
 )
 
 from image_processing import image_processing
@@ -985,7 +985,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 pY = out[0]  # parameters
                 cY = out[1]  # covariance
                 successY = out[2]  # error
-                msg = out[3]
 
                 # Save fit's parameters
                 self.ay1d, self.y01d, self.sy1d = pY[0], pY[1] + ymin, pY[2]
@@ -1002,9 +1001,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             if successX in (1, 2, 3, 4):
                 # Successful fit
-                if cX is None:
-                    self.log.WARN("Successful fit with singular covariance matrix: %s" % msg)
-
+                if cX is None: # do we really need this?
+                    self.log.WARN("Successful X fit with singular covariance "
+                                  "matrix. Resetting fit parameters.")
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
@@ -1021,21 +1020,23 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                             beamWidth = self.stdDev2BeamSize * pixelSize * pX[2]
                             h.set("beamWidth1d", beamWidth)
                 except Exception as e:
-                    self.log.WARN("Exception caught after successful X fit: %s" % str(e))
+                    self.log.WARN("Exception caught after successful X fit: %s"
+                                  % str(e))
 
             h.set("yFitTime", (t2 - t1))
             h.set("yFitSuccess", successY)
 
             if successY in (1, 2, 3, 4):
                 # Successful fit
-                if cY is None:
-                    self.log.WARN("Successful fit with singular covariance matrix: %s" % msg)
-                try: 
+                if cY is None:  # do we really need this?
+                    self.log.WARN("Successful Y fit with singular covariance "
+                                  "matrix. Resetting fit parameters.")
+                try:
                     if absolutePositions:
                         h.set("y01d", ymin + pY[1] + imageOffsetY)
                     else:
                         h.set("y01d", ymin + pY[1])
-                        
+
                         if cY is not None:
                             ey01d = math.sqrt(cY[1][1])
                             h.set("ey01d", ey01d)
@@ -1047,7 +1048,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                             beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
                             h.set("beamHeight1d", beamHeight)
                 except Exception as e:
-                    self.log.WARN("Exception caught after successful Y fit: %s" % str(e))
+                    self.log.WARN("Exception caught after successful Y fit: %s"
+                                  % str(e))
 
             if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
                 ax1d = pX[0] / pY[2] / math.sqrt(2 * math.pi)
@@ -1128,7 +1130,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
-                    msg = out[3]
 
                     # Save fit's parameters
                     self.a2d, self.x02d, self.y02d, self.sx2d, self.sy2d = (
@@ -1145,8 +1146,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if successXY in (1, 2, 3, 4):
                 h.set("a2d", pXY[0])
                 # Successful fit
-                if cXY is None:
-                    self.log.WARN("Successful fit with singular covariance matrix: %s" % msg)
+                if cXY is None:  # do we really need this?
+                    self.log.WARN("Successful XY fit with singular covariance "
+                                  "matrix")
                 if absolutePositions:
                     h.set("x02d", xmin + pXY[1] + imageOffsetX)
                     h.set("y02d", ymin + pXY[2] + imageOffsetY)
@@ -1162,7 +1164,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
                 h.set("sx2d", pXY[3])
                 h.set("sy2d", pXY[4])
-
 
                 if pixelSize is not None:
                     beamWidth = self.stdDev2BeamSize * pixelSize * pXY[3]
