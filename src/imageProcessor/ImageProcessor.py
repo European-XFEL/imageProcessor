@@ -14,7 +14,7 @@ import time
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
     STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
     Hash, MetricPrefix, Schema, Unit
@@ -660,7 +660,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if data.has('data.image'):
                 self.processImage(data['data.image'])
             elif data.has('image'):
-                # To ensure backward compatibility with older versions of cameras
+                # To ensure backward compatibility
+                # with older versions of cameras
                 self.processImage(data['image'])
             else:
                 self.log.DEBUG("data does not have any image")
@@ -687,8 +688,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if self.lastTime is None:
                 self.counter = 0
                 self.lastTime = currentTime
-            elif (self.lastTime is not None
-                  and (currentTime - self.lastTime) > 1.):
+            elif (self.lastTime is not None and
+                  (currentTime - self.lastTime) > 1.):
                 fps = self.counter / (currentTime - self.lastTime)
                 self.set("frameRate", fps)
                 self.log.DEBUG("Acquisition rate %f Hz" % fps)
@@ -789,8 +790,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         if self.get("subtractBkgImage"):
             t0 = time.time()
             try:
-                if (self.bkgImage is not None and self.bkgImage.shape
-                        == img.shape):
+                if(self.bkgImage is not None and
+                   self.bkgImage.shape == img.shape):
                     # Subtract background image
                     m = (img > self.bkgImage)  # img is above bkg
                     n = (img <= self.bkgImage)  # image is below bkg
@@ -1001,9 +1002,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             if successX in (1, 2, 3, 4):
                 # Successful fit
-                if cX is None: # do we really need this?
-                    self.log.DEBUG("Successful X fit with singular covariance "
-                                  "matrix.")
+                if cX is None:
+                    self.log.WARN("Successful X fit with singular covariance "
+                                  "matrix. Resetting initial fit values.")
+                    self.ax1d = None
+                    self.x01d = None
+                    self.sx1d = None
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
@@ -1030,9 +1034,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             if successY in (1, 2, 3, 4):
                 # Successful fit
-                if cY is None:  # do we really need this?
-                    self.log.DEBUG("Successful Y fit with singular covariance "
-                                  "matrix.")
+                if cY is None:
+                    self.log.WARN("Successful Y fit with singular covariance "
+                                  "matrix.. Resetting initial fit values.")
+                    self.ay1d = None
+                    self.y01d = None
+                    self.sy1d = None
                 try:
                     if absolutePositions:
                         h.set("y01d", ymin + pY[1] + imageOffsetY)
@@ -1149,9 +1156,17 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             if successXY in (1, 2, 3, 4):
                 h.set("a2d", pXY[0])
                 # Successful fit
-                if cXY is None:  # do we really need this?
-                    self.log.DEBUG("Successful XY fit with singular covariance "
-                                  "matrix")
+                if cXY is None:
+                    self.log.WARN("Successful XY fit with singular covariance "
+                                  "matrix. Resetting initial fit values.")
+                    self.a2d = None
+                    self.x02d = None
+                    self.y02d = None
+                    self.sx2d = None
+                    self.sy2d = None
+                    if rotation:
+                        self.theta2d = None
+
                 if absolutePositions:
                     h.set("x02d", xmin + pXY[1] + imageOffsetX)
                     h.set("y02d", ymin + pXY[2] + imageOffsetY)
