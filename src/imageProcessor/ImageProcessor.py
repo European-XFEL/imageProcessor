@@ -1008,6 +1008,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     self.ax1d = None
                     self.x01d = None
                     self.sx1d = None
+                    
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
@@ -1016,9 +1017,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
                     if cX is not None:
                         ex01d = math.sqrt(cX[1][1])
-                        h.set("ex01d", ex01d)
                         esx1d = math.sqrt(cX[2][2])
-                        h.set("esx1d", esx1d)
+                    else:
+                        ex01d = 0.0
+                        esx1d = 0.0
+
+                    h.set("ex01d", ex01d)
+                    h.set("esx1d", esx1d)
                     h.set("sx1d", pX[2])
 
                     if pixelSize is not None:
@@ -1040,6 +1045,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     self.ay1d = None
                     self.y01d = None
                     self.sy1d = None
+
                 try:
                     if absolutePositions:
                         h.set("y01d", ymin + pY[1] + imageOffsetY)
@@ -1048,9 +1054,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
                     if cY is not None:
                         ey01d = math.sqrt(cY[1][1])
-                        h.set("ey01d", ey01d)
                         esy1d = math.sqrt(cY[2][2])
-                        h.set("esy1d", esy1d)
+                    else:
+                        ey01d = 0.0
+                        esy1d = 0.0
+                    h.set("ey01d", ey01d)
+                    h.set("esy1d", esy1d)
+
                     h.set("sy1d", pY[2])
 
                     if pixelSize is not None:
@@ -1179,6 +1189,12 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     h.set("ey02d", math.sqrt(cXY[2][2]))
                     h.set("esx2d", math.sqrt(cXY[3][3]))
                     h.set("esy2d", math.sqrt(cXY[4][4]))
+                else:
+                    h.set("ex02d", 0.0)
+                    h.set("ey02d", 0.0)
+                    h.set("esx2d", 0.0)
+                    h.set("esy2d", 0.0)
+
 
                 h.set("sx2d", pXY[3])
                 h.set("sy2d", pXY[4])
