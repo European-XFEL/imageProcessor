@@ -1008,7 +1008,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                     self.ax1d = None
                     self.x01d = None
                     self.sx1d = None
-
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
