@@ -1003,7 +1003,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 # Successful fit
                 if cX is None: # do we really need this?
                     self.log.WARN("Successful X fit with singular covariance "
-                                  "matrix. Resetting fit parameters.")
+                                  "matrix.")
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
@@ -1030,7 +1030,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 # Successful fit
                 if cY is None:  # do we really need this?
                     self.log.WARN("Successful Y fit with singular covariance "
-                                  "matrix. Resetting fit parameters.")
+                                  "matrix.")
                 try:
                     if absolutePositions:
                         h.set("y01d", ymin + pY[1] + imageOffsetY)
