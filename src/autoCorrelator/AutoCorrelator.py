@@ -40,9 +40,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         data = Schema()
         (
-            IMAGEDATA_ELEMENT(data).key("image")
-                .commit(),
-
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
                 .dataSchema(data)
@@ -281,7 +278,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     def onData(self, data, metaData):
 
         try:
-            if data.has('image'):
+            if data.has('data.image'):
+                self.processImage(data['data.image'])
+            elif data.has('image'):
+                # To ensure backward compatibility
+                # with older versions of cameras
                 self.processImage(data['image'])
             else:
                 self.log.WARN("data does not have any image")
