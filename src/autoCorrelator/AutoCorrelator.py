@@ -12,8 +12,8 @@ import scipy.constants
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
-    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
-    SLOT_ELEMENT, STRING_ELEMENT, Hash, InputChannel, MetricPrefix, Schema,
+    DOUBLE_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
+    SLOT_ELEMENT, STRING_ELEMENT, Hash, MetricPrefix, Schema,
     State, Unit
 )
 
@@ -23,7 +23,9 @@ from image_processing import image_processing
 @KARABO_CLASSINFO("AutoCorrelator", "2.1")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
-    shapeFactor = {'Gaussian Beam': 1/math.sqrt(2), 'Sech^2 Beam': 1/1.543}
+    # AKA shape-factor
+    deconvolutionFactor = {'Gaussian Beam': 1/math.sqrt(2),
+                           'Sech^2 Beam': 1/1.543}
 
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -135,7 +137,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .displayedName("Beam Shape")
                 .description("Time shape of the beam.")
                 .assignmentOptional().defaultValue("Gaussian Beam")
-                .options("Gaussian Beam,Sech^2 Beam", sep=",")
+                .options(','.join([k for k in AutoCorrelator.
+                                  deconvolutionFactor.keys()]), sep=",")
                 .reconfigurable()
                 .allowedStates(State.NORMAL)
                 .commit(),
@@ -194,7 +197,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             recalculateWidth = True
 
         if recalculateWidth is True and self.currentFwhm is not None:
-            sF = self.shapeFactor[beamShape]
+            sF = self.deconvolutionFactor[beamShape]
             w3 = self.currentFwhm * sF * calibrationFactor
             self.set("xWidth3", w3)
             self.log.DEBUG("Image re-processed!!!")
@@ -299,7 +302,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         try:
             calibrationFactor = self.get("calibrationFactor")
-            sF = self.shapeFactor[self.get("beamShape")]
+            sF = self.deconvolutionFactor[self.get("beamShape")]
 
             imageArray = imageData.getData()
             (x3, s3) = self.findPeakFWHM(imageArray)
