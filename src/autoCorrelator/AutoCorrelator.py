@@ -6,13 +6,14 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
+import math
 import numpy
 import scipy.constants
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
-    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
-    SLOT_ELEMENT, STRING_ELEMENT, Hash, InputChannel, MetricPrefix, Schema,
+    DOUBLE_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
+    SLOT_ELEMENT, STRING_ELEMENT, Hash, MetricPrefix, Schema,
     State, Unit
 )
 
@@ -21,6 +22,11 @@ from image_processing import image_processing
 
 @KARABO_CLASSINFO("AutoCorrelator", "2.1")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
+
+    # AKA shape-factor
+    deconvolutionFactor = {'Gaussian Beam': 1/math.sqrt(2),
+                           'Sech^2 Beam': 1/1.543}
+
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(AutoCorrelator, self).__init__(configuration)
@@ -123,17 +129,16 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .displayedName("Calibration constant [fs/px]")
                 .description("The calibration constant.")
             #    .unit(Unit.???) # TODO Unit is fs/px
-                .assignmentOptional().defaultValue(0)
-                .reconfigurable()
-                .allowedStates(State.NORMAL)
+                .readOnly().initialValue(0)
                 .commit(),
 
-            DOUBLE_ELEMENT(expected)
-                .key("shapeFactor")
-                .displayedName("Shape Factor")
-                .description("Shape factor to convert FWHM to peak width.")
-                .assignmentOptional().defaultValue(1.)
-            #    .options("1.") # TODO...
+            STRING_ELEMENT(expected)
+                .key("beamShape")
+                .displayedName("Beam Shape")
+                .description("Time shape of the beam.")
+                .assignmentOptional().defaultValue("Gaussian Beam")
+                .options(','.join([k for k in AutoCorrelator.
+                                  deconvolutionFactor.keys()]), sep=",")
                 .reconfigurable()
                 .allowedStates(State.NORMAL)
                 .commit(),
@@ -179,20 +184,21 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         recalculateWidth = False
         calibrationFactor = self.get("calibrationFactor")
-        shapeFactor = self.get("shapeFactor")
+        beamShape = self.get("beamShape")
 
         if inputConfig.has("calibrationFactor"):
             # Calibration factor has changed
             calibrationFactor = inputConfig.get("calibrationFactor")
             recalculateWidth = True
 
-        if inputConfig.has("shapeFactor"):
+        if inputConfig.has("beamShape"):
             # Shape factor has changed
-            shapeFactor = inputConfig.get("shapeFactor")
+            beamShape = inputConfig.get("beamShape")
             recalculateWidth = True
 
         if recalculateWidth is True and self.currentFwhm is not None:
-            w3 = self.currentFwhm * shapeFactor * calibrationFactor
+            sF = self.deconvolutionFactor[beamShape]
+            w3 = self.currentFwhm * sF * calibrationFactor
             self.set("xWidth3", w3)
             self.log.DEBUG("Image re-processed!!!")
 
@@ -296,13 +302,13 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         try:
             calibrationFactor = self.get("calibrationFactor")
-            shapeFactor = self.get("shapeFactor")
+            sF = self.deconvolutionFactor[self.get("beamShape")]
 
             imageArray = imageData.getData()
             (x3, s3) = self.findPeakFWHM(imageArray)
             self.currentPeak = x3
             self.currentFwhm = s3
-            w3 = s3 * shapeFactor * calibrationFactor
+            w3 = s3 * sF * calibrationFactor
 
             h = Hash()
 
