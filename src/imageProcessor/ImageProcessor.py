@@ -202,7 +202,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             BOOL_ELEMENT(expected).key("doBinCount")
                 .displayedName("Pixel Value Frequency")
                 .description("Frequency distribution of pixel values.")
-                .assignmentOptional().defaultValue(True)
+                .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
@@ -224,7 +224,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             BOOL_ELEMENT(expected).key("doXYSum")
                 .displayedName("Sum along X-Y Axes")
                 .description("Sum image along the x- and y-axes.")
-                .assignmentOptional().defaultValue(True)
+                .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
