@@ -13,11 +13,12 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice, launchPythonDevice, OkErrorFsm,
+    KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
-    INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
-    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
-    Hash, MetricPrefix, Schema, Unit
+    INPUT_CHANNEL, INT32_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT,
+    VECTOR_INT32_ELEMENT,
+    DaqDataType, Hash, MetricPrefix, Schema, Unit
 )
 
 from image_processing import image_processing
@@ -67,8 +68,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
     @staticmethod
     def expectedParameters(expected):
-        data = Schema()
-
+        inputData = Schema()
+        outputData = Schema()
         (
             SLOT_ELEMENT(expected).key("useAsBackgroundImage")
                 .displayedName("Current Image as Background")
@@ -77,7 +78,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
-                .dataSchema(data)
+                .dataSchema(inputData)
                 .commit(),
 
             # Images should be dropped if processor is too slow
@@ -336,23 +337,33 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .readOnly()
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(expected).key("imgBinCount")
+            NODE_ELEMENT(outputData).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgBinCount")
                 .displayedName("Pixel counts distribution")
                 .description("Distribution of the image pixel counts.")
                 .unit(Unit.NUMBER)
                 .readOnly().initialValue([0])
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(expected).key("imgX")
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgX")
                 .displayedName("X Distribution")
                 .description("Image sum along the Y-axis.")
                 .readOnly().initialValue([0])
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(expected).key("imgY")
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgY")
                 .displayedName("Y Distribution")
                 .description("Image sum along the X-axis.")
                 .readOnly().initialValue([0])
+                .commit(),
+
+            OUTPUT_CHANNEL(expected).key("output")
+                .displayedName("Output")
+                .dataSchema(outputData)
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("x0")
@@ -680,7 +691,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         userDefinedRange = self.get("userDefinedRange")
         absolutePositions = self.get("absolutePositions")
 
-        h = Hash()  # Empty hash
+        h = Hash()  # Device properties updates
+        outHash = Hash()  # Output channel updates
 
         try:
             self.counter += 1
@@ -782,10 +794,10 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
 
             h.set("binCountTime", (t1 - t0))
-            h.set("imgBinCount", pxFreq.tolist())
+            outHash.set("data.imgBinCount", pxFreq.tolist())
         else:
             h.set("binCountTime", 0.0)
-            h.set("imgBinCount", [0.0])
+            outHash.set("data.imgBinCount", [0.0])
 
         # Background image subtraction
         if self.get("subtractBkgImage"):
@@ -854,13 +866,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             t1 = time.time()
 
             h.set("xYSumTime", (t1 - t0))
-            h.set("imgX", imgX.tolist())
-            h.set("imgY", imgY.tolist())
+            outHash.set("data.imgX", imgX.tolist())
+            outHash.set("data.imgY", imgY.tolist())
             self.log.DEBUG("Image X-Y sums: done!")
         else:
             h.set("xYSumTime", 0.0)
-            h.set("imgX", [0.0])
-            h.set("imgY", [0.0])
+            outHash.set("data.imgX", [0.0])
+            outHash.set("data.imgY", [0.0])
 
         # Centre-Of-Mass and widths
         x0 = None
@@ -1231,7 +1243,4 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
         # Update device parameters (all at once)
         self.set(h)
-
-
-if __name__ == "__main__":
-    launchPythonDevice()
+        self.writeChannel("output", outHash)
