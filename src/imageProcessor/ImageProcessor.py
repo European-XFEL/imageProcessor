@@ -706,14 +706,15 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
         try:
             dims = imageData.getDimensions()
-            imageWidth = dims[0]
-            imageHeight = dims[1]
+            imageHeight = dims[0]
+            imageWidth = dims[1]
             h.set("imageWidth", imageWidth)
             h.set("imageHeight", imageHeight)
+
             try:
                 roiOffsets = imageData.getROIOffsets()
-                imageOffsetX = roiOffsets[0]
-                imageOffsetY = roiOffsets[1]
+                imageOffsetY = roiOffsets[0]
+                imageOffsetX = roiOffsets[1]
             except:
                 # Image has no ROI offset
                 imageOffsetX = 0
@@ -722,8 +723,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("imageOffsetY", imageOffsetY)
 
             img = imageData.getData()  # np.ndarray
-            if img.ndim == 3 and img.shape[0] == 1:
-                # Image has 3rd dimension, but it's 1
+            if img.ndim == 3 and img.shape[2] == 1:
+                # Image has 3rd dimension (channel), but it's 1
                 self.log.DEBUG("Reshaping image...")
                 img = img.squeeze()
 
