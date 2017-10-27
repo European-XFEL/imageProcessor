@@ -318,14 +318,14 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected).key("minPxValue")
                 .displayedName("Min Px Value")
-                .description("Minimun pixel value.")
+                .description("Minimum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
                 .displayedName("Max Pixel Value")
-                .description("Maximun pixel value.")
+                .description("Maximum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
@@ -595,7 +595,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected).key("etheta2d")
                 .displayedName("sigma(theta) (2D Fit)")
-                .description("Uncertianty on rotation angle from 2D Fit.")
+                .description("Uncertainty on rotation angle from 2D Fit.")
                 .expertAccess()
                 .unit(Unit.DEGREE)
                 .readOnly()
