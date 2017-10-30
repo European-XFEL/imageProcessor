@@ -1302,9 +1302,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             except Exception as e:
                 self.log.WARN("Could not do integration: %s." % str(e))
         if not integrationDone:
-                h.set("regionIntegral", 0.0)
-                h.set("regionMean", 0.0)
-                h.set("integrationTime", 0.0)
+            h.set("regionIntegral", 0.0)
+            h.set("regionMean", 0.0)
+            h.set("integrationTime", 0.0)
 
         # Update device parameters (all at once)
         self.set(h)
