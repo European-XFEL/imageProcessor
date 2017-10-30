@@ -190,6 +190,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .reconfigurable()
                 .commit(),
 
+            VECTOR_INT32_ELEMENT(expected).key("integrationRegion")
+                .displayedName("Integration Region")
+                .description("The region to be integrated over.")
+                .assignmentOptional().defaultValue([0, 400, 0, 400])
+                .reconfigurable()
+                .commit(),
+
             # Image processing enable bits
 
             BOOL_ELEMENT(expected).key("doMinMaxMean")
@@ -258,6 +265,13 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .reconfigurable()
                 .commit(),
 
+            BOOL_ELEMENT(expected).key("doIntegration")
+                .displayedName("Region Integration")
+                .description("Perform integration over region.")
+                .assignmentOptional().defaultValue(False)
+                .reconfigurable()
+                .commit(),
+
             # Image processing times
 
             FLOAT_ELEMENT(expected).key("minMaxMeanTime")
@@ -314,18 +328,24 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .readOnly()
                 .commit(),
 
+            FLOAT_ELEMENT(expected).key("integrationTime")
+                .displayedName("Region Integration Time")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
             # Image processing outputs
 
             DOUBLE_ELEMENT(expected).key("minPxValue")
                 .displayedName("Min Px Value")
-                .description("Minimun pixel value.")
+                .description("Minimum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
                 .displayedName("Max Pixel Value")
-                .description("Maximun pixel value.")
+                .description("Maximum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
@@ -595,9 +615,25 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected).key("etheta2d")
                 .displayedName("sigma(theta) (2D Fit)")
-                .description("Uncertianty on rotation angle from 2D Fit.")
+                .description("Uncertainty on rotation angle from 2D Fit.")
                 .expertAccess()
                 .unit(Unit.DEGREE)
+                .readOnly()
+                .commit(),
+
+            DOUBLE_ELEMENT(expected).key("regionIntegral")
+                .displayedName("Integral Over Region")
+                .description("Integral of pixel value over region "
+                             "specified by integrationRegion.")
+                .unit(Unit.NUMBER)
+                .readOnly()
+                .commit(),
+
+            DOUBLE_ELEMENT(expected).key("regionMean")
+                .displayedName("Mean Over Region")
+                .description("Mean pixel value over region "
+                             "specified by integrationRegion.")
+                .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
         )
@@ -628,6 +664,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         h.set("xFitTime", 0.0)
         h.set("yFitTime", 0.0)
         h.set("fitTime", 0.0)
+        h.set("integrationTime", 0.0)
 
         h.set("minPxValue", 0.0)
         h.set("maxPxValue", 0.0)
@@ -662,6 +699,8 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         h.set("theta2d", 0.0)
         h.set("etheta2d", 0.0)
         h.set("beamHeight2d", 0.0)
+        h.set("regionIntegral", 0.0)
+        h.set("regionMean", 0.0)
 
         # Reset device parameters (all at once)
         self.set(h)
@@ -1240,6 +1279,32 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             h.set("beamHeight2d", 0.0)
             h.set("theta2d", 0.0)
             h.set("etheta2d", 0.0)
+
+        # Region Integration
+        integrationDone = False
+        if self.get("doIntegration"):
+            try:
+                t0 = time.time()
+                integrationRegion = self.get("integrationRegion")
+                xmin = np.maximum(integrationRegion[0], 0)
+                xmax = np.minimum(integrationRegion[1], imageWidth)
+                ymin = np.maximum(integrationRegion[2], 0)
+                ymax = np.minimum(integrationRegion[3], imageHeight)
+                data = img[ymin:ymax, xmin:xmax]
+                integral = np.float64(np.sum(data))
+                h.set("regionIntegral", integral)
+                regionMean = integral / data.size if data.size > 0 else 0.0
+                h.set("regionMean", regionMean)
+                t1 = time.time()
+                h.set("integrationTime", (t1 - t0))
+                integrationDone = True
+                self.log.DEBUG("Region integration: done!")
+            except Exception as e:
+                self.log.WARN("Could not do integration: %s." % str(e))
+        if not integrationDone:
+            h.set("regionIntegral", 0.0)
+            h.set("regionMean", 0.0)
+            h.set("integrationTime", 0.0)
 
         # Update device parameters (all at once)
         self.set(h)
