@@ -172,6 +172,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                              "[lowX, highX) x [lowY, highY)"
                              " specified as [lowX, highX, lowY, highY]")
                 .assignmentOptional().defaultValue([0, 400, 0, 400])
+                .minSize(4).maxSize(4)
                 .reconfigurable()
                 .commit(),
 
@@ -198,6 +199,7 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                              "[lowX, highX) x [lowY, highY)"
                              " specified as [lowX, highX, lowY, highY]")
                 .assignmentOptional().defaultValue([0, 400, 0, 400])
+                .minSize(4).maxSize(4)
                 .reconfigurable()
                 .commit(),
 
