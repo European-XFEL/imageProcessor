@@ -168,7 +168,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
             VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
                 .displayedName("User Defined Range")
                 .description("The user-defined range for centre-of-gravity "
-                             "and gaussian fit(s).")
+                             "and gaussian fit(s). Region "
+                             "[lowX, highX) x [lowY, highY)"
+                             " specified as [lowX, highX, lowY, highY]")
                 .assignmentOptional().defaultValue([0, 400, 0, 400])
                 .reconfigurable()
                 .commit(),
@@ -192,7 +194,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
 
             VECTOR_INT32_ELEMENT(expected).key("integrationRegion")
                 .displayedName("Integration Region")
-                .description("The region to be integrated over.")
+                .description("The region to be integrated over.  Region "
+                             "[lowX, highX) x [lowY, highY)"
+                             " specified as [lowX, highX, lowY, highY]")
                 .assignmentOptional().defaultValue([0, 400, 0, 400])
                 .reconfigurable()
                 .commit(),
