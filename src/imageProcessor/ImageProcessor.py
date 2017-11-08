@@ -717,6 +717,8 @@ class ImageProcessor(PythonDevice):
         h.set("regionIntegral", 0.0)
         h.set("regionMean", 0.0)
 
+        h.set("frameRate", 0.)
+
         # Reset device parameters (all at once)
         self.set(h)
 
@@ -738,6 +740,7 @@ class ImageProcessor(PythonDevice):
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
+        self.set("frameRate", 0.)
         self.updateState(State.PASSIVE)
 
     def processImage(self, imageData):
