@@ -29,43 +29,6 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
     # Numerical factor to convert gaussian standard deviation to beam size
     stdDev2BeamSize = 4.0
 
-    def __init__(self, configuration):
-        # always call superclass constructor first!
-        super(ImageProcessor, self).__init__(configuration)
-
-        # 1d gaussian fit parameters
-        self.ax1d = None
-        self.x01d = None
-        self.sx1d = None
-        self.ay1d = None
-        self.y01d = None
-        self.sy1d = None
-
-        # 2d gaussian fit parameters
-        self.a2d = None
-        self.x02d = None
-        self.sx2d = None
-        self.y02d = None
-        self.sy2d = None
-        self.theta2d = None
-
-        # Current image
-        self.currentImage = None
-
-        # Background image
-        self.bkgImage = None
-
-        # frames per second
-        self.lastTime = None
-        self.counter = 0
-
-        # Register additional slots
-        self._ss.registerSlot(self.useAsBackgroundImage)
-        # TODO: save/load bkg image slots
-
-    def __del__(self):
-        super(ImageProcessor, self).__del__()
-
     @staticmethod
     def expectedParameters(expected):
         inputData = Schema()
@@ -643,6 +606,43 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
                 .readOnly()
                 .commit(),
         )
+
+    def __init__(self, configuration):
+        # always call superclass constructor first!
+        super(ImageProcessor, self).__init__(configuration)
+
+        # 1d gaussian fit parameters
+        self.ax1d = None
+        self.x01d = None
+        self.sx1d = None
+        self.ay1d = None
+        self.y01d = None
+        self.sy1d = None
+
+        # 2d gaussian fit parameters
+        self.a2d = None
+        self.x02d = None
+        self.sx2d = None
+        self.y02d = None
+        self.sy2d = None
+        self.theta2d = None
+
+        # Current image
+        self.currentImage = None
+
+        # Background image
+        self.bkgImage = None
+
+        # frames per second
+        self.lastTime = None
+        self.counter = 0
+
+        # Register additional slots
+        self._ss.registerSlot(self.useAsBackgroundImage)
+        # TODO: save/load bkg image slots
+
+    def __del__(self):
+        super(ImageProcessor, self).__del__()
 
     ##############################################
     #   Implementation of State Machine methods  #
