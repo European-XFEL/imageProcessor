@@ -13,19 +13,19 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
+    KARABO_CLASSINFO, PythonDevice,
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT,
     VECTOR_INT32_ELEMENT,
-    DaqDataType, Hash, MetricPrefix, Schema, Unit
+    DaqDataType, Hash, MetricPrefix, Schema, State, Unit
 )
 
 from image_processing import image_processing
 
 
 @KARABO_CLASSINFO("ImageProcessor", "2.1")
-class ImageProcessor(PythonDevice, OkErrorFsm):
+class ImageProcessor(PythonDevice):
     # Numerical factor to convert gaussian standard deviation to beam size
     stdDev2BeamSize = 4.0
 
@@ -34,6 +34,16 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         inputData = Schema()
         outputData = Schema()
         (
+            OVERWRITE_ELEMENT(expected).key("state")
+                .setNewOptions(State.PASSIVE, State.ACTIVE)
+                .setNewDefaultValue(State.PASSIVE)
+                .commit(),
+
+            SLOT_ELEMENT(expected).key("reset")
+                .displayedName("Reset")
+                .description("Resets the processor output values.")
+                .commit(),
+
             SLOT_ELEMENT(expected).key("useAsBackgroundImage")
                 .displayedName("Current Image as Background")
                 .description("Use the current image as background image.")
@@ -638,27 +648,29 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.counter = 0
 
         # Register additional slots
-        self._ss.registerSlot(self.useAsBackgroundImage)
+        self.registerSlot(self.reset)
+        self.registerSlot(self.useAsBackgroundImage)
         # TODO: save/load bkg image slots
+
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
+
+        self.registerInitialFunction(self.initialization)
 
     def __del__(self):
         super(ImageProcessor, self).__del__()
 
-    ##############################################
-    #   Implementation of State Machine methods  #
-    ##############################################
+    def initialization(self):
+        """ This method will be called after the constructor. """
+        self.reset()
 
     def useAsBackgroundImage(self):
         self.log.INFO("Use current image as background.")
         # Copy current image to background image
         self.bkgImage = np.array(self.currentImage)
 
-    def okStateOnEntry(self):
-
-        # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
+    def reset(self):
         h = Hash()
 
         h.set("minMaxMeanTime", 0.0)
@@ -712,6 +724,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         self.set(h)
 
     def onData(self, data, metaData):
+        if self.get("state") == State.PASSIVE:
+            self.log.INFO("Start of Stream")
+            self.updateState(State.ACTIVE)
         try:
             if data.has('data.image'):
                 self.processImage(data['data.image'])
@@ -724,8 +739,9 @@ class ImageProcessor(PythonDevice, OkErrorFsm):
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
-    def onEndOfStream(self):
-        self.log.INFO("onEndOfStream called")
+    def onEndOfStream(self, inputChannel):
+        self.log.INFO("End of Stream")
+        self.updateState(State.PASSIVE)
 
     def processImage(self, imageData):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
