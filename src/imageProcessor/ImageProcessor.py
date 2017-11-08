@@ -658,9 +658,6 @@ class ImageProcessor(PythonDevice):
 
         self.registerInitialFunction(self.initialization)
 
-    def __del__(self):
-        super(ImageProcessor, self).__del__()
-
     def initialization(self):
         """ This method will be called after the constructor. """
         self.reset()
