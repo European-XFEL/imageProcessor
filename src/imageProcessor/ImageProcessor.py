@@ -222,19 +222,20 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            BOOL_ELEMENT(expected).key("usePeakParameters")
-                .displayedName("Use raw peak parameters for fit start")
-                .description("Set true to use raw peak parameters to evaluate"
-                             "fit starting point")
-                .assignmentOptional().defaultValue(False)
-                .reconfigurable()
-                .commit(),
-
             BOOL_ELEMENT(expected).key("do1DFit")
                 .displayedName("1-D Gaussian Fits")
                 .description("Perform a 1-d gaussian fit of the x- and "
                              "y-distributions.")
                 .assignmentOptional().defaultValue(True)
+                .reconfigurable()
+                .commit(),
+
+            STRING_ELEMENT(expected).key("gauss1dStartValues")
+                .displayedName("1d gauss fit start values")
+                .description("selects how 1d gauss fit starting values are "
+                             "evaluated")
+                .options("last_fit_result,raw_peak")
+                .assignmentOptional().defaultValue("last_fit_result")
                 .reconfigurable()
                 .commit(),
 
@@ -1001,7 +1002,7 @@ class ImageProcessor(PythonDevice):
         # 1-D Gaussian Fits
         if self.get("do1DFit"):
 
-            usePeakParameters =  self.get("usePeakParameters")
+            gauss1dStartValues =  self.get("gauss1dStartValues")
 
             t0 = time.time()
             try:
@@ -1015,11 +1016,10 @@ class ImageProcessor(PythonDevice):
                     data -= data.min()
 
                 # Initial parameters
-                if usePeakParameters:
+                if gauss1dStartValues == "raw_peak":
                     # evaluate peak parameters w/o fit
                     p0 = self.evalStartingPoint(data)
-
-                else:
+                else:  # if gauss1dStartValues == "last_fit_result"
                     if None not in (self.ax1d, self.x01d, self.sx1d):
                         # Use last fit's parameters as initial estimate
                         p0 = (self.ax1d, self.x01d - xmin, self.sx1d)
@@ -1029,6 +1029,7 @@ class ImageProcessor(PythonDevice):
                     else:
                         # No initial parameters
                         p0 = None
+
 
                 # 1-d gaussian fit
                 out = image_processing.fitGauss(data, p0)
@@ -1057,10 +1058,10 @@ class ImageProcessor(PythonDevice):
                     data -= data.min()
 
                 # Initial parameters
-                if usePeakParameters:
+                if gauss1dStartValues == "raw_peak":
                     # evaluate peak parameters w/o fit
                     p0 = self.evalStartingPoint(data)
-                else:
+                else:  # if gauss1dStartValues == "last_fit_result"
                     if None not in (self.ay1d, self.y01d, self.sy1d):
                         # Use last fit's parameters as initial estimate
                         p0 = (self.ay1d, self.y01d - ymin, self.sy1d)
