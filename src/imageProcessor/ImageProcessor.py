@@ -805,14 +805,13 @@ class ImageProcessor(PythonDevice):
             h.set("imageOffsetX", imageOffsetX)
             h.set("imageOffsetY", imageOffsetY)
 
-            img = imageData.getData()  # np.ndarray
+            self.currentImage = imageData.getData()  # np.ndarray
+            img = self.currentImage  # Shallow copy
             if img.ndim == 3 and img.shape[2] == 1:
                 # Image has 3rd dimension (channel), but it's 1
                 self.log.DEBUG("Reshaping image...")
                 img = img.squeeze()
 
-            # Copy current image, before doing any processing
-            self.currentImage = np.array(img)
             self.log.DEBUG("Image loaded!!!")
 
         except Exception as e:
@@ -876,6 +875,11 @@ class ImageProcessor(PythonDevice):
             try:
                 if(self.bkgImage is not None and
                    self.bkgImage.shape == img.shape):
+
+                    if self.currentImage is img:
+                        # Must copy, or self.currentImage will be modified
+                        self.currentImage = img.copy()
+
                     # Subtract background image
                     m = (img > self.bkgImage)  # img is above bkg
                     n = (img <= self.bkgImage)  # image is below bkg
@@ -902,8 +906,13 @@ class ImageProcessor(PythonDevice):
             try:
                 imgMin = img.min()
                 if imgMin > 0:
+                    if self.currentImage is img:
+                        # Must copy, or self.currentImage will be modified
+                        self.currentImage = img.copy()
+
                     # Subtract image pedestal
-                    img = img - imgMin
+                    img -= imgMin
+
             except Exception as e:
                 self.log.WARN("Could not subtract image pedestal: %s." %
                               str(e))
