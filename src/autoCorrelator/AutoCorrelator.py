@@ -129,7 +129,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .displayedName("Calibration constant [fs/px]")
                 .description("The calibration constant.")
             #    .unit(Unit.???) # TODO Unit is fs/px
-                .readOnly().initialValue(0)
+                .assignmentOptional().defaultValue(0)
+                .reconfigurable()
                 .commit(),
 
             STRING_ELEMENT(expected)
