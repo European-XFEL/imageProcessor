@@ -751,6 +751,8 @@ class ImageProcessor(PythonDevice):
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self.set("frameRate", 0.)
+        # Signals end of stream
+        self.signalEndOfStream("output")
         self.updateState(State.PASSIVE)
 
     def processImage(self, imageData):
