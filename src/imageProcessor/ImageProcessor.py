@@ -121,6 +121,16 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
+            STRING_ELEMENT(expected).key("comRange")
+                .displayedName("Centre-of-Mass Range")
+                .description("The range to be used for Centre-of-Mass "
+                             "calculation. Can be the full image, or a "
+                             "user-defined range.")
+                .assignmentOptional().defaultValue("full")
+                .options("full user-defined")
+                .reconfigurable()
+                .commit(),
+
             STRING_ELEMENT(expected).key("fitRange")
                 .displayedName("Fit Range")
                 .description("The range to be used for fitting. Can be the "
@@ -141,7 +151,7 @@ class ImageProcessor(PythonDevice):
 
             VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
                 .displayedName("User Defined Range")
-                .description("The user-defined range for centre-of-gravity "
+                .description("The user-defined range for centre-of-mass "
                              "and gaussian fit(s). Region "
                              "[lowX, highX) x [lowY, highY)"
                              " specified as [lowX, highX, lowY, highY]")
@@ -160,7 +170,7 @@ class ImageProcessor(PythonDevice):
 
             FLOAT_ELEMENT(expected).key("threshold")
                 .displayedName("Pixel Relative threshold")
-                .description("The pixel threshold for centre-of-gravity "
+                .description("The pixel threshold for centre-of-mass "
                              "calculation (fraction of highest value).")
                 .assignmentOptional().defaultValue(0.10)
                 .minInc(0.0).maxInc(1.0)
@@ -758,7 +768,8 @@ class ImageProcessor(PythonDevice):
     def processImage(self, imageData):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
         imageThreshold = self.get("imageThreshold")
-        range = self.get("fitRange")
+        comRange = self.get("comRange")
+        fitRange = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
@@ -976,21 +987,27 @@ class ImageProcessor(PythonDevice):
                 img2 = image_processing.imageSetThreshold(img, thr * img.max())
 
                 # Centre-of-mass and widths
-                (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
+                if comRange == "user-defined":
+                    img3 = img2[userDefinedRange[2]:userDefinedRange[3],
+                                userDefinedRange[0]:userDefinedRange[1]]
+                    (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img3)
+                    x0 += userDefinedRange[0]
+                    y0 += userDefinedRange[2]
+                else:  # "full"
+                    (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
 
-                if range == "full":
+                if fitRange == "full":
                     xmin = 0
                     xmax = imageWidth
                     ymin = 0
                     ymax = imageHeight
-                elif range == "user-defined":
+                elif fitRange == "user-defined":
                     xmin = np.maximum(userDefinedRange[0], 0)
                     xmax = np.minimum(userDefinedRange[1], imageWidth)
                     ymin = np.maximum(userDefinedRange[2], 0)
                     ymax = np.minimum(userDefinedRange[3], imageHeight)
                     # TODO check that xmin<xmax and ymin<ymax
-                else:
-                    # "auto"
+                else:  # "auto"
                     xmin = np.maximum(int(x0 - sigmas * sx), 0)
                     xmax = np.minimum(int(x0 + sigmas * sx), imageWidth)
                     ymin = np.maximum(int(y0 - sigmas * sy), 0)
