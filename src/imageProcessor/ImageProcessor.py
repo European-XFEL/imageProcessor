@@ -793,8 +793,10 @@ class ImageProcessor(PythonDevice):
             dims = imageData.getDimensions()
             imageHeight = dims[0]
             imageWidth = dims[1]
-            h.set("imageWidth", imageWidth)
-            h.set("imageHeight", imageHeight)
+            if imageWidth != self.get("imageWidth"):
+                h.set("imageWidth", imageWidth)
+            if imageHeight != self.get("imageHeight"):
+                h.set("imageHeight", imageHeight)
 
             try:
                 roiOffsets = imageData.getROIOffsets()
@@ -804,8 +806,10 @@ class ImageProcessor(PythonDevice):
                 # Image has no ROI offset
                 imageOffsetX = 0
                 imageOffsetY = 0
-            h.set("imageOffsetX", imageOffsetX)
-            h.set("imageOffsetY", imageOffsetY)
+            if imageOffsetX != self.get("imageOffsetX"):
+                h.set("imageOffsetX", imageOffsetX)
+            if imageOffsetY != self.get("imageOffsetY"):
+                h.set("imageOffsetY", imageOffsetY)
 
             self.currentImage = imageData.getData()  # np.ndarray
             img = self.currentImage  # Shallow copy
@@ -840,6 +844,9 @@ class ImageProcessor(PythonDevice):
 
             t1 = time.time()
 
+            # TODO: average minMaxMeanTime over 1 second
+            # TODO: use a relative "epsilon" for imgMin, imgMax and imgMean
+            # and other fast changing float properties
             h.set("minMaxMeanTime", (t1 - t0))
             h.set("minPxValue", float(imgMin))
             h.set("maxPxValue", float(imgMax))
@@ -1017,7 +1024,7 @@ class ImageProcessor(PythonDevice):
         # 1-D Gaussian Fits
         if self.get("do1DFit"):
 
-            gauss1dStartValues =  self.get("gauss1dStartValues")
+            gauss1dStartValues = self.get("gauss1dStartValues")
 
             t0 = time.time()
             try:
@@ -1048,7 +1055,6 @@ class ImageProcessor(PythonDevice):
                         # as well, once it's well tested
                 else:
                     raise RuntimeError("unexpected gauss1dStartValues option")
-
 
                 # 1-d gaussian fit
                 out = image_processing.fitGauss(data, p0)
@@ -1375,7 +1381,4 @@ class ImageProcessor(PythonDevice):
     def evalStartingPoint(self, data):
         fitAmpl, peakPixel, fwhm = image_processing.peakParametersEval(data)
 
-        return  (fitAmpl, peakPixel, fwhm/self.__gaussFwhmConst)
-
-
-
+        return (fitAmpl, peakPixel, fwhm/self.__gaussFwhmConst)
