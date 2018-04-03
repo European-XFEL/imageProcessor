@@ -1,7 +1,4 @@
-nbproject/Makefile-*.mk
-nbproject/Package-*.bash
-nbproject/private
 dist/
 build/
-package/
-.dep.inc
+.idea/
+
