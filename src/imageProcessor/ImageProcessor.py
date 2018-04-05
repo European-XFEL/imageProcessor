@@ -24,11 +24,31 @@ from karabo.bound import (
 from image_processing import image_processing
 
 
+class Average():
+    counter = 0
+    valueSum = 0.
+
+    def append(self, value):
+        self.valueSum += value
+        self.counter += 1
+
+    def clear(self):
+        self.counter = 0
+        self.valueSum = 0.
+
+    def mean(self):
+        return (self.valueSum / self.counter) if self.counter > 0 else np.nan
+
+    def __len__(self):
+        return self.counter
+
+
 @KARABO_CLASSINFO("ImageProcessor", "2.1")
 class ImageProcessor(PythonDevice):
     # Numerical factor to convert gaussian standard deviation to beam size
     stdDev2BeamSize = 4.0
     __gaussFwhmConst = 2 * math.sqrt(2 * math.log(2))
+    _averagingTimeItervall = 1.0
 
     @staticmethod
     def expectedParameters(expected):
@@ -672,6 +692,20 @@ class ImageProcessor(PythonDevice):
         self.registerSlot(self.useAsBackgroundImage)
         # TODO: save/load bkg image slots
 
+        # Processing time averages
+        self.lastUpdateTime = time.time()
+        self.averagers = {'minMaxMeanTime': Average(),
+                          'binCountTime': Average(),
+                          'subtractBkgImageTime': Average(),
+                          'subtractPedestalTime': Average(),
+                          'xYSumTime': Average(),
+                          'cOfMTime': Average(),
+                          'xFitTime': Average(),
+                          'yFitTime': Average(),
+                          'fitTime': Average(),
+                          'integrationTime': Average()
+                          }
+
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
@@ -854,17 +888,13 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
+            self.averagers["minMaxMeanTime"].append(t1 - t0)
 
-            # TODO: average minMaxMeanTime over 1 second
-            # TODO: use a relative "epsilon" for imgMin, imgMax and imgMean
-            # and other fast changing float properties
-            h.set("minMaxMeanTime", (t1 - t0))
             h.set("minPxValue", float(imgMin))
             h.set("maxPxValue", float(imgMax))
             h.set("meanPxValue", float(imgMean))
             self.log.DEBUG("Pixel min/max/mean: done!")
         else:
-            h.set("minMaxMeanTime", 0.0)
             h.set("minPxValue", 0.0)
             h.set("maxPxValue", 0.0)
             h.set("meanPxValue", 0.0)
@@ -882,11 +912,10 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
+            self.averagers["binCountTime"].append(t1 - t0)
 
-            h.set("binCountTime", (t1 - t0))
             outHash.set("data.imgBinCount", pxFreq.tolist())
         else:
-            h.set("binCountTime", 0.0)
             outHash.set("data.imgBinCount", [0.0])
 
         # Background image subtraction
@@ -914,11 +943,8 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
-
-            h.set("subtractBkgImageTime", (t1 - t0))
+            self.averagers["subtractBkgImageTime"].append(t1 - t0)
             self.log.DEBUG("Background image subtraction: done!")
-        else:
-            h.set("subtractBkgImageTime", 0.0)
 
         # Pedestal subtraction
         if self.get("subtractImagePedestal"):  # was "doBackground"
@@ -939,11 +965,8 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
-
-            h.set("subtractPedestalTime", (t1 - t0))  # was "backgroundTime"
+            self.averagers["subtractPedestalTime"].append(t1 - t0)
             self.log.DEBUG("Image pedestal subtraction: done!")
-        else:
-            h.set("subtractPedestalTime", 0.0)  # was "backgroundTime"
 
         # Sum the image along the x- and y-axes
         imgX = None
@@ -964,13 +987,12 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
+            self.averagers["xYSumTime"].append(t1 - t0)
 
-            h.set("xYSumTime", (t1 - t0))
             outHash.set("data.imgX", imgX.tolist())
             outHash.set("data.imgY", imgY.tolist())
             self.log.DEBUG("Image X-Y sums: done!")
         else:
-            h.set("xYSumTime", 0.0)
             outHash.set("data.imgX", [0.0])
             outHash.set("data.imgY", [0.0])
 
@@ -1019,8 +1041,8 @@ class ImageProcessor(PythonDevice):
                 return
 
             t1 = time.time()
+            self.averagers["cOfMTime"].append(t1 - t0)
 
-            h.set("cOfMTime", (t1 - t0))
             if absolutePositions:
                 h.set("x0", x0 + imageOffsetX)
                 h.set("y0", y0 + imageOffsetY)
@@ -1032,7 +1054,6 @@ class ImageProcessor(PythonDevice):
             self.log.DEBUG("Centre-of-mass and widths: done!")
 
         else:
-            h.set("cOfMTime", 0.0)
             h.set("x0", 0.0)
             h.set("sx", 0.0)
             h.set("y0", 0.0)
@@ -1133,8 +1154,7 @@ class ImageProcessor(PythonDevice):
                 return
 
             t2 = time.time()
-
-            h.set("xFitTime", (t1 - t0))
+            self.averagers["xFitTime"].append(t1 - t0)
             h.set("xFitSuccess", successX)
 
             if successX in (1, 2, 3, 4):
@@ -1170,7 +1190,7 @@ class ImageProcessor(PythonDevice):
                     self.log.WARN("Exception caught after successful X fit: %s"
                                   % str(e))
 
-            h.set("yFitTime", (t2 - t1))
+            self.averagers["yFitTime"].append(t2 - t1)
             h.set("yFitSuccess", successY)
 
             if successY in (1, 2, 3, 4):
@@ -1215,8 +1235,6 @@ class ImageProcessor(PythonDevice):
 
             self.log.DEBUG("1-d gaussian fit: done!")
         else:
-            h.set("xFitTime", 0.0)
-            h.set("yFitTime", 0.0)
             h.set("xFitSuccess", 0)
             h.set("ax1d", 0.0)
             h.set("x01d", 0.0)
@@ -1297,7 +1315,7 @@ class ImageProcessor(PythonDevice):
 
             t1 = time.time()
 
-            h.set("fitTime", (t1 - t0))
+            self.averagers["fitTime"].append(t1 - t0)
             h.set("fitSuccess", successXY)
             if successXY in (1, 2, 3, 4):
                 h.set("a2d", pXY[0])
@@ -1349,7 +1367,6 @@ class ImageProcessor(PythonDevice):
 
             self.log.DEBUG("2-d gaussian fit: done!")
         else:
-            h.set("fitTime", 0.0)
             h.set("fitSuccess", 0)
             h.set("a2d", 0.0)
             h.set("x02d", 0.0)
@@ -1381,7 +1398,7 @@ class ImageProcessor(PythonDevice):
                 regionMean = integral / data.size if data.size > 0 else 0.0
                 h.set("regionMean", regionMean)
                 t1 = time.time()
-                h.set("integrationTime", (t1 - t0))
+                self.averagers["integrationTime"].append(t1 - t0)
                 integrationDone = True
                 self.log.DEBUG("Region integration: done!")
             except Exception as e:
@@ -1389,7 +1406,15 @@ class ImageProcessor(PythonDevice):
         if not integrationDone:
             h.set("regionIntegral", 0.0)
             h.set("regionMean", 0.0)
-            h.set("integrationTime", 0.0)
+
+        if time.time() - self.lastUpdateTime > self._averagingTimeItervall:
+            # average processing times over 1 second
+            for key, averager in self.averagers.items():
+                if averager:
+                    h.set(key, averager.mean())
+                    averager.clear()
+
+            self.lastUpdateTime = time.time()
 
         # Update device parameters (all at once)
         self.set(h)
