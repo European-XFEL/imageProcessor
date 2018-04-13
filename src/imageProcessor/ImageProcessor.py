@@ -367,6 +367,8 @@ class ImageProcessor(PythonDevice):
                 .description("Maximum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
+            # As pixels are usually UINT16, default alarmHigh will never fire
+                .alarmHigh(65536).needsAcknowledging(False)
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("meanPxValue")
@@ -374,6 +376,8 @@ class ImageProcessor(PythonDevice):
                 .description("Mean pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
+            # As pixels are usually UINT16, default alarmHigh will never fire
+                .alarmHigh(65536).needsAcknowledging(False)
                 .commit(),
 
             NODE_ELEMENT(outputData).key("data")
