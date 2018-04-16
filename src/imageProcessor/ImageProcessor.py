@@ -121,6 +121,7 @@ class ImageProcessor(PythonDevice):
                 .displayedName("Pixel Size")
                 .description("The pixel size.")
                 .assignmentOptional().defaultValue(0.)
+                .minInc(0.)
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .reconfigurable()
                 .commit(),
@@ -137,6 +138,7 @@ class ImageProcessor(PythonDevice):
                 .displayedName("Image Threshold")
                 .description("The threshold for image fitting.")
                 .assignmentOptional().defaultValue(0.)
+                .minInc(0.)
                 .unit(Unit.NUMBER)
                 .reconfigurable()
                 .commit(),
@@ -166,6 +168,7 @@ class ImageProcessor(PythonDevice):
                 .description("The range for auto mode (in standard "
                              "deviations).")
                 .assignmentOptional().defaultValue(3.0)
+                .minInc(0.)
                 .reconfigurable()
                 .commit(),
 
@@ -441,7 +444,6 @@ class ImageProcessor(PythonDevice):
                 .displayedName("x Success (1D Fit)")
                 .description("1-D Gaussian Fit Success (1-4 if fit "
                              "converged).")
-                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
@@ -681,6 +683,12 @@ class ImageProcessor(PythonDevice):
         self.sy2d = None
         self.theta2d = None
 
+        # Define good range for gaussian fit
+        self.xMin = None
+        self.xMax = None
+        self.yMin = None
+        self.yMax = None
+
         # Current image
         self.currentImage = None
 
@@ -781,18 +789,32 @@ class ImageProcessor(PythonDevice):
         self.set(h)
 
     def onData(self, data, metaData):
+        firstImage = False
         if self.get("state") == State.PASSIVE:
             self.log.INFO("Start of Stream")
             self.updateState(State.ACTIVE)
+            firstImage = True
+
         try:
             if data.has('data.image'):
-                self.processImage(data['data.image'])
+                imageData = data['data.image']
             elif data.has('image'):
                 # To ensure backward compatibility
                 # with older versions of cameras
-                self.processImage(data['image'])
+                imageData = data['image']
             else:
                 self.log.DEBUG("data does not have any image")
+                return
+
+            if firstImage:
+                # Update warning levels
+                dims = imageData.getDimensions()
+                imageHeight = dims[0]
+                imageWidth = dims[1]
+                self.updateWarnLevels(0, imageWidth, 0, imageHeight)
+
+            self.processImage(imageData)  # Process image
+
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
@@ -1163,12 +1185,14 @@ class ImageProcessor(PythonDevice):
 
             if successX in (1, 2, 3, 4):
                 # Successful fit
+
                 if cX is None:
                     self.log.WARN("Successful X fit with singular covariance "
                                   "matrix. Resetting initial fit values.")
                     self.ax1d = None
                     self.x01d = None
                     self.sx1d = None
+
                 try:
                     if absolutePositions:
                         h.set("x01d", xmin + pX[1] + imageOffsetX)
@@ -1199,6 +1223,7 @@ class ImageProcessor(PythonDevice):
 
             if successY in (1, 2, 3, 4):
                 # Successful fit
+
                 if cY is None:
                     self.log.WARN("Successful Y fit with singular covariance "
                                   "matrix.. Resetting initial fit values.")
@@ -1321,9 +1346,11 @@ class ImageProcessor(PythonDevice):
 
             self.averagers["fitTime"].append(t1 - t0)
             h.set("fitSuccess", successXY)
+
             if successXY in (1, 2, 3, 4):
-                h.set("a2d", pXY[0])
                 # Successful fit
+                h.set("a2d", pXY[0])
+
                 if cXY is None:
                     self.log.WARN("Successful XY fit with singular covariance "
                                   "matrix. Resetting initial fit values.")
@@ -1362,7 +1389,7 @@ class ImageProcessor(PythonDevice):
                     beamHeight = self.stdDev2BeamSize * pixelSize * pXY[4]
                     h.set("beamHeight2d", beamHeight)
                 if rotation:
-                    h.set("theta2d", pXY[5] % math.pi)
+                    h.set("theta2d", pXY[5] % (2. * math.pi))
                     if cXY is not None:
                         h.set("etheta2d", math.sqrt(cXY[5][5]))
                 else:
@@ -1428,3 +1455,58 @@ class ImageProcessor(PythonDevice):
         fitAmpl, peakPixel, fwhm = image_processing.peakParametersEval(data)
 
         return (fitAmpl, peakPixel, fwhm/self.__gaussFwhmConst)
+
+    def updateWarnLevels(self, xMin, xMax, yMin, yMax):
+        newSchema = Schema()
+        needsUpdate = False
+
+        if xMin != self.xMin or xMax != self.xMax:
+            (
+                DOUBLE_ELEMENT(newSchema).key("x01d")
+                    .displayedName("x0 (1D Fit)")
+                    .description("x0 from 1D Fit.")
+                    .unit(Unit.PIXEL)
+                    .readOnly()
+                    .warnLow(xMin).needsAcknowledging(False)
+                    .warnHigh(xMax).needsAcknowledging(False)
+                    .commit(),
+
+                DOUBLE_ELEMENT(newSchema).key("x02d")
+                    .displayedName("x0 (2D Fit)")
+                    .description("x0 from 2D Fit.")
+                    .unit(Unit.PIXEL)
+                    .readOnly()
+                    .warnLow(xMin).needsAcknowledging(False)
+                    .warnHigh(xMax).needsAcknowledging(False)
+                    .commit(),
+            )
+            self.xMin = xMin
+            self.xMax = xMax
+            needsUpdate = True
+
+        if yMin != self.yMin or yMax != self.yMax:
+            (
+                DOUBLE_ELEMENT(newSchema).key("y01d")
+                    .displayedName("y0 (1D Fit)")
+                    .description("y0 from 1D Fit.")
+                    .unit(Unit.PIXEL)
+                    .readOnly()
+                    .warnLow(yMin).needsAcknowledging(False)
+                    .warnHigh(yMax).needsAcknowledging(False)
+                    .commit(),
+
+                DOUBLE_ELEMENT(newSchema).key("y02d")
+                    .displayedName("y0 (2D Fit)")
+                    .description("y0 from 2D Fit.")
+                    .unit(Unit.PIXEL)
+                    .readOnly()
+                    .warnLow(yMin).needsAcknowledging(False)
+                    .warnHigh(yMax).needsAcknowledging(False)
+                    .commit(),
+            )
+            self.yMin = yMin
+            self.yMax = yMax
+            needsUpdate = True
+
+        if needsUpdate:
+            self.updateSchema(newSchema)
