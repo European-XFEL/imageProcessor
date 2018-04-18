@@ -96,8 +96,15 @@ class ImageProcessor(PythonDevice):
 
             INT32_ELEMENT(expected).key("imageOffsetX")
                 .displayedName("Image Offset X")
-                .description("The image offset in X direction, i.e. the Y "
+                .description("The image offset in X direction, i.e. the X "
                              "position of its top-left corner.")
+                .unit(Unit.PIXEL)
+                .readOnly()
+                .commit(),
+
+            INT32_ELEMENT(expected).key("imageBinningX")
+                .displayedName("Image Binning X")
+                .description("The image binning in X direction.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
@@ -113,6 +120,13 @@ class ImageProcessor(PythonDevice):
                 .displayedName("Image Offset Y")
                 .description("The image offset in Y direction, i.e. the Y "
                              "position of its top-left corner.")
+                .unit(Unit.PIXEL)
+                .readOnly()
+                .commit(),
+
+            INT32_ELEMENT(expected).key("imageBinningY")
+                .displayedName("Image Binning X")
+                .description("The image binning in X direction.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
@@ -882,6 +896,19 @@ class ImageProcessor(PythonDevice):
             if imageOffsetY != self.get("imageOffsetY"):
                 h.set("imageOffsetY", imageOffsetY)
 
+            try:
+                imageBinning = imageData.getBinning()
+                imageBinningY = imageBinning[0]
+                imageBinningX = imageBinning[1]
+                if imageBinningX != self.get("imageBinningX"):
+                    h.set("imageBinningX", imageBinningX)
+                if imageBinningY != self.get("imageBinningY"):
+                    h.set("imageBinningY", imageBinningY)
+            except:
+                # Image has no binning information
+                imageBinningY = 1
+                imageBinningX = 1
+
             self.currentImage = imageData.getData()  # np.ndarray
             img = self.currentImage  # Shallow copy
             if img.ndim == 3 and img.shape[2] == 1:
@@ -1070,8 +1097,8 @@ class ImageProcessor(PythonDevice):
             self.averagers["cOfMTime"].append(t1 - t0)
 
             if absolutePositions:
-                h.set("x0", x0 + imageOffsetX)
-                h.set("y0", y0 + imageOffsetY)
+                h.set("x0", imageBinningX*(x0 + imageOffsetX))
+                h.set("y0", imageBinningY*(y0 + imageOffsetY))
             else:
                 h.set("x0", x0)
                 h.set("y0", y0)
@@ -1195,7 +1222,8 @@ class ImageProcessor(PythonDevice):
 
                 try:
                     if absolutePositions:
-                        h.set("x01d", xmin + pX[1] + imageOffsetX)
+                        h.set("x01d",
+                              imageBinningX*(xmin + pX[1] + imageOffsetX))
                     else:
                         h.set("x01d", xmin + pX[1])
 
@@ -1233,7 +1261,8 @@ class ImageProcessor(PythonDevice):
 
                 try:
                     if absolutePositions:
-                        h.set("y01d", ymin + pY[1] + imageOffsetY)
+                        h.set("y01d",
+                              imageBinningY*(ymin + pY[1] + imageOffsetY))
                     else:
                         h.set("y01d", ymin + pY[1])
 
@@ -1363,8 +1392,10 @@ class ImageProcessor(PythonDevice):
                         self.theta2d = None
 
                 if absolutePositions:
-                    h.set("x02d", xmin + pXY[1] + imageOffsetX)
-                    h.set("y02d", ymin + pXY[2] + imageOffsetY)
+                    h.set("x02d",
+                          imageBinningX*(xmin + pXY[1] + imageOffsetX))
+                    h.set("y02d",
+                          imageBinningY*(ymin + pXY[2] + imageOffsetY))
                 else:
                     h.set("x02d", xmin + pXY[1])
                     h.set("y02d", ymin + pXY[2])
