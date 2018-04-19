@@ -125,8 +125,8 @@ class ImageProcessor(PythonDevice):
                 .commit(),
 
             INT32_ELEMENT(expected).key("imageBinningY")
-                .displayedName("Image Binning X")
-                .description("The image binning in X direction.")
+                .displayedName("Image Binning Y")
+                .description("The image binning in Y direction.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
