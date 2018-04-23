@@ -200,7 +200,8 @@ class ImageProcessor(PythonDevice):
             BOOL_ELEMENT(expected).key("absolutePositions")
                 .displayedName("Peak Absolute Position")
                 .description("If True, the peak position will be w.r.t. to "
-                             "the full frame, not to the ROI.")
+                             "the full frame, taking into account current "
+                             "settings for ROI and binning.")
                 .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
