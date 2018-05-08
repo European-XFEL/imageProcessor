@@ -17,8 +17,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT,
-    VECTOR_INT32_ELEMENT,
-    DaqDataType, Hash, MetricPrefix, Schema, State, Unit
+    VECTOR_INT32_ELEMENT, DaqDataType, Hash, MetricPrefix, Schema, State, Unit
 )
 
 from image_processing import image_processing
@@ -403,7 +402,7 @@ class ImageProcessor(PythonDevice):
                 .setDaqDataType(DaqDataType.TRAIN)
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgBinCount")
+            VECTOR_INT32_ELEMENT(outputData).key("data.imgBinCount")
                 .displayedName("Pixel counts distribution")
                 .description("Distribution of the image pixel counts.")
                 .unit(Unit.NUMBER)
@@ -828,6 +827,9 @@ class ImageProcessor(PythonDevice):
                 imageWidth = dims[1]
                 self.updateWarnLevels(0, imageWidth, 0, imageHeight)
 
+                bpp = imageData.getBitsPerPixel()
+                self.updateOutputSchema(imageHeight, imageWidth, bpp)
+
             self.processImage(imageData)  # Process image
 
         except Exception as e:
@@ -970,7 +972,7 @@ class ImageProcessor(PythonDevice):
 
             outHash.set("data.imgBinCount", pxFreq.tolist())
         else:
-            outHash.set("data.imgBinCount", [0.0])
+            outHash.set("data.imgBinCount", [0])
 
         # Background image subtraction
         if self.get("subtractBkgImage"):
@@ -1043,8 +1045,8 @@ class ImageProcessor(PythonDevice):
             t1 = time.time()
             self.averagers["xYSumTime"].append(t1 - t0)
 
-            outHash.set("data.imgX", imgX.tolist())
-            outHash.set("data.imgY", imgY.tolist())
+            outHash.set("data.imgX", imgX.astype(np.float).tolist())
+            outHash.set("data.imgY", imgY.astype(np.float).tolist())
             self.log.DEBUG("Image X-Y sums: done!")
         else:
             outHash.set("data.imgX", [0.0])
@@ -1542,3 +1544,54 @@ class ImageProcessor(PythonDevice):
 
         if needsUpdate:
             self.updateSchema(newSchema)
+
+    def updateOutputSchema(self, width, height, bpp):
+        # Get device configuration before schema update
+        try:
+            outputHostname = self["output.hostname"]
+        except AttributeError as e:
+            # Configuration does not contain "output.hostname"
+            outputHostname = None
+
+        newSchema = Schema()
+        outputData = Schema()
+        (
+            NODE_ELEMENT(outputData).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            VECTOR_INT32_ELEMENT(outputData).key("data.imgBinCount")
+                .displayedName("Pixel counts distribution")
+                .description("Distribution of the image pixel counts.")
+                .unit(Unit.NUMBER)
+                .maxSize(min(65535, 2**bpp))
+                .readOnly().initialValue([0])
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgX")
+                .displayedName("X Distribution")
+                .description("Image sum along the Y-axis.")
+                .maxSize(width)
+                .readOnly().initialValue([0])
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgY")
+                .displayedName("Y Distribution")
+                .description("Image sum along the X-axis.")
+                .maxSize(height)
+                .readOnly().initialValue([0])
+                .commit(),
+
+            OUTPUT_CHANNEL(newSchema).key("output")
+                .displayedName("Output")
+                .dataSchema(outputData)
+                .commit(),
+        )
+
+        self.updateSchema(newSchema)
+
+        if outputHostname:
+            # Restore configuration
+            self.log.DEBUG("output.hostname: %s" % outputHostname)
+            self.set("output.hostname", outputHostname)
