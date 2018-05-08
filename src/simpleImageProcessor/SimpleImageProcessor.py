@@ -319,17 +319,15 @@ class SimpleImageProcessor(PythonDevice):
         if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
             self.updateState(State.RUNNING)
-        try:
-            if data.has('data.image'):
-                self.processImage(data['data.image'])
-            elif data.has('image'):
-                # To ensure backward compatibility
-                # with older versions of cameras
-                self.processImage(data['image'])
-            else:
-                self.log.INFO("data does not have any image")
-        except Exception as e:
-            self.log.ERROR("Exception caught in onData: %s" % str(e))
+
+        if data.has('data.image'):
+            self.processImage(data['data.image'])
+        elif data.has('image'):
+            # To ensure backward compatibility
+            # with older versions of cameras
+            self.processImage(data['image'])
+        else:
+            self.log.INFO("data does not have any image")
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
@@ -562,10 +560,10 @@ class SimpleImageProcessor(PythonDevice):
             # X Fit Update
             h.set("positionX",
                   binningX * (xmin + pX[1] + offsetX))
-            errPositionX = math.sqrt(cX[1][1])
+            errPositionX = math.sqrt(abs(cX[1][1]))
             h.set("errPositionX", errPositionX)
             h.set("sigmaX", pX[2])
-            errSigmaX = math.sqrt(cX[2][2])
+            errSigmaX = math.sqrt(abs(cX[2][2]))
             h.set("errSigmaX", errSigmaX)
             if pixelSize is not None:
                 fwhmX = self.std_to_fwhm * pixelSize * pX[2]
@@ -578,10 +576,10 @@ class SimpleImageProcessor(PythonDevice):
             # Y Fit Update
             h.set("positionY",
                   binningY * (ymin + pY[1] + offsetY))
-            errPositionY = math.sqrt(cY[1][1])
+            errPositionY = math.sqrt(abs(cY[1][1]))
             h.set("errPositionY", errPositionY)
             h.set("sigmaY", pY[2])
-            errSigmaY = math.sqrt(cY[2][2])
+            errSigmaY = math.sqrt(abs(cY[2][2]))
             h.set("errSigmaY", errSigmaY)
             if pixelSize is not None:
                 fwhmY = self.std_to_fwhm * pixelSize * pY[2]
