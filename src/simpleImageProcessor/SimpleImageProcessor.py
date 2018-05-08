@@ -3,23 +3,23 @@
 # Created on April  6, 2016
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
+import math
+import time
 
 import numpy as np
-import time
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice,
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
-    Hash, MetricPrefix, Schema, State, Unit
-)
+    Hash, MetricPrefix, Schema, State, Unit)
 
 from image_processing import image_processing
 
 
 @KARABO_CLASSINFO("SimpleImageProcessor", "2.2")
 class SimpleImageProcessor(PythonDevice):
-    # Numerical factor to convert gaussian standard deviation to beam size
+    # Numerical factor to convert Gaussian standard deviation to beam size
     std_to_fwhm = 2.35
 
     @staticmethod
@@ -27,7 +27,7 @@ class SimpleImageProcessor(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.ON, State.ACQUIRING)
+                .setNewOptions(State.ON, State.RUNNING)
                 .setNewDefaultValue(State.ON)
                 .commit(),
 
@@ -70,7 +70,7 @@ class SimpleImageProcessor(PythonDevice):
                 .readOnly()
                 .commit(),
 
-            INT32_ELEMENT(expected).key("imageOffsetX")
+            INT32_ELEMENT(expected).key("offsetX")
                 .displayedName("Image Offset X")
                 .description("The image offset in X direction, i.e. the X "
                              "position of its top-left corner.")
@@ -79,7 +79,7 @@ class SimpleImageProcessor(PythonDevice):
                 .readOnly()
                 .commit(),
 
-            INT32_ELEMENT(expected).key("imageOffsetY")
+            INT32_ELEMENT(expected).key("offsetY")
                 .displayedName("Image Offset Y")
                 .description("The image offset in Y direction, i.e. the Y "
                              "position of its top-left corner.")
@@ -107,8 +107,9 @@ class SimpleImageProcessor(PythonDevice):
             FLOAT_ELEMENT(expected).key("pixelSize")
                 .displayedName("Pixel Size")
                 .description("The pixel size.")
-                .assignmentOptional().defaultValue(1.0)
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0)
                 .reconfigurable()
                 .commit(),
 
@@ -125,7 +126,7 @@ class SimpleImageProcessor(PythonDevice):
 
             FLOAT_ELEMENT(expected).key("fitRange")
                 .displayedName("Fit Range")
-                .description("The range for the gaussian fit (in standard "
+                .description("The range for the Gaussian fit (in standard "
                              "deviations).")
                 .assignmentOptional().defaultValue(3.0)
                 .expertAccess()
@@ -146,7 +147,7 @@ class SimpleImageProcessor(PythonDevice):
             BOOL_ELEMENT(expected).key("subtractImagePedestal")
                 .displayedName("Subtract Image Pedestal")
                 .description("Subtract the image pedestal (ie image = image - "
-                             "image.min()) before centre-of-mass and gaussian "
+                             "image.min()) before centre-of-mass and Gaussian "
                              "fit.")
                 .assignmentOptional().defaultValue(True)
                 .expertAccess()
@@ -154,6 +155,13 @@ class SimpleImageProcessor(PythonDevice):
                 .commit(),
 
             # Image processing outputs
+
+            BOOL_ELEMENT(expected).key("success")
+                .displayedName("Success")
+                .description("Success boolean whether the image processing "
+                             "was succesful or not")
+                .readOnly().initialValue(False)
+                .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
                 .displayedName("Max Pixel Value")
@@ -164,35 +172,35 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("amplitudeX")
                 .displayedName("Amplitude X")
-                .description("Amplitude X from gaussian fitting.")
+                .description("Amplitude X from Gaussian fitting.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("amplitudeY")
                 .displayedName("Amplitude Y")
-                .description("Amplitude Y from gaussian fitting.")
+                .description("Amplitude Y from Gaussian fitting.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
-            DOUBLE_ELEMENT(expected).key("centerX")
-                .displayedName("Center X")
-                .description("Center X from gaussian fitting.")
+            DOUBLE_ELEMENT(expected).key("positionX")
+                .displayedName("Position X")
+                .description("Beam position X from Gaussian fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            DOUBLE_ELEMENT(expected).key("centerY")
-                .displayedName("Center Y")
-                .description("Center Y from gaussian fitting.")
+            DOUBLE_ELEMENT(expected).key("positionY")
+                .displayedName("Position Y")
+                .description("Beam position Y from Gaussian fitting.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("sigmaX")
                 .displayedName("Sigma X")
-                .description("SigmaX from gaussian fitting.")
+                .description("Standard deviation X from Gaussian fitting.")
                 .unit(Unit.PIXEL)
                 .expertAccess()
                 .readOnly()
@@ -200,7 +208,7 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sigmaY")
                 .displayedName("Sigma Y")
-                .description("Sigma Y from gaussian fitting.")
+                .description("Standard deviation Y from Gaussian fitting.")
                 .unit(Unit.PIXEL)
                 .expertAccess()
                 .readOnly()
@@ -208,29 +216,31 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("fwhmX")
                 .displayedName("FWHM X")
-                .description("FWHM obtained from sigma.")
+                .description("FWHM obtained from standard deviation.")
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("fwhmY")
                 .displayedName("FWHM Y")
-                .description("FWHM obtained from sigmaY.")
+                .description("FWHM obtained from standard deviation.")
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .readOnly()
                 .commit(),
 
-            DOUBLE_ELEMENT(expected).key("errCenterX")
-                .displayedName("Error Center X")
-                .description("Uncertainty on center X from gaussian fitting.")
+            DOUBLE_ELEMENT(expected).key("errPositionX")
+                .displayedName("Error Position X")
+                .description("Uncertainty on position X from Gaussian "
+                             "fitting.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            DOUBLE_ELEMENT(expected).key("errCenterY")
-                .displayedName("Error Center Y")
-                .description("Uncertainty on centerY from gaussian fitting.")
+            DOUBLE_ELEMENT(expected).key("errPositionY")
+                .displayedName("Error Position Y")
+                .description("Uncertainty on position Y from Gaussian "
+                             "fitting.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -238,7 +248,8 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("errSigmaX")
                 .displayedName("Error Sigma X")
-                .description("Uncertainty on sigma_x from gaussian fitting.")
+                .description("Uncertainty of the standard deviation X from "
+                             "Gaussian fitting.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -246,7 +257,8 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("errSigmaY")
                 .displayedName("Error Sigma Y")
-                .description("Uncertainty on sigmaY from gaussian fitting.")
+                .description("Uncertainty of the standard deviation Y from "
+                             "Gaussian fitting.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -261,12 +273,12 @@ class SimpleImageProcessor(PythonDevice):
         # always call superclass constructor first!
         super(SimpleImageProcessor, self).__init__(configuration)
 
-        # 1d gaussian fit parameters
+        # 1d Gaussian fit parameters
         self.amplitudeX = None
-        self.centerX = None
+        self.positionX = None
         self.sigmaX = None
         self.amplitudeY = None
-        self.centerY = None
+        self.positionY = None
         self.sigmaY = None
 
         # Current image
@@ -288,14 +300,14 @@ class SimpleImageProcessor(PythonDevice):
 
         h.set("maxPxValue", 0.0)
         h.set("amplitudeX", 0.0)
-        h.set("centerX", 0.0)
-        h.set("errCenterX", 0.0)
+        h.set("positionX", 0.0)
+        h.set("errPositionX", 0.0)
         h.set("sigmaX", 0.0)
         h.set("errSigmaX", 0.0)
         h.set("fwhmX", 0.0)
         h.set("amplitudeY", 0.0)
-        h.set("centerY", 0.0)
-        h.set("errCenterY", 0.0)
+        h.set("positionY", 0.0)
+        h.set("errPositionY", 0.0)
         h.set("sigmaY", 0.0)
         h.set("errSigmaY", 0.0)
         h.set("fwhmY", 0.0)
@@ -306,7 +318,7 @@ class SimpleImageProcessor(PythonDevice):
     def onData(self, data, metaData):
         if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACQUIRING)
+            self.updateState(State.RUNNING)
         try:
             if data.has('data.image'):
                 self.processImage(data['data.image'])
@@ -325,11 +337,13 @@ class SimpleImageProcessor(PythonDevice):
         self.updateState(State.ON)
 
     def processImage(self, imageData):
-        imgThr = self.get("imageThreshold")
-        fitRange = self.get("fitRange")
-        pxThr = self.get("pixelThreshold")
+        img_threshold = self.get("imageThreshold")
+        fit_range = self.get("fitRange")
+        px_threshold = self.get("pixelThreshold")
 
         h = Hash()  # Empty hash
+        # default is no success in processing
+        h.set("success", False)
 
         try:
             self.counter += 1
@@ -350,7 +364,7 @@ class SimpleImageProcessor(PythonDevice):
             pixelSize = self.get("pixelSize")
         except:
             # No pixel size, using default
-            pixelSize = 1.
+            pixelSize = None
 
         try:
             dims = imageData.getDimensions()
@@ -363,16 +377,16 @@ class SimpleImageProcessor(PythonDevice):
 
             try:
                 roiOffsets = imageData.getROIOffsets()
-                imageOffsetY = roiOffsets[0]
-                imageOffsetX = roiOffsets[1]
+                offsetY = roiOffsets[0]
+                offsetX = roiOffsets[1]
             except:
                 # Image has no ROI offset
-                imageOffsetX = 0
-                imageOffsetY = 0
-            if imageOffsetX != self.get("imageOffsetX"):
-                h.set("imageOffsetX", imageOffsetX)
-            if imageOffsetY != self.get("imageOffsetY"):
-                h.set("imageOffsetY", imageOffsetY)
+                offsetX = 0
+                offsetY = 0
+            if offsetX != self.get("offsetX"):
+                h.set("offsetX", offsetX)
+            if offsetY != self.get("offsetY"):
+                h.set("offsetY", offsetY)
 
             try:
                 binning = imageData.getBinning()
@@ -397,21 +411,27 @@ class SimpleImageProcessor(PythonDevice):
             self.log.DEBUG("Image loaded!!!")
 
         except Exception as e:
-            self.log.WARN("In processImage: %s" % str(e))
+            self.log.WARN("In processImage: {}".format(e))
+            # set the hash for no success!
+            self.set(h)
             return
 
         # Filter by Threshold
-        if img.max() < imgThr:
+        if img.max() < img_threshold:
             self.log.DEBUG("Max pixel value below threshold: image "
-                           "discarded!!!")
+                           "discarded!")
+            # set the hash for no success!
+            self.set(h)
             return
 
         # Get pixel max value
         try:
-            imgMax = img.max()
-            h.set("maxPxValue", float(imgMax))
+            img_max = img.max()
+            h.set("maxPxValue", float(img_max))
         except Exception as e:
-            self.log.WARN("Could not read pixel max: %s." % str(e))
+            self.log.WARN("Could not read pixel max: {}.".format(e))
+            # set the hash for no success!
+            self.set(h)
             return
 
         self.log.DEBUG("Pixel max: done!")
@@ -428,8 +448,10 @@ class SimpleImageProcessor(PythonDevice):
                     # Subtract image pedestal
                     img -= imgMin
             except Exception as e:
-                self.log.WARN("Could not subtract image pedestal: %s." %
-                              str(e))
+                self.log.WARN("Could not subtract image "
+                              "pedestal: {}.".format(e))
+                # set the hash for no success!
+                self.set(h)
                 return
 
             self.log.DEBUG("Image pedestal subtraction: done!")
@@ -437,18 +459,21 @@ class SimpleImageProcessor(PythonDevice):
         # Centre-Of-Mass and widths
         try:
             # Set a threshold to cut away noise
-            img2 = image_processing.imageSetThreshold(img, pxThr * img.max())
+            img2 = image_processing.imageSetThreshold(img,
+                                                      px_threshold * img.max())
 
             # Centre-of-mass and widths
             (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
 
-            xmin = np.maximum(int(x0 - fitRange * sx), 0)
-            xmax = np.minimum(int(x0 + fitRange * sx), imageSizeX)
-            ymin = np.maximum(int(y0 - fitRange * sy), 0)
-            ymax = np.minimum(int(y0 + fitRange * sy), imageSizeY)
+            xmin = np.maximum(int(x0 - fit_range * sx), 0)
+            xmax = np.minimum(int(x0 + fit_range * sx), imageSizeX)
+            ymin = np.maximum(int(y0 - fit_range * sy), 0)
+            ymax = np.minimum(int(y0 + fit_range * sy), imageSizeY)
 
         except Exception as e:
-            self.log.WARN("Could not calculate centre-of-mass: %s." % str(e))
+            self.log.WARN("Could not calculate centre-of-mass: {}.".format(e))
+            # set the hash for no success!
+            self.set(h)
             return
 
         self.log.DEBUG("Centre-of-mass and widths: done!")
@@ -465,9 +490,9 @@ class SimpleImageProcessor(PythonDevice):
                 data -= data.min()
 
             # Initial parameters
-            if None not in (self.amplitudeX, self.centerX, self.sigmaX):
+            if None not in (self.amplitudeX, self.positionX, self.sigmaX):
                 # Use last fit's parameters as initial estimate
-                p0 = (self.amplitudeX, self.centerX - xmin, self.sigmaX)
+                p0 = (self.amplitudeX, self.positionX - xmin, self.sigmaX)
             elif None not in (x0, sx):
                 # Use CoM for initial parameter estimate
                 p0 = (data.max(), x0 - xmin, sx)
@@ -475,17 +500,21 @@ class SimpleImageProcessor(PythonDevice):
                 # No initial parameters
                 p0 = None
 
-            # 1-d gaussian fit
+            # 1-d Gaussian fit
             out = image_processing.fitGauss(data, p0)
             pX = out[0]  # parameters
             cX = out[1]  # covariance
             successX = out[2]  # error
 
             # Save fit's parameters
-            self.amplitudeX, self.centerX, self.sigmaX = pX[0], pX[1] + xmin, pX[2]
+            self.amplitudeX = pX[0]
+            self.positionX = pX[1] + xmin
+            self.sigmaX = pX[2]
 
         except Exception as e:
-            self.log.WARN("Could not do 1-d gaussian fit [x]: %s." % str(e))
+            self.log.WARN("Could not do 1-d Gaussian fit [x]: {}.".format(e))
+            # set the hash for no success!
+            self.set(h)
             return
 
         try:
@@ -499,9 +528,9 @@ class SimpleImageProcessor(PythonDevice):
                 data -= data.min()
 
             # Initial parameters
-            if None not in (self.amplitudeY, self.centerY, self.sigmaY):
+            if None not in (self.amplitudeY, self.positionY, self.sigmaY):
                 # Use last fit's parameters as initial estimate
-                p0 = (self.amplitudeY, self.centerY - ymin, self.sigmaY)
+                p0 = (self.amplitudeY, self.positionY - ymin, self.sigmaY)
             elif None not in (y0, sy):
                 # Use CoM for initial parameter estimate
                 p0 = (data.max(), y0 - ymin, sy)
@@ -509,7 +538,7 @@ class SimpleImageProcessor(PythonDevice):
                 # No initial parameters
                 p0 = None
 
-            # 1-d gaussian fit
+            # 1-d Gaussian fit
             out = image_processing.fitGauss(data, p0)
             pY = out[0]  # parameters
             cY = out[1]  # covariance
@@ -517,46 +546,51 @@ class SimpleImageProcessor(PythonDevice):
 
             # Save fit's parameters
             self.amplitudeY = pY[0]
-            self.centerY = pY[1] + ymin
+            self.positionY = pY[1] + ymin
             self.sigmaY = pY[2]
 
         except Exception as e:
-            self.log.WARN("Could not do 1-d gaussian fit [y]: %s." % str(e))
+            self.log.WARN("Could not do 1-d Gaussian fit [y]: {}.".format(e))
+            # set the hash for no success!
+            self.set(h)
             return
 
-        if successX in (1, 2, 3, 4):
-            # Successful fit
-            h.set("centerX",
-                  binningX * (xmin + pX[1] + imageOffsetX))
-            errCenterX = np.sqrt(cX[1][1])
-            h.set("errCenterX", errCenterX)
+        if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
+            h.set("success", True)
+
+            # ----------------
+            # X Fit Update
+            h.set("positionX",
+                  binningX * (xmin + pX[1] + offsetX))
+            errPositionX = math.sqrt(cX[1][1])
+            h.set("errPositionX", errPositionX)
             h.set("sigmaX", pX[2])
-            errSigmaX = np.sqrt(cX[2][2])
+            errSigmaX = math.sqrt(cX[2][2])
             h.set("errSigmaX", errSigmaX)
             if pixelSize is not None:
                 fwhmX = self.std_to_fwhm * pixelSize * pX[2]
                 h.set("fwhmX", fwhmX)
 
-        if successY in (1, 2, 3, 4):
-            # Successful fit
-            h.set("centerY",
-                  binningY * (ymin + pY[1] + imageOffsetY))
-            errCenterY = np.sqrt(cY[1][1])
-            h.set("errCenterY", errCenterY)
+            amplitudeX = pX[0] / pY[2] / math.sqrt(2 * math.pi)
+            h.set("amplitudeX", amplitudeX)
+
+            # ----------------
+            # Y Fit Update
+            h.set("positionY",
+                  binningY * (ymin + pY[1] + offsetY))
+            errPositionY = math.sqrt(cY[1][1])
+            h.set("errPositionY", errPositionY)
             h.set("sigmaY", pY[2])
-            errSigmaY = np.sqrt(cY[2][2])
+            errSigmaY = math.sqrt(cY[2][2])
             h.set("errSigmaY", errSigmaY)
             if pixelSize is not None:
                 fwhmY = self.std_to_fwhm * pixelSize * pY[2]
                 h.set("fwhmY", fwhmY)
 
-        if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
-            amplitudeX = pX[0] / pY[2] / np.sqrt(2 * np.pi)
-            amplitudeY = pY[0] / pX[2] / np.sqrt(2 * np.pi)
-            h.set("amplitudeX", amplitudeX)
+            amplitudeY = pY[0] / pX[2] / math.sqrt(2 * math.pi)
             h.set("amplitudeY", amplitudeY)
 
-        self.log.DEBUG("1-d gaussian fit: done!")
+        self.log.DEBUG("1-d Gaussian fit: done!")
 
         # Update device parameters (all at once)
         self.set(h)
