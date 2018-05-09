@@ -20,7 +20,7 @@ from image_processing import image_processing
 @KARABO_CLASSINFO("SimpleImageProcessor", "2.2")
 class SimpleImageProcessor(PythonDevice):
     # Numerical factor to convert Gaussian standard deviation to beam size
-    std_to_fwhm = 2.35
+    STD_TO_FWHM = 2.35
 
     @staticmethod
     def expectedParameters(expected):
@@ -120,26 +120,6 @@ class SimpleImageProcessor(PythonDevice):
                              "will be processed.")
                 .assignmentOptional().defaultValue(0.)
                 .unit(Unit.NUMBER)
-                .expertAccess()
-                .init()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("fitRange")
-                .displayedName("Fit Range")
-                .description("The range for the Gaussian fit (in standard "
-                             "deviations).")
-                .assignmentOptional().defaultValue(3.0)
-                .expertAccess()
-                .init()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("pixelThreshold")
-                .displayedName("Pixel Relative threshold")
-                .description("The pixel threshold for centre-of-gravity "
-                             "calculation (fraction of highest value). Pixels "
-                             "below threshold will be discarded.")
-                .assignmentOptional().defaultValue(0.10)
-                .minInc(0.0).maxInc(1.0)
                 .expertAccess()
                 .init()
                 .commit(),
@@ -274,12 +254,14 @@ class SimpleImageProcessor(PythonDevice):
         super(SimpleImageProcessor, self).__init__(configuration)
 
         # 1d Gaussian fit parameters
-        self.amplitudeX = None
-        self.positionX = None
-        self.sigmaX = None
-        self.amplitudeY = None
-        self.positionY = None
-        self.sigmaY = None
+        self.amplitudeX = np.NaN
+        self.positionX = np.NaN
+        self.sigmaX = np.NaN
+        self.amplitudeY = np.NaN
+        self.positionY = np.NaN
+        self.sigmaY = np.NaN
+
+        self.success = False
 
         # Current image
         self.currentImage = None
@@ -298,19 +280,19 @@ class SimpleImageProcessor(PythonDevice):
     def reset(self):
         h = Hash()
 
-        h.set("maxPxValue", 0.0)
-        h.set("amplitudeX", 0.0)
-        h.set("positionX", 0.0)
-        h.set("errPositionX", 0.0)
-        h.set("sigmaX", 0.0)
-        h.set("errSigmaX", 0.0)
-        h.set("fwhmX", 0.0)
-        h.set("amplitudeY", 0.0)
-        h.set("positionY", 0.0)
-        h.set("errPositionY", 0.0)
-        h.set("sigmaY", 0.0)
-        h.set("errSigmaY", 0.0)
-        h.set("fwhmY", 0.0)
+        h.set("maxPxValue", np.NaN)
+        h.set("amplitudeX", np.NaN)
+        h.set("positionX", np.NaN)
+        h.set("errPositionX", np.NaN)
+        h.set("sigmaX", np.NaN)
+        h.set("errSigmaX", np.NaN)
+        h.set("fwhmX", np.NaN)
+        h.set("amplitudeY", np.NaN)
+        h.set("positionY", np.NaN)
+        h.set("errPositionY", np.NaN)
+        h.set("sigmaY", np.NaN)
+        h.set("errSigmaY", np.NaN)
+        h.set("fwhmY", np.NaN)
 
         # Reset device parameters (all at once)
         self.set(h)
@@ -336,254 +318,200 @@ class SimpleImageProcessor(PythonDevice):
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
-        fit_range = self.get("fitRange")
-        px_threshold = self.get("pixelThreshold")
 
         h = Hash()  # Empty hash
         # default is no success in processing
         h.set("success", False)
+        h.set("maxPxValue", np.NaN)
+        h.set("amplitudeX", np.NaN)
+        h.set("positionX", np.NaN)
+        h.set("errPositionX", np.NaN)
+        h.set("sigmaX", np.NaN)
+        h.set("errSigmaX", np.NaN)
+        h.set("fwhmX", np.NaN)
+        h.set("amplitudeY", np.NaN)
+        h.set("positionY", np.NaN)
+        h.set("errPositionY", np.NaN)
+        h.set("sigmaY", np.NaN)
+        h.set("errSigmaY", np.NaN)
+        h.set("fwhmY", np.NaN)
+
+        self.counter += 1
+        currentTime = time.time()
+        if self.lastTime is None:
+            self.counter = 0
+            self.lastTime = currentTime
+        elif self.lastTime and (currentTime - self.lastTime) > 1.:
+            fps = self.counter / (currentTime - self.lastTime)
+            self.set("frameRate", fps)
+            self.log.DEBUG("Acquisition rate %f Hz" % fps)
+            self.counter = 0
+            self.lastTime = currentTime
+
+        pixelSize = self.get("pixelSize")
+
+        dims = imageData.getDimensions()
+        imageSizeY = dims[0]
+        imageSizeX = dims[1]
+        if imageSizeX != self.get("imageSizeX"):
+            h.set("imageSizeX", imageSizeX)
+        if imageSizeY != self.get("imageSizeY"):
+            h.set("imageSizeY", imageSizeY)
 
         try:
-            self.counter += 1
-            currentTime = time.time()
-            if self.lastTime is None:
-                self.counter = 0
-                self.lastTime = currentTime
-            elif self.lastTime and (currentTime - self.lastTime) > 1.:
-                fps = self.counter / (currentTime - self.lastTime)
-                self.set("frameRate", fps)
-                self.log.DEBUG("Acquisition rate %f Hz" % fps)
-                self.counter = 0
-                self.lastTime = currentTime
-        except Exception as e:
-            self.log.ERROR("Exception caught in processImage: %s" % str(e))
-
-        try:
-            pixelSize = self.get("pixelSize")
+            roiOffsets = imageData.getROIOffsets()
+            offsetY = roiOffsets[0]
+            offsetX = roiOffsets[1]
         except:
-            # No pixel size, using default
-            pixelSize = None
+            # XXX: What exceptions do we expect?
+            # Image has no ROI offset
+            offsetX = 0
+            offsetY = 0
+        if offsetX != self.get("offsetX"):
+            h.set("offsetX", offsetX)
+        if offsetY != self.get("offsetY"):
+            h.set("offsetY", offsetY)
 
         try:
-            dims = imageData.getDimensions()
-            imageSizeY = dims[0]
-            imageSizeX = dims[1]
-            if imageSizeX != self.get("imageSizeX"):
-                h.set("imageSizeX", imageSizeX)
-            if imageSizeY != self.get("imageSizeY"):
-                h.set("imageSizeY", imageSizeY)
+            binning = imageData.getBinning()
+            binningY = binning[0]
+            binningX = binning[1]
+            if binningX != self.get("binningX"):
+                h.set("binningX", binningX)
+            if binningY != self.get("binningY"):
+                h.set("binningY", binningY)
+        except:
+            # XXX: What exceptions do we expect?
+            # Image has no binning information
+            binningY = 1
+            binningX = 1
 
-            try:
-                roiOffsets = imageData.getROIOffsets()
-                offsetY = roiOffsets[0]
-                offsetX = roiOffsets[1]
-            except:
-                # Image has no ROI offset
-                offsetX = 0
-                offsetY = 0
-            if offsetX != self.get("offsetX"):
-                h.set("offsetX", offsetX)
-            if offsetY != self.get("offsetY"):
-                h.set("offsetY", offsetY)
+        self.currentImage = imageData.getData()  # np.ndarray
+        img = self.currentImage  # Shallow copy
+        if img.ndim == 3 and img.shape[2] == 1:
+            # Image has 3rd dimension (channel), but it's 1
+            self.log.DEBUG("Reshaping image...")
+            img = img.squeeze()
 
-            try:
-                binning = imageData.getBinning()
-                binningY = binning[0]
-                binningX = binning[1]
-                if binningX != self.get("binningX"):
-                    h.set("binningX", binningX)
-                if binningY != self.get("binningY"):
-                    h.set("binningY", binningY)
-            except:
-                # Image has no binning information
-                binningY = 1
-                binningX = 1
+        self.log.DEBUG("Image loaded!!!")
 
-            self.currentImage = imageData.getData()  # np.ndarray
-            img = self.currentImage  # Shallow copy
-            if img.ndim == 3 and img.shape[2] == 1:
-                # Image has 3rd dimension (channel), but it's 1
-                self.log.DEBUG("Reshaping image...")
-                img = img.squeeze()
-
-            self.log.DEBUG("Image loaded!!!")
-
-        except Exception as e:
-            self.log.WARN("In processImage: {}".format(e))
-            # set the hash for no success!
-            self.set(h)
-            return
-
+        # ---------------------
         # Filter by Threshold
         if img.max() < img_threshold:
             self.log.DEBUG("Max pixel value below threshold: image "
                            "discarded!")
             # set the hash for no success!
+            self.success = False
             self.set(h)
             return
 
+        # ---------------------
         # Get pixel max value
         try:
             img_max = img.max()
             h.set("maxPxValue", float(img_max))
         except Exception as e:
+            # XXX: Why should this happen?
             self.log.WARN("Could not read pixel max: {}.".format(e))
             # set the hash for no success!
+            self.success = False
             self.set(h)
             return
 
         self.log.DEBUG("Pixel max: done!")
 
+        # ---------------------
         # Pedestal subtraction
         if self.get("subtractImagePedestal"):
-            try:
-                imgMin = img.min()
-                if imgMin > 0:
-                    if self.currentImage is img:
-                        # Must copy, or self.currentImage will be modified
-                        self.currentImage = img.copy()
+            imgMin = img.min()
+            if imgMin > 0:
+                if self.currentImage is img:
+                    # Must copy, or self.currentImage will be modified
+                    self.currentImage = img.copy()
 
-                    # Subtract image pedestal
-                    img -= imgMin
-            except Exception as e:
-                self.log.WARN("Could not subtract image "
-                              "pedestal: {}.".format(e))
-                # set the hash for no success!
-                self.set(h)
-                return
+                # Subtract image pedestal
+                img -= imgMin
 
             self.log.DEBUG("Image pedestal subtraction: done!")
 
-        # Centre-Of-Mass and widths
-        try:
-            # Set a threshold to cut away noise
-            img2 = image_processing.imageSetThreshold(img,
-                                                      px_threshold * img.max())
-
-            # Centre-of-mass and widths
-            (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
-
-            xmin = np.maximum(int(x0 - fit_range * sx), 0)
-            xmax = np.minimum(int(x0 + fit_range * sx), imageSizeX)
-            ymin = np.maximum(int(y0 - fit_range * sy), 0)
-            ymax = np.minimum(int(y0 + fit_range * sy), imageSizeY)
-
-        except Exception as e:
-            self.log.WARN("Could not calculate centre-of-mass: {}.".format(e))
-            # set the hash for no success!
-            self.set(h)
-            return
-
-        self.log.DEBUG("Centre-of-mass and widths: done!")
-
         # 1-D Gaussian Fits
-        try:
-            # Sum image along y axis
-            imgX = image_processing.imageSumAlongY(img)
+        # Sum image along y axis
+        imgX = image_processing.imageSumAlongY(img)
 
-            # Select sub-range and substract pedestal
-            data = imgX[xmin:xmax]
-            imgMin = data.min()
-            if imgMin > 0:
-                data -= data.min()
+        # Initial parameters depending on either success or not
+        if self.success:
+            # Use last fit's parameters as initial estimate
+            p0 = (self.amplitudeX, self.positionX, self.sigmaX)
+        else:
+            # No initial parameters
+            p0 = image_processing.peakParametersEval(imgX)
 
-            # Initial parameters
-            if None not in (self.amplitudeX, self.positionX, self.sigmaX):
-                # Use last fit's parameters as initial estimate
-                p0 = (self.amplitudeX, self.positionX - xmin, self.sigmaX)
-            elif None not in (x0, sx):
-                # Use CoM for initial parameter estimate
-                p0 = (data.max(), x0 - xmin, sx)
-            else:
-                # No initial parameters
-                p0 = None
+        # 1-d Gaussian fit
+        out = image_processing.fitGauss(imgX, p0)
+        pX = out[0]  # parameters
+        cX = out[1]  # covariance
+        successX = out[2]  # error
 
-            # 1-d Gaussian fit
-            out = image_processing.fitGauss(data, p0)
-            pX = out[0]  # parameters
-            cX = out[1]  # covariance
-            successX = out[2]  # error
+        # Save fit's parameters
+        self.amplitudeX = pX[0]
+        self.positionX = pX[1]
+        self.sigmaX = pX[2]
 
-            # Save fit's parameters
-            self.amplitudeX = pX[0]
-            self.positionX = pX[1] + xmin
-            self.sigmaX = pX[2]
+        # Sum image along x axis
+        imgY = image_processing.imageSumAlongX(img)
 
-        except Exception as e:
-            self.log.WARN("Could not do 1-d Gaussian fit [x]: {}.".format(e))
-            # set the hash for no success!
-            self.set(h)
-            return
+        # Initial parameters
+        if self.success:
+            # Use last fit's parameters as initial estimate
+            p0 = (self.amplitudeY, self.positionY, self.sigmaY)
+        else:
+            # No initial parameters
+            p0 = image_processing.peakParametersEval(imgY)
 
-        try:
-            # Sum image along x axis
-            imgY = image_processing.imageSumAlongX(img)
+        # 1-d Gaussian fit
+        out = image_processing.fitGauss(imgY, p0)
+        pY = out[0]  # parameters
+        cY = out[1]  # covariance
+        successY = out[2]  # error
 
-            # Select sub-range and substract pedestal
-            data = imgY[ymin:ymax]
-            imgMin = data.min()
-            if imgMin > 0:
-                data -= data.min()
+        # Save fit's parameters
+        self.amplitudeY = pY[0]
+        self.positionY = pY[1]
+        self.sigmaY = pY[2]
 
-            # Initial parameters
-            if None not in (self.amplitudeY, self.positionY, self.sigmaY):
-                # Use last fit's parameters as initial estimate
-                p0 = (self.amplitudeY, self.positionY - ymin, self.sigmaY)
-            elif None not in (y0, sy):
-                # Use CoM for initial parameter estimate
-                p0 = (data.max(), y0 - ymin, sy)
-            else:
-                # No initial parameters
-                p0 = None
-
-            # 1-d Gaussian fit
-            out = image_processing.fitGauss(data, p0)
-            pY = out[0]  # parameters
-            cY = out[1]  # covariance
-            successY = out[2]  # error
-
-            # Save fit's parameters
-            self.amplitudeY = pY[0]
-            self.positionY = pY[1] + ymin
-            self.sigmaY = pY[2]
-
-        except Exception as e:
-            self.log.WARN("Could not do 1-d Gaussian fit [y]: {}.".format(e))
-            # set the hash for no success!
-            self.set(h)
-            return
-
-        if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
+        SUCCESS = (1, 2, 3, 4)
+        if successX in SUCCESS and successY in SUCCESS:
+            # Directly set the success boolean
+            self.success = True
             h.set("success", True)
 
             # ----------------
             # X Fit Update
+
             h.set("positionX",
-                  binningX * (xmin + pX[1] + offsetX))
+                  binningX * (pX[1] + offsetX))
             errPositionX = math.sqrt(abs(cX[1][1]))
             h.set("errPositionX", errPositionX)
             h.set("sigmaX", pX[2])
             errSigmaX = math.sqrt(abs(cX[2][2]))
             h.set("errSigmaX", errSigmaX)
-            if pixelSize is not None:
-                fwhmX = self.std_to_fwhm * pixelSize * pX[2]
-                h.set("fwhmX", fwhmX)
+            fwhmX = self.STD_TO_FWHM * pixelSize * pX[2]
+            h.set("fwhmX", fwhmX)
 
             amplitudeX = pX[0] / pY[2] / math.sqrt(2 * math.pi)
             h.set("amplitudeX", amplitudeX)
 
             # ----------------
             # Y Fit Update
-            h.set("positionY",
-                  binningY * (ymin + pY[1] + offsetY))
+
+            h.set("positionY", binningY * (pY[1] + offsetY))
             errPositionY = math.sqrt(abs(cY[1][1]))
             h.set("errPositionY", errPositionY)
             h.set("sigmaY", pY[2])
             errSigmaY = math.sqrt(abs(cY[2][2]))
             h.set("errSigmaY", errSigmaY)
-            if pixelSize is not None:
-                fwhmY = self.std_to_fwhm * pixelSize * pY[2]
-                h.set("fwhmY", fwhmY)
+            fwhmY = self.STD_TO_FWHM * pixelSize * pY[2]
+            h.set("fwhmY", fwhmY)
 
             amplitudeY = pY[0] / pX[2] / math.sqrt(2 * math.pi)
             h.set("amplitudeY", amplitudeY)
