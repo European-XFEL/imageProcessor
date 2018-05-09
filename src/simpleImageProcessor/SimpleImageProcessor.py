@@ -27,8 +27,8 @@ class SimpleImageProcessor(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.ON, State.RUNNING)
-                .setNewDefaultValue(State.ON)
+                .setNewOptions(State.PASSIVE, State.ACTIVE)
+                .setNewDefaultValue(State.PASSIVE)
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -298,9 +298,9 @@ class SimpleImageProcessor(PythonDevice):
         self.set(h)
 
     def onData(self, data, metaData):
-        if self.get("state") == State.ON:
+        if self.get("state") == State.PASSIVE:
             self.log.INFO("Start of Stream")
-            self.updateState(State.RUNNING)
+            self.updateState(State.ACTIVE)
 
         if data.has('data.image'):
             self.processImage(data['data.image'])
@@ -314,7 +314,7 @@ class SimpleImageProcessor(PythonDevice):
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self.set("frameRate", 0.)
-        self.updateState(State.ON)
+        self.updateState(State.PASSIVE)
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
@@ -434,17 +434,15 @@ class SimpleImageProcessor(PythonDevice):
 
             self.log.DEBUG("Image pedestal subtraction: done!")
 
+        # ------------------------------------------------
         # 1-D Gaussian Fits
-        # Sum image along y axis
+
+        # ------------------------------------------------
+        # X Fitting
         imgX = image_processing.imageSumAlongY(img)
 
-        # Initial parameters depending on either success or not
-        if self.success:
-            # Use last fit's parameters as initial estimate
-            p0 = (self.amplitudeX, self.positionX, self.sigmaX)
-        else:
-            # No initial parameters
-            p0 = image_processing.peakParametersEval(imgX)
+        # Initial parameters
+        p0 = image_processing.peakParametersEval(imgX)
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgX, p0)
@@ -457,16 +455,12 @@ class SimpleImageProcessor(PythonDevice):
         self.positionX = pX[1]
         self.sigmaX = pX[2]
 
-        # Sum image along x axis
+        # ------------------------------------------------
+        # Y Fitting
         imgY = image_processing.imageSumAlongX(img)
 
         # Initial parameters
-        if self.success:
-            # Use last fit's parameters as initial estimate
-            p0 = (self.amplitudeY, self.positionY, self.sigmaY)
-        else:
-            # No initial parameters
-            p0 = image_processing.peakParametersEval(imgY)
+        p0 = image_processing.peakParametersEval(imgY)
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgY, p0)
@@ -488,33 +482,24 @@ class SimpleImageProcessor(PythonDevice):
             # ----------------
             # X Fit Update
 
-            h.set("positionX",
-                  binningX * (pX[1] + offsetX))
-            errPositionX = math.sqrt(abs(cX[1][1]))
-            h.set("errPositionX", errPositionX)
+            h.set("positionX", binningX * (pX[1] + offsetX))
+            h.set("errPositionX", math.sqrt(abs(cX[1][1])))
             h.set("sigmaX", pX[2])
-            errSigmaX = math.sqrt(abs(cX[2][2]))
-            h.set("errSigmaX", errSigmaX)
-            fwhmX = self.STD_TO_FWHM * pixelSize * pX[2]
-            h.set("fwhmX", fwhmX)
+            h.set("errSigmaX", math.sqrt(abs(cX[2][2])))
+            h.set("fwhmX", self.STD_TO_FWHM * pixelSize * pX[2])
 
-            amplitudeX = pX[0] / pY[2] / math.sqrt(2 * math.pi)
-            h.set("amplitudeX", amplitudeX)
+            h.set("amplitudeX", pX[0] / pY[2] / math.sqrt(2 * math.pi))
 
             # ----------------
             # Y Fit Update
 
             h.set("positionY", binningY * (pY[1] + offsetY))
-            errPositionY = math.sqrt(abs(cY[1][1]))
-            h.set("errPositionY", errPositionY)
+            h.set("errPositionY", math.sqrt(abs(cY[1][1])))
             h.set("sigmaY", pY[2])
-            errSigmaY = math.sqrt(abs(cY[2][2]))
-            h.set("errSigmaY", errSigmaY)
-            fwhmY = self.STD_TO_FWHM * pixelSize * pY[2]
-            h.set("fwhmY", fwhmY)
+            h.set("errSigmaY", math.sqrt(abs(cY[2][2])))
+            h.set("fwhmY", self.STD_TO_FWHM * pixelSize * pY[2])
 
-            amplitudeY = pY[0] / pX[2] / math.sqrt(2 * math.pi)
-            h.set("amplitudeY", amplitudeY)
+            h.set("amplitudeY", pY[0] / pX[2] / math.sqrt(2 * math.pi))
 
         self.log.DEBUG("1-d Gaussian fit: done!")
 
