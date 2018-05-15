@@ -17,6 +17,11 @@ from karabo.bound import (
 from image_processing import image_processing
 
 
+class FFS(object):
+    def blubblub(self):
+        self.log.INFO("BLUBLUB")
+
+
 @KARABO_CLASSINFO("SimpleImageProcessor", "2.2")
 class SimpleImageProcessor(PythonDevice):
     # Numerical factor to convert Gaussian standard deviation to beam size
@@ -254,14 +259,12 @@ class SimpleImageProcessor(PythonDevice):
         super(SimpleImageProcessor, self).__init__(configuration)
 
         # 1d Gaussian fit parameters
-        self.amplitudeX = np.NaN
-        self.positionX = np.NaN
-        self.sigmaX = np.NaN
-        self.amplitudeY = np.NaN
-        self.positionY = np.NaN
-        self.sigmaY = np.NaN
-
-        self.success = False
+        self.amplitudeX = None
+        self.positionX = None
+        self.sigmaX = None
+        self.amplitudeY = None
+        self.positionY = None
+        self.sigmaY = None
 
         # Current image
         self.currentImage = None
@@ -280,20 +283,19 @@ class SimpleImageProcessor(PythonDevice):
     def reset(self):
         h = Hash()
 
-        h.set("maxPxValue", np.NaN)
-        h.set("amplitudeX", np.NaN)
-        h.set("positionX", np.NaN)
-        h.set("errPositionX", np.NaN)
-        h.set("sigmaX", np.NaN)
-        h.set("errSigmaX", np.NaN)
-        h.set("fwhmX", np.NaN)
-        h.set("amplitudeY", np.NaN)
-        h.set("positionY", np.NaN)
-        h.set("errPositionY", np.NaN)
-        h.set("sigmaY", np.NaN)
-        h.set("errSigmaY", np.NaN)
-        h.set("fwhmY", np.NaN)
-
+        h.set("maxPxValue", 0.0)
+        h.set("amplitudeX", 0.0)
+        h.set("positionX", 0.0)
+        h.set("errPositionX", 0.0)
+        h.set("sigmaX", 0.0)
+        h.set("errSigmaX", 0.0)
+        h.set("fwhmX", 0.0)
+        h.set("amplitudeY", 0.0)
+        h.set("positionY", 0.0)
+        h.set("errPositionY", 0.0)
+        h.set("sigmaY", 0.0)
+        h.set("errSigmaY", 0.0)
+        h.set("fwhmY", 0.0)
         # Reset device parameters (all at once)
         self.set(h)
 
@@ -322,19 +324,6 @@ class SimpleImageProcessor(PythonDevice):
         h = Hash()  # Empty hash
         # default is no success in processing
         h.set("success", False)
-        h.set("maxPxValue", np.NaN)
-        h.set("amplitudeX", np.NaN)
-        h.set("positionX", np.NaN)
-        h.set("errPositionX", np.NaN)
-        h.set("sigmaX", np.NaN)
-        h.set("errSigmaX", np.NaN)
-        h.set("fwhmX", np.NaN)
-        h.set("amplitudeY", np.NaN)
-        h.set("positionY", np.NaN)
-        h.set("errPositionY", np.NaN)
-        h.set("sigmaY", np.NaN)
-        h.set("errSigmaY", np.NaN)
-        h.set("fwhmY", np.NaN)
 
         self.counter += 1
         currentTime = time.time()
@@ -358,15 +347,9 @@ class SimpleImageProcessor(PythonDevice):
         if imageSizeY != self.get("imageSizeY"):
             h.set("imageSizeY", imageSizeY)
 
-        try:
-            roiOffsets = imageData.getROIOffsets()
-            offsetY = roiOffsets[0]
-            offsetX = roiOffsets[1]
-        except:
-            # XXX: What exceptions do we expect?
-            # Image has no ROI offset
-            offsetX = 0
-            offsetY = 0
+        roiOffsets = imageData.getROIOffsets()
+        offsetY = roiOffsets[0]
+        offsetX = roiOffsets[1]
         if offsetX != self.get("offsetX"):
             h.set("offsetX", offsetX)
         if offsetY != self.get("offsetY"):
@@ -380,9 +363,8 @@ class SimpleImageProcessor(PythonDevice):
                 h.set("binningX", binningX)
             if binningY != self.get("binningY"):
                 h.set("binningY", binningY)
-        except:
-            # XXX: What exceptions do we expect?
-            # Image has no binning information
+        except AttributeError:
+            # Image has no binning information, for Karabo < 2.2.3
             binningY = 1
             binningX = 1
 
@@ -401,23 +383,13 @@ class SimpleImageProcessor(PythonDevice):
             self.log.DEBUG("Max pixel value below threshold: image "
                            "discarded!")
             # set the hash for no success!
-            self.success = False
             self.set(h)
             return
 
         # ---------------------
         # Get pixel max value
-        try:
-            img_max = img.max()
-            h.set("maxPxValue", float(img_max))
-        except Exception as e:
-            # XXX: Why should this happen?
-            self.log.WARN("Could not read pixel max: {}.".format(e))
-            # set the hash for no success!
-            self.success = False
-            self.set(h)
-            return
-
+        img_max = img.max()
+        h.set("maxPxValue", float(img_max))
         self.log.DEBUG("Pixel max: done!")
 
         # ---------------------
@@ -442,64 +414,73 @@ class SimpleImageProcessor(PythonDevice):
         imgX = image_processing.imageSumAlongY(img)
 
         # Initial parameters
-        p0 = image_processing.peakParametersEval(imgX)
+        p0 = np.r_[imgX.max(), image_processing.imageCentreOfMass(imgX)]
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgX, p0)
-        pX = out[0]  # parameters
-        cX = out[1]  # covariance
+        paramX = out[0]  # parameters
+        covX = out[1]  # covariance
         successX = out[2]  # error
 
         # Save fit's parameters
-        self.amplitudeX = pX[0]
-        self.positionX = pX[1]
-        self.sigmaX = pX[2]
+        self.amplitudeX = paramX[0]
+        self.positionX = paramX[1]
+        self.sigmaX = paramX[2]
 
         # ------------------------------------------------
         # Y Fitting
         imgY = image_processing.imageSumAlongX(img)
 
         # Initial parameters
-        p0 = image_processing.peakParametersEval(imgY)
+        p0 = np.r_[imgY.max(), image_processing.imageCentreOfMass(imgY)]
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgY, p0)
-        pY = out[0]  # parameters
-        cY = out[1]  # covariance
+        paramY = out[0]  # parameters
+        covY = out[1]  # covariance
         successY = out[2]  # error
 
         # Save fit's parameters
-        self.amplitudeY = pY[0]
-        self.positionY = pY[1]
-        self.sigmaY = pY[2]
+        self.amplitudeY = paramY[0]
+        self.positionY = paramY[1]
+        self.sigmaY = paramY[2]
 
         SUCCESS = (1, 2, 3, 4)
-        if successX in SUCCESS and successY in SUCCESS:
+        if (successX in SUCCESS and successY in SUCCESS
+            and covX is not None and covY is not None):
+
+            # NOTE: Sometimes the covariance matrix elements provide negative
+            # values. Hence, we declare
+            # no success
+            if any(error < 0. for error in (covX[1][1], covX[2][2],
+                                            covY[1][1], covY[2][2])):
+                self.set(h)
+                return
+
             # Directly set the success boolean
-            self.success = True
             h.set("success", True)
 
             # ----------------
             # X Fit Update
 
-            h.set("positionX", binningX * (pX[1] + offsetX))
-            h.set("errPositionX", math.sqrt(abs(cX[1][1])))
-            h.set("sigmaX", pX[2])
-            h.set("errSigmaX", math.sqrt(abs(cX[2][2])))
-            h.set("fwhmX", self.STD_TO_FWHM * pixelSize * pX[2])
+            h.set("positionX", binningX * (paramX[1] + offsetX))
+            h.set("errPositionX", math.sqrt(covX[1][1]))
+            h.set("sigmaX", paramX[2])
+            h.set("errSigmaX", math.sqrt(covX[2][2]))
+            h.set("fwhmX", self.STD_TO_FWHM * pixelSize * paramX[2])
 
-            h.set("amplitudeX", pX[0] / pY[2] / math.sqrt(2 * math.pi))
+            h.set("amplitudeX", paramX[0] / paramY[2] / math.sqrt(2 * math.pi))
 
             # ----------------
             # Y Fit Update
 
-            h.set("positionY", binningY * (pY[1] + offsetY))
-            h.set("errPositionY", math.sqrt(abs(cY[1][1])))
-            h.set("sigmaY", pY[2])
-            h.set("errSigmaY", math.sqrt(abs(cY[2][2])))
-            h.set("fwhmY", self.STD_TO_FWHM * pixelSize * pY[2])
+            h.set("positionY", binningY * (paramY[1] + offsetY))
+            h.set("errPositionY", math.sqrt(covY[1][1]))
+            h.set("sigmaY", paramY[2])
+            h.set("errSigmaY", math.sqrt(covY[2][2]))
+            h.set("fwhmY", self.STD_TO_FWHM * pixelSize * paramY[2])
 
-            h.set("amplitudeY", pY[0] / pX[2] / math.sqrt(2 * math.pi))
+            h.set("amplitudeY", paramY[0] / paramX[2] / math.sqrt(2 * math.pi))
 
         self.log.DEBUG("1-d Gaussian fit: done!")
 
