@@ -17,11 +17,6 @@ from karabo.bound import (
 from image_processing import image_processing
 
 
-class FFS(object):
-    def blubblub(self):
-        self.log.INFO("BLUBLUB")
-
-
 @KARABO_CLASSINFO("SimpleImageProcessor", "2.2")
 class SimpleImageProcessor(PythonDevice):
     # Numerical factor to convert Gaussian standard deviation to beam size
@@ -447,13 +442,12 @@ class SimpleImageProcessor(PythonDevice):
 
         SUCCESS = (1, 2, 3, 4)
         if (successX in SUCCESS and successY in SUCCESS
-            and covX is not None and covY is not None):
+                and covX is not None and covY is not None):
 
             # NOTE: Sometimes the covariance matrix elements provide negative
-            # values. Hence, we declare
-            # no success
-            if any(error < 0. for error in (covX[1][1], covX[2][2],
-                                            covY[1][1], covY[2][2])):
+            # values. Hence, we declare no success
+            if any(variance < 0. for variance
+                   in (covX[1][1], covX[2][2], covY[1][1], covY[2][2])):
                 self.set(h)
                 return
 
@@ -467,7 +461,8 @@ class SimpleImageProcessor(PythonDevice):
             h.set("errPositionX", math.sqrt(covX[1][1]))
             h.set("sigmaX", paramX[2])
             h.set("errSigmaX", math.sqrt(covX[2][2]))
-            h.set("fwhmX", self.STD_TO_FWHM * pixelSize * paramX[2])
+            if pixelSize > 0:
+                h.set("fwhmX", self.STD_TO_FWHM * pixelSize * paramX[2])
 
             h.set("amplitudeX", paramX[0] / paramY[2] / math.sqrt(2 * math.pi))
 
@@ -478,7 +473,8 @@ class SimpleImageProcessor(PythonDevice):
             h.set("errPositionY", math.sqrt(covY[1][1]))
             h.set("sigmaY", paramY[2])
             h.set("errSigmaY", math.sqrt(covY[2][2]))
-            h.set("fwhmY", self.STD_TO_FWHM * pixelSize * paramY[2])
+            if pixelSize > 0:
+                h.set("fwhmY", self.STD_TO_FWHM * pixelSize * paramY[2])
 
             h.set("amplitudeY", paramY[0] / paramX[2] / math.sqrt(2 * math.pi))
 
