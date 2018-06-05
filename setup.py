@@ -14,6 +14,7 @@ setup(name='imageProcessor',
       entry_points={
           'karabo.bound_device': [
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
+              'ImageApplyRoi = imageProcessor.ImageApplyRoi:ImageApplyRoi',
           ],
       },
       package_data={},
