@@ -72,10 +72,6 @@ class ImageApplyRoi(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            SLOT_ELEMENT(expected).key("resetRoi")
-                .displayedName("Reset ROI")
-                .commit(),
-
         )
 
     def __init__(self, configuration):
@@ -86,9 +82,6 @@ class ImageApplyRoi(PythonDevice):
         self.lastTime = None
         self.counter = 0
 
-        # Register additional slots
-        self.registerSlot(self.resetRoi)
-
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
@@ -97,9 +90,20 @@ class ImageApplyRoi(PythonDevice):
 
     def initialization(self):
         """ This method will be called after the constructor. """
+        roi = self["roi"]
+        valid = self.validRoi(roi)
+        if not valid:
+            self.set("disable", True)
+            self.log.ERROR("ROI is invalid -> will be disabled")
 
-    def resetRoi(self):
-        self.set("roi", [-1, -1, -1, -1])
+    def preReconfigure(self, incomingReconfiguration):
+        if incomingReconfiguration.has("roi"):
+            roi = incomingReconfiguration["roi"]
+            valid = self.validRoi(roi)
+            if not valid:
+                incomingReconfiguration.erase("roi")
+                self.set("disable", True)
+                self.log.ERROR("ROI is invalid -> will be disabled")
 
     def onData(self, data, metaData):
         if self.get("state") == State.PASSIVE:
@@ -160,26 +164,10 @@ class ImageApplyRoi(PythonDevice):
             imageHeight = dims[0]
             imageWidth = dims[1]
 
-            if roi[0] < 0:
-                lowX = 0
-            else:
-                lowX = roi[0]
-
-            if roi[1] < 0 or roi[1] > imageWidth:
-                highX = imageWidth
-            else:
-                highX = roi[1]
-
-            if roi[2] < 0:
-                lowY = 0
-            else:
-                lowY = roi[2]
-
-            if roi[3] < 0 or roi[3] > imageHeight:
-                highY = imageHeight
-            else:
-                highY = roi[3]
-
+            lowX = roi[0]
+            highX = roi[1]
+            lowY = roi[2]
+            highY = roi[3]
             data = imageData.getData()  # np.ndarray
             croppedImage = ImageData(data[lowY:highY, lowX:highX])
             self.writeChannel("output", Hash("data.image", croppedImage))
@@ -187,3 +175,11 @@ class ImageApplyRoi(PythonDevice):
         except Exception as e:
             self.log.WARN("In processImage: %s" % str(e))
             return
+
+    def validRoi(self, roi):
+        if roi[0] < 0 or roi[1] < roi[0]:
+            return False
+        if roi[2] < 0 or roi[3] < roi[2]:
+            return False
+
+        return True
