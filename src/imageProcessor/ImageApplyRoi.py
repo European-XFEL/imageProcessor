@@ -8,9 +8,8 @@ import time
 
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, NODE_ELEMENT, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, SLOT_ELEMENT, VECTOR_INT32_ELEMENT,
+    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
+    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, VECTOR_INT32_ELEMENT,
     Hash, ImageData, Schema, State, Unit
 )
 
@@ -60,14 +59,14 @@ class ImageApplyRoi(PythonDevice):
             BOOL_ELEMENT(expected).key("disable")
                 .description("Disable ROI")
                 .assignmentOptional().defaultValue(False)
-                .reconfigurable()
+                .init()
                 .commit(),
 
             VECTOR_INT32_ELEMENT(expected).key("roi")
                 .displayedName("ROI")
                 .description("The user-defined region of interest (ROI),"
                              " specified as [lowX, highX, lowY, highY].")
-                .assignmentOptional().defaultValue([-1, -1, -1, -1])
+                .assignmentOptional().defaultValue([0, 10000, 0, 10000])
                 .minSize(4).maxSize(4)
                 .reconfigurable()
                 .commit(),
@@ -94,16 +93,18 @@ class ImageApplyRoi(PythonDevice):
         valid = self.validRoi(roi)
         if not valid:
             self.set("disable", True)
-            self.log.ERROR("ROI is invalid -> will be disabled")
+            self.log.ERROR("Initial ROI is invalid -> disabled")
 
     def preReconfigure(self, incomingReconfiguration):
         if incomingReconfiguration.has("roi"):
             roi = incomingReconfiguration["roi"]
             valid = self.validRoi(roi)
-            if not valid:
+            if valid:
+                self.set("disable", False)
+                self.log.INFO("Applying new roi {}".format(roi))
+            else:
                 incomingReconfiguration.erase("roi")
-                self.set("disable", True)
-                self.log.ERROR("ROI is invalid -> will be disabled")
+                self.log.ERROR("New ROI is invalid -> rejected")
 
     def onData(self, data, metaData):
         if self.get("state") == State.PASSIVE:
@@ -159,10 +160,6 @@ class ImageApplyRoi(PythonDevice):
                 self.writeChannel("output", Hash("data.image", imageData))
                 self.log.DEBUG("Original image copied to output channel")
                 return
-
-            dims = imageData.getDimensions()
-            imageHeight = dims[0]
-            imageWidth = dims[1]
 
             lowX = roi[0]
             highX = roi[1]
