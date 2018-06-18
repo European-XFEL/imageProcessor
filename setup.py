@@ -15,6 +15,7 @@ setup(name='imageProcessor',
           'karabo.bound_device': [
               'ImageApplyMask = imageProcessor.ImageApplyMask:ImageApplyMask',
               'ImageApplyRoi = imageProcessor.ImageApplyRoi:ImageApplyRoi',
+              'ImageAverager = imageProcessor.ImageAverager:ImageAverager',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
           ],
       },
