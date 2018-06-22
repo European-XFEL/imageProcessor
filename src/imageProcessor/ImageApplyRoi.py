@@ -166,7 +166,11 @@ class ImageApplyRoi(PythonDevice):
             lowY = roi[2]
             highY = roi[3]
             data = imageData.getData()  # np.ndarray
+            yOff, xOff = imageData.getROIOffsets()  # input image offset
+            yOff += lowY  # output image offset
+            xOff += lowX  # output image offset
             croppedImage = ImageData(data[lowY:highY, lowX:highX])
+            croppedImage.setROIOffsets((yOff, xOff))
             self.writeChannel("output", Hash("data.image", croppedImage))
 
         except Exception as e:
