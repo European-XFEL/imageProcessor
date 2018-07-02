@@ -18,6 +18,9 @@ setup(name='imageProcessor',
               'ImageAverager = imageProcessor.ImageAverager:ImageAverager',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
           ],
+          'karabo.middlelayer_device': [
+              'ImageToSpectrum = imageProcessor.ImageToSpectrum:ImageToSpectrum'
+          ],
       },
       package_data={},
       requires=[],
