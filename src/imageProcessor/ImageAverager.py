@@ -9,6 +9,7 @@ from karabo.bound import (
     KARABO_CLASSINFO, State, PythonDevice,
     ImageData, Schema, Unit, IMAGEDATA_ELEMENT, INPUT_CHANNEL, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, UINT32_ELEMENT, Hash, FLOAT_ELEMENT, SLOT_ELEMENT,
+    NODE_ELEMENT
 )
 
 from image_processing.image_running_mean import ImageRunningMean
@@ -19,28 +20,34 @@ class ImageAverager(PythonDevice):
 
     @staticmethod
     def expectedParameters(expected):
-        inputSchema = Schema()
-        outputSchema = Schema()
+        data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
                 .commit(),
 
-            IMAGEDATA_ELEMENT(inputSchema).key('image')
+            NODE_ELEMENT(data).key("data")
+                .displayedName("Data")
                 .commit(),
 
-            INPUT_CHANNEL(expected).key('input')
-                .displayedName('Input')
-                .dataSchema(inputSchema)
+            IMAGEDATA_ELEMENT(data).key("data.image")
+                .displayedName("Image")
                 .commit(),
 
-            IMAGEDATA_ELEMENT(outputSchema).key('image')
+            INPUT_CHANNEL(expected).key("input")
+                .displayedName("Input")
+                .dataSchema(data)
                 .commit(),
 
-            OUTPUT_CHANNEL(expected).key('output')
-                .displayedName('Output')
-                .dataSchema(outputSchema)
+            # Images should be dropped if processor is too slow
+            OVERWRITE_ELEMENT(expected).key("input.onSlowness")
+                .setNewDefaultValue("drop")
+                .commit(),
+
+            OUTPUT_CHANNEL(expected).key("output")
+                .displayedName("Output")
+                .dataSchema(data)
                 .commit(),
 
             SLOT_ELEMENT(expected).key('resetAverage')
@@ -53,6 +60,7 @@ class ImageAverager(PythonDevice):
                     .description('Number of images to be averaged.')
                     .unit(Unit.NUMBER)
                     .assignmentOptional().defaultValue(5)
+                    .minInc(1)
                     .reconfigurable()
                     .commit(),
 
@@ -94,13 +102,22 @@ class ImageAverager(PythonDevice):
 
         self.updateFrameRate()
 
+        if data.has('data.image'):
+            inputImage = data['data.image']
+        elif data.has('image'):
+            # To ensure backward compatibility
+            # with older versions of cameras
+            inputImage = data['image']
+        else:
+            self.log.DEBUG("Data contains no image at 'data.image'")
+            return
+
         nImages = self['nImages']
         if nImages == 1:
             # No averaging needed
-            self.writeChannel('output', data)
+            h = Hash('data.image', inputImage)
+            self.writeChannel('output', h)
             return
-
-        inputImage = data['image']
 
         # Compute latency
         header = inputImage.getHeader()
@@ -111,7 +128,7 @@ class ImageAverager(PythonDevice):
         pixels = inputImage.getData()
         self.imageRunningMean.append(pixels, nImages)
 
-        h = Hash('image', ImageData(self.imageRunningMean.runningMean))
+        h = Hash('data.image', ImageData(self.imageRunningMean.runningMean))
         self.writeChannel('output', h)
         self.log.DEBUG('Averaged image sent to output channel')
 
