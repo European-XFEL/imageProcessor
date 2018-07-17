@@ -3,16 +3,87 @@ Author: heisenb
 Creation date: January, 2017, 05:21 PM
 Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
 """
+import numpy as np
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, State, PythonDevice,
-    ImageData, Schema, Unit, IMAGEDATA_ELEMENT, INPUT_CHANNEL, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, UINT32_ELEMENT, Hash, FLOAT_ELEMENT, SLOT_ELEMENT,
-    NODE_ELEMENT
+    KARABO_CLASSINFO, PythonDevice,
+    BOOL_ELEMENT, FLOAT_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, Schema,
+    SLOT_ELEMENT, State, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_running_mean import ImageRunningMean
+
+
+class FrameRate:
+    def __init__(self, type='input'):
+        self.counter = 0
+        self.lastTime = time.time()
+        self.type = type
+
+    def update(self):
+        self.counter += 1
+
+    def elapsedTime(self):
+        return time.time() - self.lastTime
+
+    def reset(self):
+        self.counter = 0
+        self.lastTime = time.time()
+
+    def rate(self):
+        if self.counter > 0:
+            return self.counter / self.elapsedTime()
+        else:
+            return 0.
+
+
+class ImageStandardMean:
+    def __init__(self):
+        self.__mean = None  # Image mean
+        self.__images = 0  # number of images
+
+    def append(self, image):
+        """Add a new image to the average"""
+        if not isinstance(image, np.ndarray):
+            raise ValueError("image has incorrect type: %s" % str(type(image)))
+
+        # Update mean
+        if self.__images > 0:
+            if image.shape != self.shape:
+                raise ValueError("image has incorrect shape: %s != %s" %
+                                 (str(image.shape), str(self.shape)))
+
+            self.__mean = (self.__mean * self.__images +
+                           image) / (self.__images + 1)
+            self.__images += 1
+        else:
+            self.__mean = image.astype('float64')
+            self.__images = 1
+
+    def clear(self):
+        """Reset the mean"""
+        self.__mean = None
+        self.__images = 0
+
+    @property
+    def mean(self):
+        """Return the mean"""
+        return self.__mean
+
+    @property
+    def size(self):
+        """Return the number of images in the average"""
+        return self.__images
+
+    @property
+    def shape(self):
+        """Return the shape of images in the average"""
+        if self.size == 0:
+            return ()
+        else:
+            return self.__mean.shape
 
 
 @KARABO_CLASSINFO('ImageAverager', '2.0')
@@ -64,12 +135,27 @@ class ImageAverager(PythonDevice):
                     .reconfigurable()
                     .commit(),
 
-            FLOAT_ELEMENT(expected).key('frameRate')
-                    .displayedName('Frame Rate')
-                    .description('The actual frame rate.')
+            BOOL_ELEMENT(expected).key('runningAverage')
+                    .displayedName('Running Average')
+                    .description('Calculate running average (instead of '
+                                 'standard).')
+                    .assignmentOptional().defaultValue(True)
+                    .reconfigurable()
+                    .commit(),
+
+            FLOAT_ELEMENT(expected).key('inFrameRate')
+                    .displayedName('Input Frame Rate')
+                    .description('The input frame rate.')
                     .unit(Unit.HERTZ)
                     .readOnly()
                     .commit(),
+
+            FLOAT_ELEMENT(expected).key('outFrameRate')
+                .displayedName('Output Frame Rate')
+                .description('The output frame rate.')
+                .unit(Unit.HERTZ)
+                .readOnly()
+                .commit(),
 
             FLOAT_ELEMENT(expected).key('latency')
                     .displayedName('Image Latency')
@@ -90,9 +176,15 @@ class ImageAverager(PythonDevice):
         self.KARABO_SLOT(self.resetAverage)
         # Get an instance of the mean calculator
         self.imageRunningMean = ImageRunningMean()
+        self.imageStandardMean = ImageStandardMean()
         # Variables for frames per second computation
-        self.lastTime = None
-        self.counter = 0
+        self.frameRateIn = FrameRate()
+        self.frameRateOut = FrameRate()
+
+    def preReconfigure(self, incomingReconfiguration):
+        if incomingReconfiguration.has('runningAverage'):
+            # Reset averages
+            self.resetAverage()
 
     def onData(self, data, metaData):
         """ This function will be called whenever a data token is availabe"""
@@ -100,7 +192,12 @@ class ImageAverager(PythonDevice):
             self.log.INFO("Start of Stream")
             self.updateState(State.ACTIVE)
 
-        self.updateFrameRate()
+        self.frameRateIn.update()
+        if self.frameRateIn.elapsedTime() >= 1.0:
+            fpsIn = self.frameRateIn.rate()
+            self['inFrameRate'] = fpsIn
+            self.log.DEBUG('Input rate %f Hz' % fpsIn)
+            self.frameRateIn.reset()
 
         if data.has('data.image'):
             inputImage = data['data.image']
@@ -126,32 +223,39 @@ class ImageAverager(PythonDevice):
 
         # Compute average
         pixels = inputImage.getData()
-        self.imageRunningMean.append(pixels, nImages)
+        runningAverage = self['runningAverage']
+        h = Hash()
+        if runningAverage:
+            self.imageRunningMean.append(pixels, nImages)
+            h.set('data.image',
+                  ImageData(self.imageRunningMean.runningMean))
+        else:
+            self.imageStandardMean.append(pixels)
+            if self.imageStandardMean.size >= nImages:
+                h.set('data.image',
+                      ImageData(self.imageStandardMean.mean))
+                self.imageStandardMean.clear()
 
-        h = Hash('data.image', ImageData(self.imageRunningMean.runningMean))
-        self.writeChannel('output', h)
-        self.log.DEBUG('Averaged image sent to output channel')
+        if not h.empty():
+            self.frameRateOut.update()
+            if self.frameRateOut.elapsedTime() >= 1.0:
+                fpsOut = self.frameRateOut.rate()
+                self['outFrameRate'] = fpsOut
+                self.log.DEBUG('Output rate %f Hz' % fpsOut)
+                self.frameRateOut.reset()
+
+            self.writeChannel('output', h)
+            self.log.DEBUG('Averaged image sent to output channel')
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
-        self["frameRate"] = 0.
+        self["inFrameRate"] = 0.
         self.updateState(State.PASSIVE)
         self.signalEndOfStream("output")
-
-    def updateFrameRate(self):
-        self.counter += 1
-        currentTime = time.time()
-        if self.lastTime is None:
-            self.counter = 0
-            self.lastTime = currentTime
-        elif self.lastTime is not None and (currentTime - self.lastTime) > 1.:
-            fps = self.counter / (currentTime - self.lastTime)
-            self['frameRate'] = fps
-            self.log.DEBUG('Acquisition rate %f Hz' % fps)
-            self.counter = 0
-            self.lastTime = currentTime
 
     def resetAverage(self):
         self.log.INFO('Reset image average and fps')
         self.imageRunningMean.clear()
-        self['frameRate'] = 0
+        self.imageStandardMean.clear()
+        self['inFrameRate'] = 0
+        self['outFrameRate'] = 0
