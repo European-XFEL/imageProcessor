@@ -648,7 +648,7 @@ class ImageProcessor(PythonDevice):
             DOUBLE_ELEMENT(expected).key("theta2d")
                 .displayedName("theta (2D Fit)")
                 .description("Rotation angle from 2D Fit.")
-                .unit(Unit.DEGREE)
+                .unit(Unit.RADIAN)
                 .readOnly()
                 .commit(),
 
@@ -656,7 +656,7 @@ class ImageProcessor(PythonDevice):
                 .displayedName("sigma(theta) (2D Fit)")
                 .description("Uncertainty on rotation angle from 2D Fit.")
                 .expertAccess()
-                .unit(Unit.DEGREE)
+                .unit(Unit.RADIAN)
                 .readOnly()
                 .commit(),
 
