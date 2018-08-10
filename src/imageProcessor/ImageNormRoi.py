@@ -18,8 +18,7 @@ class DataNode(Configurable):
     daqDataType = DaqDataType.TRAIN
     spectrum = VectorDouble(
         displayedName="Spectrum",
-        accessMode=AccessMode.READONLY
-    )
+        accessMode=AccessMode.READONLY)
 
 
 class ChannelNode(Configurable):
@@ -41,33 +40,32 @@ class ImageNormRoi(Device):
         if self.state != State.ACTIVE:
             self.state = State.ACTIVE
 
-        if hasattr(data, 'data.image'):
-            image = getattr(data, 'data.image')
-        elif hasattr(data, 'image'):
-            # To ensure backward compatibility
-            # with older versions of cameras
-            image = getattr(data, 'image')
-        else:
-            self.logger.error("Data contains no image at 'data.image")
-            return
-
-        try:
-            # Calculate spectrum
-            spectrum = imageSumAlongY(image.pixels.value)
-        except Exception as e:
-            self.logger.error("Invalid image received: {}".format(e))
-            return
-
+        image = data.data.image.pixels.value
         try:
             # Apply ROI and calculate integral
+            x_roi = self.dataRoiPosition[0]
+            y_roi = self.dataRoiPosition[1]
+            x_norm_roi = self.normRoiPosition[0]
+            y_norm_roi = self.normRoiPosition[1]
             width_roi = self.roiSize[0]
             height_roi = self.roiSize[1]
             if width_roi == 0 and height_roi == 0:
                 # In case of [0, 0] no ROI is applied
-                cropSpectrum = spectrum
+                self.spectrumIntegral = np.NaN
+                self.logger.info("Please provide valid ROI")
+                return
             else:
-                cropSpectrum = spectrum[width_roi:height_roi]
-            self.spectrumIntegral = cropSpectrum.sum()
+                # First the data_image
+                data_image = image[y_roi:y_roi + height_roi,
+                                x_roi:x_roi + width_roi]
+
+                norm_image = image[y_norm_roi:y_norm_roi + height_roi,
+                             x_norm_roi:x_norm_roi + width_roi]
+
+            # Normalize the images
+            difference = data_image - norm_image
+            spectrum = imageSumAlongY(difference)
+            self.spectrumIntegral = spectrum.sum()
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
             self.spectrumIntegral = np.NaN
@@ -91,13 +89,30 @@ class ImageNormRoi(Device):
         minSize=2,
         maxSize=2,
         defaultValue=roiDefault)
-    def roi(self, value):
-        if self.validRoi(value):
-            self.roiSize = value
-        elif self.roiSize.value is None:
+    def roiSize(self, value):
+        if value is None:
             self.logger.error("Invalid initial ROI = {}, reset to "
                               "default.".format(value.value))
-            self.roiSize = self.roiSizeDefault
+            self.roiSize = [0, 0]
+            return
+
+        self.roiSize = value
+
+    dataRoiPosition = VectorInt32(
+        displayedName="Data Roi Position",
+        description="The user-defined position of the data ROI of the "
+                    "image [x, y]. Coordinates are taken top-left!",
+        minSize=2,
+        maxSize=2,
+        defaultValue=roiDefault)
+
+    normRoiPosition = VectorInt32(
+        displayedName="Norm Roi Position",
+        description="The user-defined position of the ROI to normalize the "
+                    "image [x, y]. Coordinates are taken top-left!",
+        minSize=2,
+        maxSize=2,
+        defaultValue=roiDefault)
 
     output = OutputChannel(
         ChannelNode,
@@ -107,11 +122,6 @@ class ImageNormRoi(Device):
         displayedName="Spectrum Integral",
         description="Integral of the spectrum, after applying ROI.",
         accessMode=AccessMode.READONLY)
-
-    def validRoi(self, roi):
-        if roi[0] < 0 or roi[1] < roi[0]:
-            return False
-        return True
 
     @coroutine
     def onInitialization(self):
