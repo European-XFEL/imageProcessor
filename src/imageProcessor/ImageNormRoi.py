@@ -85,8 +85,7 @@ class ImageNormRoi(Device):
     @VectorInt32(
         displayedName="ROI Size",
         description="The user-defined region of interest (ROI), "
-                    "specified as [width_roi, height_roi]. "
-                    "[0, 0] will be interpreted as 'whole range'.",
+                    "specified as [width_roi, height_roi]. ",
         minSize=2,
         maxSize=2,
         defaultValue=roiDefault)
