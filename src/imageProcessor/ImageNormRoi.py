@@ -63,7 +63,7 @@ class ImageNormRoi(Device):
                              x_norm_roi:x_norm_roi + width_roi]
 
             # Normalize the images
-            difference = data_image - norm_image
+            difference = data_image.astype('double') - norm_image.data_image.astype('double')
             spectrum = imageSumAlongY(difference)
             self.spectrumIntegral = spectrum.sum()
         except Exception as e:
