@@ -57,13 +57,14 @@ class ImageNormRoi(Device):
             else:
                 # First the data_image
                 data_image = image[y_roi:y_roi + height_roi,
-                                x_roi:x_roi + width_roi]
-
+                                   x_roi:x_roi + width_roi]
                 norm_image = image[y_norm_roi:y_norm_roi + height_roi,
-                             x_norm_roi:x_norm_roi + width_roi]
+                                   x_norm_roi:x_norm_roi + width_roi]
 
             # Normalize the images
-            difference = data_image.astype('double') - norm_image.data_image.astype('double')
+            data = data_image.astype('double')
+            norm = norm_image.astype('double')
+            difference = data - norm
             spectrum = imageSumAlongY(difference)
             self.spectrumIntegral = spectrum.sum()
         except Exception as e:
