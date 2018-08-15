@@ -72,7 +72,7 @@ class ImageNormRoi(Device):
             return
 
         # Write spectrum to output channel
-        self.output.schema.data.spectrum = spectrum.astype('double').tolist()
+        self.output.schema.data.spectrum = spectrum.tolist()
         yield from self.output.writeData()
 
     @input.endOfStream
