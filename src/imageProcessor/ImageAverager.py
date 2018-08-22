@@ -7,10 +7,10 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
     BOOL_ELEMENT, FLOAT_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, Schema,
-    SLOT_ELEMENT, State, UINT32_ELEMENT, Unit
+    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
+    UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_running_mean import ImageRunningMean
@@ -122,33 +122,33 @@ class ImageAverager(PythonDevice):
                 .commit(),
 
             SLOT_ELEMENT(expected).key('resetAverage')
-                    .displayedName('Reset Average')
-                    .description('Reset averaged image.')
-                    .commit(),
+                .displayedName('Reset Average')
+                .description('Reset averaged image.')
+                .commit(),
 
             UINT32_ELEMENT(expected).key('nImages')
-                    .displayedName('Number of Images')
-                    .description('Number of images to be averaged.')
-                    .unit(Unit.NUMBER)
-                    .assignmentOptional().defaultValue(5)
-                    .minInc(1)
-                    .reconfigurable()
-                    .commit(),
+                .displayedName('Number of Images')
+                .description('Number of images to be averaged.')
+                .unit(Unit.NUMBER)
+                .assignmentOptional().defaultValue(5)
+                .minInc(1)
+                .reconfigurable()
+                .commit(),
 
             BOOL_ELEMENT(expected).key('runningAverage')
-                    .displayedName('Running Average')
-                    .description('Calculate running average (instead of '
-                                 'standard).')
-                    .assignmentOptional().defaultValue(True)
-                    .reconfigurable()
-                    .commit(),
+                .displayedName('Running Average')
+                .description('Calculate running average (instead of '
+                             'standard).')
+                .assignmentOptional().defaultValue(True)
+                .reconfigurable()
+                .commit(),
 
             FLOAT_ELEMENT(expected).key('inFrameRate')
-                    .displayedName('Input Frame Rate')
-                    .description('The input frame rate.')
-                    .unit(Unit.HERTZ)
-                    .readOnly()
-                    .commit(),
+                .displayedName('Input Frame Rate')
+                .description('The input frame rate.')
+                .unit(Unit.HERTZ)
+                .readOnly()
+                .commit(),
 
             FLOAT_ELEMENT(expected).key('outFrameRate')
                 .displayedName('Output Frame Rate')
@@ -158,12 +158,12 @@ class ImageAverager(PythonDevice):
                 .commit(),
 
             FLOAT_ELEMENT(expected).key('latency')
-                    .displayedName('Image Latency')
-                    .description('The latency of the incoming image.'
-                                 'Smaller values are closer to realtime.')
-                    .unit(Unit.HERTZ)
-                    .readOnly()
-                    .commit(),
+                .displayedName('Image Latency')
+                .description('The latency of the incoming image.'
+                             'Smaller values are closer to realtime.')
+                .unit(Unit.HERTZ)
+                .readOnly()
+                .commit(),
         )
 
     def __init__(self, configuration):
@@ -209,11 +209,14 @@ class ImageAverager(PythonDevice):
             self.log.DEBUG("Data contains no image at 'data.image'")
             return
 
+        ts = Timestamp.fromHashAttributes(
+            metaData.getAttributes('timestamp'))
+
         nImages = self['nImages']
         if nImages == 1:
             # No averaging needed
             h = Hash('data.image', inputImage)
-            self.writeChannel('output', h)
+            self.writeChannel('output', h, ts)
             return
 
         # Compute latency
@@ -244,7 +247,9 @@ class ImageAverager(PythonDevice):
                 self.log.DEBUG('Output rate %f Hz' % fpsOut)
                 self.frameRateOut.reset()
 
-            self.writeChannel('output', h)
+            # For the averaged image, we use the timestamp of the
+            # last image in the average
+            self.writeChannel('output', h, ts)
             self.log.DEBUG('Averaged image sent to output channel')
 
     def onEndOfStream(self, inputChannel):
