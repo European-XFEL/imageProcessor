@@ -13,11 +13,11 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT,
-    INPUT_CHANNEL, INT32_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT,
-    VECTOR_INT32_ELEMENT, DaqDataType, Hash, MetricPrefix, Schema, State, Unit
+    BOOL_ELEMENT, DaqDataType, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
+    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
+    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
+    SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, Unit,
+    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT
 )
 
 from image_processing import image_processing
@@ -830,7 +830,9 @@ class ImageProcessor(PythonDevice):
                 bpp = imageData.getBitsPerPixel()
                 self.updateOutputSchema(imageHeight, imageWidth, bpp)
 
-            self.processImage(imageData)  # Process image
+            ts = Timestamp.fromHashAttributes(
+                metaData.getAttributes('timestamp'))
+            self.processImage(imageData, ts)  # Process image
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -842,7 +844,7 @@ class ImageProcessor(PythonDevice):
         self.signalEndOfStream("output")
         self.updateState(State.PASSIVE)
 
-    def processImage(self, imageData):
+    def processImage(self, imageData, ts):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
         imageThreshold = self.get("imageThreshold")
         comRange = self.get("comRange")
@@ -1482,8 +1484,8 @@ class ImageProcessor(PythonDevice):
             self.lastUpdateTime = time.time()
 
         # Update device parameters (all at once)
-        self.set(h)
-        self.writeChannel("output", outHash)
+        self.set(h, ts)
+        self.writeChannel("output", outHash, ts)
 
     def evalStartingPoint(self, data):
         fitAmpl, peakPixel, fwhm = image_processing.peakParametersEval(data)

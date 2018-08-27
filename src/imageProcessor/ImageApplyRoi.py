@@ -7,10 +7,10 @@
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
-    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, VECTOR_INT32_ELEMENT,
-    Hash, ImageData, Schema, State, Unit
+    BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp, Unit,
+    VECTOR_INT32_ELEMENT,
 )
 
 
@@ -122,7 +122,9 @@ class ImageApplyRoi(PythonDevice):
                 self.log.DEBUG("data does not have any image")
                 return
 
-            self.processImage(imageData)  # Process image
+            ts = Timestamp.fromHashAttributes(
+                metaData.getAttributes('timestamp'))
+            self.processImage(imageData, ts)  # Process image
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -134,7 +136,7 @@ class ImageApplyRoi(PythonDevice):
         self.signalEndOfStream("output")
         self.updateState(State.PASSIVE)
 
-    def processImage(self, imageData):
+    def processImage(self, imageData, ts):
         disable = self.get("disable")
         roi = self.get("roi")
 
@@ -157,7 +159,7 @@ class ImageApplyRoi(PythonDevice):
         try:
             if disable:
                 self.log.DEBUG("ROI disabled!")
-                self.writeChannel("output", Hash("data.image", imageData))
+                self.writeChannel("output", Hash("data.image", imageData), ts)
                 self.log.DEBUG("Original image copied to output channel")
                 return
 
@@ -171,7 +173,7 @@ class ImageApplyRoi(PythonDevice):
             xOff += lowX  # output image offset
             croppedImage = ImageData(data[lowY:highY, lowX:highX])
             croppedImage.setROIOffsets((yOff, xOff))
-            self.writeChannel("output", Hash("data.image", croppedImage))
+            self.writeChannel("output", Hash("data.image", croppedImage), ts)
 
         except Exception as e:
             self.log.WARN("In processImage: %s" % str(e))

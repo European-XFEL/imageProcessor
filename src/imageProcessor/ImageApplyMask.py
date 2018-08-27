@@ -12,11 +12,10 @@ from PIL import Image
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
-    Hash, ImageData, Schema, State, Unit,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
-    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PATH_ELEMENT,
-    SLOT_ELEMENT, STRING_ELEMENT, VECTOR_INT32_ELEMENT
+    BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PATH_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
+    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT
 )
 
 from image_processing.image_processing import (
@@ -156,7 +155,9 @@ class ImageApplyMask(PythonDevice):
                 self.log.DEBUG("data does not have any image")
                 return
 
-            self.processImage(imageData)  # Process image
+            ts = Timestamp.fromHashAttributes(
+                metaData.getAttributes('timestamp'))
+            self.processImage(imageData, ts)  # Process image
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -172,7 +173,7 @@ class ImageApplyMask(PythonDevice):
     #   Implementation of processImage           #
     ##############################################
 
-    def processImage(self, imageData):
+    def processImage(self, imageData, ts):
 
         try:
             self.counter += 1
@@ -194,7 +195,7 @@ class ImageApplyMask(PythonDevice):
             disable = self.get("disable")
             if disable:
                 self.log.DEBUG("Mask disabled!")
-                self.writeChannel("output", Hash("data.image", imageData))
+                self.writeChannel("output", Hash("data.image", imageData), ts)
                 self.log.DEBUG("Original image copied to output channel")
                 return
 
@@ -207,7 +208,7 @@ class ImageApplyMask(PythonDevice):
                 if self.mask is None:
                     self.log.WARN("No mask loaded!")
                     self.writeChannel("output",
-                                      Hash("data.image", ImageData(img)))
+                                      Hash("data.image", ImageData(img)), ts)
                     self.log.DEBUG("Original image copied to output channel")
                     return
 

@@ -8,7 +8,8 @@ import numpy as np
 
 from karabo.middlelayer import (
     AccessMode, Assignment, Configurable, DaqDataType, Device, Double,
-    InputChannel, Node, OutputChannel, State, VectorDouble, VectorInt32
+    get_timestamp, InputChannel, Node, OutputChannel, QuantityValue, State,
+    VectorDouble, VectorInt32
 )
 
 from image_processing.image_processing import imageSumAlongY
@@ -41,6 +42,8 @@ class ImageNormRoi(Device):
             self.state = State.ACTIVE
 
         image = data.data.image.pixels.value
+        ts = get_timestamp(meta.timestamp.timestamp)
+
         try:
             # Apply ROI and calculate integral
             x_roi = self.dataRoiPosition[0]
@@ -66,15 +69,16 @@ class ImageNormRoi(Device):
             norm = norm_image.astype('double')
             difference = data - norm
             spectrum = imageSumAlongY(difference)
-            self.spectrumIntegral = spectrum.sum()
+            self.spectrumIntegral = QuantityValue(spectrum.sum(), ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
-            self.spectrumIntegral = np.NaN
+            self.spectrumIntegral = QuantityValue(np.NaN, ts)
             return
 
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.tolist()
-        yield from self.output.writeData()
+
+        yield from self.output.writeData(timestamp=ts)
 
     @input.endOfStream
     def input(self, name):
