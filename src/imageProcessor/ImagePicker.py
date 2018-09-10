@@ -57,7 +57,7 @@ class ImagePicker(PythonDevice):
 
             INPUT_CHANNEL(expected).key("inputTrainId")
                 .displayedName("Input Train Id")
-                .dataSchema(data)
+                .dataSchema(Schema())
                 .commit(),
 
             # Images should be dropped if processor is too slow
@@ -98,6 +98,7 @@ class ImagePicker(PythonDevice):
                 .displayedName("Images buffer size")
                 .description("Number of image to be kept waitng for "
                              "matching train id")
+                .minInc(1)
                 .assignmentOptional().defaultValue(5)
                 .init()
                 .commit(),
@@ -202,14 +203,13 @@ class ImagePicker(PythonDevice):
                        tid + self.get("trainIdOffset")):
                         self.writeChannel('output', img['data'],
                                           img['ts'])
-                        match_found = True
-        if match_found:
-            self.frameRateOut.update()
-            if self.frameRateOut.elapsedTime() >= 1.0:
-                fpsOut = self.frameRateOut.rate()
-                self['outFrameRate'] = fpsOut
-                self.log.DEBUG('Output rate %f Hz' % fpsOut)
-                self.frameRateOut.reset()
+                        self.frameRateOut.update()
+
+        if self.frameRateOut.elapsedTime() >= 1.0:
+            fpsOut = self.frameRateOut.rate()
+            self['outFrameRate'] = fpsOut
+            self.log.DEBUG('Output rate %f Hz' % fpsOut)
+            self.frameRateOut.reset()
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream on channel {}".format(inputChannel))
