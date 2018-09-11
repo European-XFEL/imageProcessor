@@ -152,9 +152,12 @@ class ImagePicker(PythonDevice):
         if self.imageBuffer is None:
             return
 
-        self.isImageInputActive = True
-        if self.get("state") == State.PASSIVE:
+
+
+        if self.isChannelActive['inputImage'] is False:
+            self.isChannelActive['inputImage'] = True
             self.log.INFO("Start of Image Stream")
+        if self.get("state") == State.PASSIVE:
             self.updateState(State.ACTIVE)
 
         self.frameRateIn.update()
@@ -181,9 +184,10 @@ class ImagePicker(PythonDevice):
         if self.trainidBuffer is None:
             return
 
-        self.isChannelActive['inputTrainId'] = True
-        if self.get("state") == State.PASSIVE:
+        if self.isChannelActive['inputTrainId'] is False:
+            self.isChannelActive['inputTrainId'] = True
             self.log.INFO("Start of Train Id Stream")
+        if self.get("state") == State.PASSIVE:
             self.updateState(State.ACTIVE)
 
         ts = Timestamp.fromHashAttributes(
@@ -199,9 +203,9 @@ class ImagePicker(PythonDevice):
         """
         Output data if match is found
 
-        If item is a timestamp, it search for images in self.imageBuffer queue
-           where train is matches
-        if item has the form {timestamp: image_data} it search if it matches
+        If item is a timestamp, it searches for images in self.imageBuffer
+           queue where train ID matches
+        if item has the form {timestamp: image_data} it searches if it matches
            any of the queued train ids in self.trainidBuffer
 
         if match is found returns True, False otherwise
@@ -220,15 +224,12 @@ class ImagePicker(PythonDevice):
                     img_tid = img['ts'].getTrainId()
                     if img_tid == tid + offset:
                         match_found = True
-                        matching_tid = tid
                         self.writeChannel('output', img['data'], img['ts'])
                         self.frameRateOut.update()
                     elif img_tid > tid + offset:
                         break
 
-                if match_found:
-                    # if some match was found clean up image queue
-                    self.cleanupImageQueue(tid)
+                self.cleanupImageQueue(tid)
 
         else:
             try:
@@ -251,14 +252,13 @@ class ImagePicker(PythonDevice):
         """
         Remove from image queue images with older train id
 
-        should be calles with self.buffer_lock acquired
+        should be called with self.buffer_lock acquired
         """
-        n = len(self.imageBuffer)
-        for i in range(n):
-            if self.imageBuffer[0]['ts'].getTrainId() <= tid:
-                del self.imageBuffer[0]
-            else:
+        while self.imageBuffer[0]['ts'].getTrainId() <= tid:
+            self.imageBuffer.popleft()
+            if not self.imageBuffer:
                 break
+
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream on channel {}".format(inputChannel))
