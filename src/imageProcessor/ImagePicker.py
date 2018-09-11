@@ -9,7 +9,7 @@ from collections import deque
 from threading import Lock
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, INT32_ELEMENT,  IMAGEDATA_ELEMENT, INPUT_CHANNEL,
+    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT, INPUT_CHANNEL,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
     PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
 )
@@ -90,7 +90,7 @@ class ImagePicker(PythonDevice):
                              "input train Id (delay). "
                              "Negative: output image train id is lower than "
                              "input train (advance)")
-                .assignmentOptional().defaultValue(5)
+                .assignmentOptional().defaultValue(0)
                 .init()
                 .commit(),
 
@@ -107,6 +107,7 @@ class ImagePicker(PythonDevice):
                 .displayedName("Train Ids buffer size")
                 .description("Number of train ids to be kept waitng for image "
                              "with matching train id")
+                .minInc(1)
                 .assignmentOptional().defaultValue(5)
                 .init()
                 .commit(),
@@ -167,10 +168,11 @@ class ImagePicker(PythonDevice):
             ts = Timestamp.fromHashAttributes(
                 metaData.getAttributes('timestamp'))
 
-            with self.buffer_lock:
-                self.imageBuffer.append({'ts': ts, 'data': data})
-
-            self.searchForMatch()
+            # if match is found image is sent on output channel
+            # otherwise it is queued
+            if not self.searchForMatch({'ts': ts, 'data': data}):
+                with self.buffer_lock:
+                    self.imageBuffer.append({'ts': ts, 'data': data})
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -191,25 +193,72 @@ class ImagePicker(PythonDevice):
         with self.buffer_lock:
             self.trainidBuffer.append(tid)
 
-        self.searchForMatch()
+        self.searchForMatch(ts)
 
-    def searchForMatch(self):
-        """ output data if matching trainId is found"""
+    def searchForMatch(self, item):
+        """
+        Output data if match is found
+
+        If item is a timestamp, it search for images in self.imageBuffer queue
+           where train is matches
+        if item has the form {timestamp: image_data} it search if it matches
+           any of the queued train ids in self.trainidBuffer
+
+        if match is found returns True, False otherwise
+
+        Assumptions:
+        - train ids and images are ordered (i.e. timestamps are not decreasing)
+        - there may be more images with same trainid (e.g. frameRate > 10Hz)
+        - on train id channel no trainid is received more than once
+        """
         match_found = False
-        with self.buffer_lock:
-            for img in self.imageBuffer:
-                for tid in self.trainidBuffer:
-                    if(img['ts'].getTrainId() ==
-                       tid + self.get("trainIdOffset")):
-                        self.writeChannel('output', img['data'],
-                                          img['ts'])
+        offset = self.get("trainIdOffset")
+        if isinstance(item, Timestamp):
+            tid = item.getTrainId()
+            with self.buffer_lock:
+                for img in self.imageBuffer:
+                    img_tid = img['ts'].getTrainId()
+                    if img_tid == tid + offset:
+                        match_found = True
+                        matching_tid = tid
+                        self.writeChannel('output', img['data'], img['ts'])
                         self.frameRateOut.update()
+                    elif img_tid > tid + offset:
+                        break
 
-        if self.frameRateOut.elapsedTime() >= 1.0:
-            fpsOut = self.frameRateOut.rate()
-            self['outFrameRate'] = fpsOut
-            self.log.DEBUG('Output rate %f Hz' % fpsOut)
-            self.frameRateOut.reset()
+                if match_found:
+                    # if some match was found clean up image queue
+                    self.cleanupImageQueue(tid)
+
+        else:
+            try:
+                img = item
+                img_tid = img['ts'].getTrainId()
+                for tid in self.trainidBuffer:
+                    if img_tid == tid + offset:
+                        match_found = True
+                        self.writeChannel('output', img['data'], img['ts'])
+                        self.frameRateOut.update()
+                    elif img_tid > tid + offset:
+                        break
+            except Exception as e:
+                raise RuntimeError("searchForMatch() got unexpected "
+                                   "exception: {}".format(e))
+
+        return match_found
+
+    def cleanupImageQueue(self, tid):
+        """
+        Remove from image queue images with older train id
+
+        should be calles with self.buffer_lock acquired
+        """
+        n = len(self.imageBuffer)
+        for i in range(n):
+            if self.imageBuffer[0]['ts'].getTrainId() <= tid:
+                del self.imageBuffer[0]
+            else:
+                break
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream on channel {}".format(inputChannel))
