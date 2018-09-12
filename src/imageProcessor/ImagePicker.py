@@ -152,8 +152,6 @@ class ImagePicker(PythonDevice):
         if self.imageBuffer is None:
             return
 
-
-
         if self.isChannelActive['inputImage'] is False:
             self.isChannelActive['inputImage'] = True
             self.log.INFO("Start of Image Stream")
@@ -228,9 +226,7 @@ class ImagePicker(PythonDevice):
                         self.frameRateOut.update()
                     elif img_tid > tid + offset:
                         break
-
                 self.cleanupImageQueue(tid)
-
         else:
             try:
                 img = item
@@ -240,7 +236,7 @@ class ImagePicker(PythonDevice):
                         match_found = True
                         self.writeChannel('output', img['data'], img['ts'])
                         self.frameRateOut.update()
-                    elif img_tid > tid + offset:
+                    elif img_tid < tid + offset:
                         break
             except Exception as e:
                 raise RuntimeError("searchForMatch() got unexpected "
@@ -258,7 +254,6 @@ class ImagePicker(PythonDevice):
             self.imageBuffer.popleft()
             if not self.imageBuffer:
                 break
-
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream on channel {}".format(inputChannel))
