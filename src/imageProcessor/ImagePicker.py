@@ -137,8 +137,8 @@ class ImagePicker(PythonDevice):
         self.registerInitialFunction(self.initialization)
 
         # Variables for frames per second computation
-        self.frameRateIn = FrameRate()
-        self.frameRateOut = FrameRate()
+        self.frameRateIn = FrameRate(1.0)
+        self.frameRateOut = FrameRate(1.0)
 
     def initialization(self):
         """ This method will be called after the constructor. """
@@ -159,11 +159,10 @@ class ImagePicker(PythonDevice):
             self.updateState(State.ACTIVE)
 
         self.frameRateIn.update()
-        if self.frameRateIn.elapsedTime() >= 1.0:
-            fpsIn = self.frameRateIn.rate()
+        fpsIn = self.frameRateIn.refresh()
+        if fpsIn:
             self['inFrameRate'] = fpsIn
             self.log.DEBUG('Input rate %f Hz' % fpsIn)
-            self.frameRateIn.reset()
 
         try:
             ts = Timestamp.fromHashAttributes(
@@ -224,6 +223,7 @@ class ImagePicker(PythonDevice):
                         match_found = True
                         self.writeChannel('output', img['data'], img['ts'])
                         self.frameRateOut.update()
+                        self.refreshFrameRateOut()
                     elif img_tid > tid + offset:
                         break
                 self.cleanupImageQueue(tid)
@@ -236,6 +236,7 @@ class ImagePicker(PythonDevice):
                         match_found = True
                         self.writeChannel('output', img['data'], img['ts'])
                         self.frameRateOut.update()
+                        self.refreshFrameRateOut()
                     elif img_tid < tid + offset:
                         break
             except Exception as e:
@@ -243,6 +244,12 @@ class ImagePicker(PythonDevice):
                                    "exception: {}".format(e))
 
         return match_found
+
+    def refreshFrameRateOut(self):
+        fpsOut = self.frameRateOut.refresh()
+        if fpsOut:
+            self['outFrameRate'] = fpsOut
+            self.log.DEBUG('Output rate %f Hz' % fpsOut)
 
     def cleanupImageQueue(self, tid):
         """
