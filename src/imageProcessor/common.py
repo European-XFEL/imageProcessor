@@ -26,7 +26,7 @@ class FrameRate:
 
     def refresh(self):
         fps = None
-        if self.frameRateIn.elapsedTime() >= self.refresh_interval:
-            fps = self.frameRateIn.rate()
-            self.frameRateIn.reset()
+        if self.elapsedTime() >= self.refresh_interval:
+            fps = self.rate()
+            self.reset()
         return fps
