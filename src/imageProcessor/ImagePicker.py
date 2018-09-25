@@ -137,8 +137,8 @@ class ImagePicker(PythonDevice):
         self.registerInitialFunction(self.initialization)
 
         # Variables for frames per second computation
-        self.frameRateIn = FrameRate(1.0)
-        self.frameRateOut = FrameRate(1.0)
+        self.frameRateIn = FrameRate(refresh_interval=1.0)
+        self.frameRateOut = FrameRate(refresh_interval=1.0)
 
     def initialization(self):
         """ This method will be called after the constructor. """
@@ -158,11 +158,7 @@ class ImagePicker(PythonDevice):
         if self.get("state") == State.PASSIVE:
             self.updateState(State.ACTIVE)
 
-        self.frameRateIn.update()
-        fpsIn = self.frameRateIn.refresh()
-        if fpsIn:
-            self['inFrameRate'] = fpsIn
-            self.log.DEBUG('Input rate %f Hz' % fpsIn)
+        self.refreshFrameRateIn()
 
         try:
             ts = Timestamp.fromHashAttributes(
@@ -222,7 +218,6 @@ class ImagePicker(PythonDevice):
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeChannel('output', img['data'], img['ts'])
-                        self.frameRateOut.update()
                         self.refreshFrameRateOut()
                     elif img_tid > tid + offset:
                         break
@@ -235,7 +230,6 @@ class ImagePicker(PythonDevice):
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeChannel('output', img['data'], img['ts'])
-                        self.frameRateOut.update()
                         self.refreshFrameRateOut()
                     elif img_tid < tid + offset:
                         break
@@ -245,7 +239,15 @@ class ImagePicker(PythonDevice):
 
         return match_found
 
+    def refreshFrameRateIn(self):
+        self.frameRateIn.update()
+        fpsIn = self.frameRateIn.refresh()
+        if fpsIn:
+            self['inFrameRate'] = fpsIn
+            self.log.DEBUG('Input rate %f Hz' % fpsIn)
+
     def refreshFrameRateOut(self):
+        self.frameRateOut.update()
         fpsOut = self.frameRateOut.refresh()
         if fpsOut:
             self['outFrameRate'] = fpsOut
