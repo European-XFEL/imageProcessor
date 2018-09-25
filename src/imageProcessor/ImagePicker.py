@@ -10,15 +10,15 @@ from threading import Lock
 
 from karabo.bound import (
     DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT, INPUT_CHANNEL,
-    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
-    PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
+    KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema,
+    State, Timestamp, Unit, UINT32_ELEMENT,
 )
 
-from .common import FrameRate
+from .common import FrameRate, ImageProcOutputInterface
 
 
 @KARABO_CLASSINFO("ImagePicker", "2.2")
-class ImagePicker(PythonDevice):
+class ImagePicker(ImageProcOutputInterface, PythonDevice):
     """
     This device has two input channels (inputImage and inputTrainid).
     inputImage expects an image stream (e.g. from a camera)
@@ -63,11 +63,6 @@ class ImagePicker(PythonDevice):
             # Images should be dropped if processor is too slow
             OVERWRITE_ELEMENT(expected).key("inputTrainId.onSlowness")
                 .setNewDefaultValue("drop")
-                .commit(),
-
-            OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("Output")
-                .dataSchema(data)
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key('inFrameRate')
@@ -116,6 +111,7 @@ class ImagePicker(PythonDevice):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
+
         super(ImagePicker, self).__init__(configuration)
 
         # frames per second
@@ -158,6 +154,15 @@ class ImagePicker(PythonDevice):
         if self.get("state") == State.PASSIVE:
             self.updateState(State.ACTIVE)
 
+        if data.has('data.image'):
+            imageData = data['data.image']
+        elif data.has('image'):
+            # To ensure backward compatibility
+            # with older versions of cameras
+            imageData = data['image']
+
+        self.updateOutputSchema(imageData)
+
         self.refreshFrameRateIn()
 
         try:
@@ -166,9 +171,9 @@ class ImagePicker(PythonDevice):
 
             # if match is found image is sent on output channel
             # otherwise it is queued
-            if not self.searchForMatch({'ts': ts, 'data': data}):
+            if not self.searchForMatch({'ts': ts, 'imageData': imageData}):
                 with self.buffer_lock:
-                    self.imageBuffer.append({'ts': ts, 'data': data})
+                    self.imageBuffer.append({'ts': ts, 'imageData': imageData})
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -217,7 +222,7 @@ class ImagePicker(PythonDevice):
                     img_tid = img['ts'].getTrainId()
                     if img_tid == tid + offset:
                         match_found = True
-                        self.writeChannel('output', img['data'], img['ts'])
+                        self.writeOutputChannels(img['imageData'], img['ts'])
                         self.refreshFrameRateOut()
                     elif img_tid > tid + offset:
                         break
@@ -229,7 +234,7 @@ class ImagePicker(PythonDevice):
                 for tid in self.trainidBuffer:
                     if img_tid == tid + offset:
                         match_found = True
-                        self.writeChannel('output', img['data'], img['ts'])
+                        self.writeOutputChannels(img['imageData'], img['ts'])
                         self.refreshFrameRateOut()
                     elif img_tid < tid + offset:
                         break
