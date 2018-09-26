@@ -7,15 +7,28 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    BOOL_ELEMENT, FLOAT_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, DaqDataType, FLOAT_ELEMENT, Hash, ImageData,
+    IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, NDARRAY_ELEMENT,
+    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
+    SLOT_ELEMENT, State, Timestamp, Types, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_running_mean import ImageRunningMean
 
 from .common import FrameRate
+
+DTYPE_TO_KTYPE = {
+    'uint8': Types.UINT8,
+    'int8': Types.INT8,
+    'uint16': Types.UINT16,
+    'int16': Types.INT16,
+    'uint32': Types.UINT32,
+    'int32': Types.INT32,
+    'uint64': Types.UINT32,
+    'float32': Types.FLOAT,
+    'float': Types.DOUBLE,
+    'double': Types.DOUBLE
+}
 
 
 class ImageStandardMean:
@@ -70,24 +83,17 @@ class ImageAverager(PythonDevice):
 
     @staticmethod
     def expectedParameters(expected):
-        data = Schema()
+        inputData = Schema()
+        outputData = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
                 .commit(),
 
-            NODE_ELEMENT(data).key("data")
-                .displayedName("Data")
-                .commit(),
-
-            IMAGEDATA_ELEMENT(data).key("data.image")
-                .displayedName("Image")
-                .commit(),
-
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
-                .dataSchema(data)
+                .dataSchema(inputData)
                 .commit(),
 
             # Images should be dropped if processor is too slow
@@ -95,9 +101,24 @@ class ImageAverager(PythonDevice):
                 .setNewDefaultValue("drop")
                 .commit(),
 
+            NODE_ELEMENT(outputData).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            IMAGEDATA_ELEMENT(outputData).key("data.image")
+                .displayedName("Image")
+                .commit(),
+
             OUTPUT_CHANNEL(expected).key("output")
                 .displayedName("Output")
-                .dataSchema(data)
+                .dataSchema(outputData)
+                .commit(),
+
+            # Second output channel for the DAQ
+            OUTPUT_CHANNEL(expected).key("daqOutput")
+                .displayedName("DAQ Output")
+                .dataSchema(outputData)
                 .commit(),
 
             SLOT_ELEMENT(expected).key('resetAverage')
@@ -140,7 +161,7 @@ class ImageAverager(PythonDevice):
                 .displayedName('Image Latency')
                 .description('The latency of the incoming image.'
                              'Smaller values are closer to realtime.')
-                .unit(Unit.HERTZ)
+                .unit(Unit.SECOND)
                 .readOnly()
                 .commit(),
         )
@@ -167,9 +188,11 @@ class ImageAverager(PythonDevice):
 
     def onData(self, data, metaData):
         """ This function will be called whenever a data token is availabe"""
-        if self["state"] == State.PASSIVE:
+        firstImage = False
+        if self.get("state") == State.PASSIVE:
             self.log.INFO("Start of Stream")
             self.updateState(State.ACTIVE)
+            firstImage = True
 
         self.frameRateIn.update()
         if self.frameRateIn.elapsedTime() >= 1.0:
@@ -190,13 +213,17 @@ class ImageAverager(PythonDevice):
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
+        pixels = inputImage.getData()
+        bpp = inputImage.getBitsPerPixel()
+        encoding = inputImage.getEncoding()
+        shape = inputImage.getDimensions()
+        daqShape = tuple(reversed(shape))
 
-        nImages = self['nImages']
-        if nImages == 1:
-            # No averaging needed
-            h = Hash('data.image', inputImage)
-            self.writeChannel('output', h, ts)
-            return
+        dType = str(pixels.dtype)
+        if firstImage:
+            # Update schema
+            kType = DTYPE_TO_KTYPE.get(dType, None)
+            self.updateOutputSchema(daqShape, encoding, kType)
 
         # Compute latency
         header = inputImage.getHeader()
@@ -204,21 +231,48 @@ class ImageAverager(PythonDevice):
             self['latency'] = time.time() - header['creationTime']
 
         # Compute average
-        pixels = inputImage.getData()
+        nImages = self['nImages']
         runningAverage = self['runningAverage']
-        h = Hash()
-        if runningAverage:
+        outputHash = Hash()
+        daqOutputHash = Hash()
+        if nImages == 1:
+            # No averaging needed
+            outputHash.set('data.image', inputImage)
+
+            daqPixels = pixels.reshape(daqShape)
+            daqImageData = ImageData(daqPixels, bitsPerPixel=bpp,
+                                     encoding=encoding)
+            daqOutputHash.set('data.image', daqImageData)
+
+        elif runningAverage:
             self.imageRunningMean.append(pixels, nImages)
-            h.set('data.image',
-                  ImageData(self.imageRunningMean.runningMean))
+
+            pixels = self.imageRunningMean.runningMean.astype(dType)
+            imageData = ImageData(pixels, bitsPerPixel=bpp,
+                                  encoding=encoding)
+            outputHash.set('data.image', imageData)
+
+            daqPixels = pixels.reshape(daqShape)
+            daqImageData = ImageData(daqPixels, bitsPerPixel=bpp,
+                                     encoding=encoding)
+            daqOutputHash.set('data.image', daqImageData)
+
         else:
             self.imageStandardMean.append(pixels)
             if self.imageStandardMean.size >= nImages:
-                h.set('data.image',
-                      ImageData(self.imageStandardMean.mean))
+                pixels = self.imageStandardMean.mean.astype(dType)
+                imageData = ImageData(pixels, bitsPerPixel=bpp,
+                                      encoding=encoding)
+                outputHash.set('data.image', imageData)
+
+                daqPixels = pixels.reshape(daqShape)
+                daqImageData = ImageData(daqPixels, bitsPerPixel=bpp,
+                                         encoding=encoding)
+                daqOutputHash.set('data.image', daqImageData)
+
                 self.imageStandardMean.clear()
 
-        if not h.empty():
+        if not outputHash.empty() and not daqOutputHash.empty():
             self.frameRateOut.update()
             if self.frameRateOut.elapsedTime() >= 1.0:
                 fpsOut = self.frameRateOut.rate()
@@ -228,12 +282,13 @@ class ImageAverager(PythonDevice):
 
             # For the averaged image, we use the timestamp of the
             # last image in the average
-            self.writeChannel('output', h, ts)
+            self.writeChannel('output', outputHash, ts)
+            self.writeChannel('daqOutput', daqOutputHash, ts)
             self.log.DEBUG('Averaged image sent to output channel')
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
-        self["inFrameRate"] = 0.
+        self.resetAverage()
         self.updateState(State.PASSIVE)
         self.signalEndOfStream("output")
 
@@ -243,3 +298,53 @@ class ImageAverager(PythonDevice):
         self.imageStandardMean.clear()
         self['inFrameRate'] = 0
         self['outFrameRate'] = 0
+
+    def updateOutputSchema(self, daqShape, encoding, kType):
+        newSchema = Schema()
+        outputData = Schema()
+
+        # Get device configuration before schema update
+        try:
+            outputHostname = self["daqOutput.hostname"]
+        except AttributeError as e:
+            # Configuration does not contain "daqOutput.hostname"
+            outputHostname = None
+
+        (
+            NODE_ELEMENT(outputData).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            IMAGEDATA_ELEMENT(outputData).key("data.image")
+                .displayedName("Image")
+                .setDimensions(str(daqShape).strip("()"))
+                .setEncoding(encoding)
+                .commit(),
+
+            # Set (overwrite) shape and dtype for internal NDArray element -
+            # needed by DAQ
+            NDARRAY_ELEMENT(outputData).key("data.image.pixels")
+                .shape(str(daqShape).strip("()"))
+                .dtype(kType)
+                .commit(),
+
+            # Set "maxSize" for vector properties - needed by DAQ
+            outputData.setMaxSize("data.image.dims", len(daqShape)),
+            outputData.setMaxSize("data.image.dimTypes", len(daqShape)),
+            outputData.setMaxSize("data.image.roiOffsets", len(daqShape)),
+            outputData.setMaxSize("data.image.binning", len(daqShape)),
+            outputData.setMaxSize("data.image.pixels.shape", len(daqShape)),
+
+            OUTPUT_CHANNEL(newSchema).key("daqOutput")
+                .displayedName("DAQ Output")
+                .dataSchema(outputData)
+                .commit(),
+        )
+
+        self.updateSchema(newSchema)
+
+        if outputHostname:
+            # Restore configuration
+            self.log.DEBUG("daqOutput.hostname: %s" % outputHostname)
+            self.set("daqOutput.hostname", outputHostname)
