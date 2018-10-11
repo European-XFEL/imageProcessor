@@ -18,7 +18,7 @@ from .common import FrameRate, ImageProcOutputInterface
 
 
 @KARABO_CLASSINFO("ImagePicker", "2.2")
-class ImagePicker(ImageProcOutputInterface, PythonDevice):
+class ImagePicker(PythonDevice, ImageProcOutputInterface):
     """
     This device has two input channels (inputImage and inputTrainid).
     inputImage expects an image stream (e.g. from a camera)
