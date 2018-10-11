@@ -9,16 +9,16 @@ from collections import deque
 from threading import Lock
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT, INPUT_CHANNEL,
-    KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema,
-    State, Timestamp, Unit, UINT32_ELEMENT,
+    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT,
+    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT,
+    PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
 )
 
 from .common import FrameRate, ImageProcOutputInterface
 
 
 @KARABO_CLASSINFO("ImagePicker", "2.2")
-class ImagePicker(ImageProcOutputInterface, PythonDevice):
+class ImagePicker(PythonDevice, ImageProcOutputInterface):
     """
     This device has two input channels (inputImage and inputTrainid).
     inputImage expects an image stream (e.g. from a camera)
@@ -58,6 +58,14 @@ class ImagePicker(ImageProcOutputInterface, PythonDevice):
             INPUT_CHANNEL(expected).key("inputTrainId")
                 .displayedName("Input Train Id")
                 .dataSchema(Schema())
+                .commit(),
+
+            BOOL_ELEMENT(expected).key("isDisabled")
+                .displayedName("Disabled")
+                .description("When disabled, all images received in input are"
+                             "forwarded to output channel")
+                .assignmentOptional().defaultValue(False)
+                .reconfigurable()
                 .commit(),
 
             # Images should be dropped if processor is too slow
@@ -169,17 +177,24 @@ class ImagePicker(ImageProcOutputInterface, PythonDevice):
             ts = Timestamp.fromHashAttributes(
                 metaData.getAttributes('timestamp'))
 
-            # if match is found image is sent on output channel
-            # otherwise it is queued
-            if not self.searchForMatch({'ts': ts, 'imageData': imageData}):
-                with self.buffer_lock:
-                    self.imageBuffer.append({'ts': ts, 'imageData': imageData})
+            if self.get("isDisabled"):
+                self.writeOutputChannels(imageData, ts)
+                self.refreshFrameRateOut()
+            else:
+                # if match is found image is sent on output channel
+                # otherwise it is queued
+                if not self.searchForMatch({'ts': ts, 'imageData': imageData}):
+                    with self.buffer_lock:
+                        self.imageBuffer.append({'ts': ts, 'imageData': imageData})
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
     def onDataTrainId(self, data, metaData):
         if self.trainidBuffer is None:
+            return
+
+        if self.get("isDisabled"):
             return
 
         if self.isChannelActive['inputTrainId'] is False:
