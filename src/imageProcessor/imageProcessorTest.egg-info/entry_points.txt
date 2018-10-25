@@ -1,0 +1,4 @@
+[karabo.bound_device]
+TestCamera = tests.test_camera:TestCamera
+ImageProcessor = ImageProcessor:ImageProcessor
+

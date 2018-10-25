@@ -1,0 +1,8 @@
+imageProcessorTest.egg-info/PKG-INFO
+imageProcessorTest.egg-info/SOURCES.txt
+imageProcessorTest.egg-info/entry_points.txt
+__init__.py
+ImageProcessor.py
+tests/__init__.py
+tests/test_camera.py
+
