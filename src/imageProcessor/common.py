@@ -160,11 +160,16 @@ class ImageProcOutputInterface(NoFsm):
 
     def writeOutputChannels(self, img, timestamp=None):
 
+        if not isinstance(img, ImageData):
+            raise RuntimeError(
+                "Trying to feed writeOutputChannels with invalid "
+                "imageData")
+
         # write data to output channel
         self.writeChannel('output', Hash("data.image", img), timestamp)
 
         # swap image dimensions for DAQ compatibility
-        daqImg = img.getData().reshape(self.daqShape)
+        daqImg = ImageData(img.getData().reshape(self.daqShape))
 
         # send data to DAQ output channel
         self.writeChannel('daqOutput', Hash("data.image", daqImg), timestamp)
