@@ -158,11 +158,11 @@ class ImageProcOutputInterface(NoFsm):
                 .commit(),
         )
 
-    def writeOutputChannels(self, img, timestamp=None):
+    def writeImageToOutputs(self, img, timestamp=None):
 
         if not isinstance(img, ImageData):
             raise RuntimeError(
-                "Trying to feed writeOutputChannels with invalid "
+                "Trying to feed writeImageToOutputs with invalid "
                 "imageData")
 
         # write data to output channel

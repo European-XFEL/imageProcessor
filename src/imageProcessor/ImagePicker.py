@@ -178,7 +178,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                 metaData.getAttributes('timestamp'))
 
             if self.get("isDisabled"):
-                self.writeOutputChannels(imageData, ts)
+                self.writeImageToOutputs(imageData, ts)
                 self.refreshFrameRateOut()
             else:
                 # if match is found image is sent on output channel
@@ -237,7 +237,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                     img_tid = img['ts'].getTrainId()
                     if img_tid == tid + offset:
                         match_found = True
-                        self.writeOutputChannels(img['imageData'], img['ts'])
+                        self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.refreshFrameRateOut()
                     elif img_tid > tid + offset:
                         break
@@ -249,7 +249,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                 for tid in self.trainidBuffer:
                     if img_tid == tid + offset:
                         match_found = True
-                        self.writeOutputChannels(img['imageData'], img['ts'])
+                        self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.refreshFrameRateOut()
                     elif img_tid < tid + offset:
                         break
