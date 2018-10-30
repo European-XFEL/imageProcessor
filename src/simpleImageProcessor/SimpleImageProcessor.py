@@ -409,7 +409,7 @@ class SimpleImageProcessor(PythonDevice):
         imgX = image_processing.imageSumAlongY(img)
 
         # Initial parameters
-        p0 = np.r_[imgX.max(), image_processing.imageCentreOfMass(imgX)]
+        p0 = image_processing.peakParametersEval(imgX)
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgX, p0)
@@ -427,7 +427,7 @@ class SimpleImageProcessor(PythonDevice):
         imgY = image_processing.imageSumAlongX(img)
 
         # Initial parameters
-        p0 = np.r_[imgY.max(), image_processing.imageCentreOfMass(imgY)]
+        p0 = image_processing.peakParametersEval(imgY)
 
         # 1-d Gaussian fit
         out = image_processing.fitGauss(imgY, p0)

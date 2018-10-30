@@ -3,3 +3,5 @@ build/
 .idea/
 src/simpleImageProcessor.egg-info/
 src/simpleImageProcessor/__pycache__/
+src/simpleImageProcessor/tests/__pycache__/
+
