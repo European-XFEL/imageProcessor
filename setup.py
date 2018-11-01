@@ -22,6 +22,7 @@ setup(name='imageProcessor',
           'karabo.middlelayer_device': [
               'ImageToSpectrum = imageProcessor.ImageToSpectrum:ImageToSpectrum',
               'ImageNormRoi = imageProcessor.ImageNormRoi:ImageNormRoi',
+              'BeamShapeCoarse = imageProcessor.BeamShapeCoarse:BeamShapeCoarse',
           ],
       },
       package_data={},
