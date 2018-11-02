@@ -94,7 +94,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                              "Negative: output image train id is lower than "
                              "input train (advance)")
                 .assignmentOptional().defaultValue(0)
-                .init()
+                .reconfigurable()
                 .commit(),
 
             UINT32_ELEMENT(expected).key("imgBufferSize")
