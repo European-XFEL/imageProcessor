@@ -74,8 +74,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
             x_projection = imageSumAlongY(img)
             y_projection = imageSumAlongX(img)
 
-            max_x, coord_x, fwhm_x = peakParametersEval(x_projection)
-            max_y, coord_y, fwhm_y = peakParametersEval(y_projection)
+            _, coord_x, fwhm_x = peakParametersEval(x_projection)
+            _, coord_y, fwhm_y = peakParametersEval(y_projection)
 
             self.x0 = QuantityValue(coord_x, timestamp=img_timestamp)
             self.y0 = QuantityValue(coord_y, timestamp=img_timestamp)
