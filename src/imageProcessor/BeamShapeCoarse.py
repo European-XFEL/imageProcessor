@@ -17,7 +17,7 @@ from image_processing.image_processing import (
 
 from DaqCompliancy.DaqCompliancy import DaqCompliant
 
-from .common import FrameRate
+from processing_utils.rate_calculator import RateCalculator
 
 
 class BeamShapeCoarse(DaqCompliant, Device):
@@ -103,7 +103,7 @@ class BeamShapeCoarse(DaqCompliant, Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
-        self.frame_rate = FrameRate(refresh_interval=1.0)
+        self.frame_rate = RateCalculator(refresh_interval=1.0)
 
         self.state = State.PASSIVE
 

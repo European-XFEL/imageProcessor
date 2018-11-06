@@ -1,5 +1,3 @@
-import time
-
 from karabo.bound import (
     DaqDataType, Hash, ImageData, IMAGEDATA_ELEMENT, NODE_ELEMENT,
     NDARRAY_ELEMENT, NoFsm, OUTPUT_CHANNEL, Schema, Types
@@ -20,38 +18,8 @@ DTYPE_TO_KTYPE = {
 }
 
 
-class FrameRate:
-    def __init__(self, type='input', refresh_interval=1.0):
-        self.counter = 0
-        self.lastTime = time.time()
-        self.type = type
-        self.refresh_interval = refresh_interval
-
-    def update(self):
-        self.counter += 1
-
-    def elapsedTime(self):
-        return time.time() - self.lastTime
-
-    def reset(self):
-        self.counter = 0
-        self.lastTime = time.time()
-
-    def rate(self):
-        if self.counter > 0:
-            return self.counter / self.elapsedTime()
-        else:
-            return 0.
-
-    def refresh(self):
-        fps = None
-        if self.elapsedTime() >= self.refresh_interval:
-            fps = self.rate()
-            self.reset()
-        return fps
-
-
 class ImageProcOutputInterface(NoFsm):
+    """Interface for processor output channels"""
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
         super(ImageProcOutputInterface, self).__init__(configuration)
@@ -64,8 +32,8 @@ class ImageProcOutputInterface(NoFsm):
         outputData = Schema()
         (
 
-            OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("Output")
+            OUTPUT_CHANNEL(expected).key("ppOutput")
+                .displayedName("GUI/PP Output")
                 .dataSchema(outputData)
                 .commit(),
 
@@ -78,6 +46,7 @@ class ImageProcOutputInterface(NoFsm):
         )
 
     def updateOutputSchema(self, imageData):
+        """Updates the schema of all the output channels"""
         if isinstance(imageData, ImageData):
             pixels = imageData.getData()  # np.ndarray
             shape = pixels.shape
@@ -95,21 +64,21 @@ class ImageProcOutputInterface(NoFsm):
 
         # Get device configuration before schema update
         try:
-            outputHostname = self["output.hostname"]
+            outputHostname = self["ppOutput.hostname"]
         except AttributeError as e:
-            # Configuration does not contain "output.hostname"
+            # Configuration does not contain "ppOutput.hostname"
             outputHostname = None
 
         try:
             daqOutputHostname = self["daqOutput.hostname"]
         except AttributeError as e:
-            # Configuration does not contain "output.hostname"
+            # Configuration does not contain "daqOutput.hostname"
             daqOutputHostname = None
 
         newSchema = Schema()
 
         # update output Channel
-        self.updateSchemaHelper(newSchema, "output", "Output", self.shape)
+        self.updateSchemaHelper(newSchema, "ppOutput", "Output", self.shape)
 
         # update DAQ output Channel
         self.updateSchemaHelper(newSchema, "daqOutput", "DAQ Output",
@@ -120,13 +89,14 @@ class ImageProcOutputInterface(NoFsm):
 
         # Restore configuration
         if outputHostname:
-            self.log.DEBUG("output.hostname: {}".format(outputHostname))
-            self.set("output.hostname", outputHostname)
+            self.log.DEBUG("ppOutput.hostname: {}".format(outputHostname))
+            self.set("ppOutput.hostname", outputHostname)
         if daqOutputHostname:
             self.log.DEBUG("daqOutput.hostname: {}".format(daqOutputHostname))
             self.set("daqOutput.hostname", daqOutputHostname)
 
     def updateSchemaHelper(self, schema, outputNodeKey, outputNodeName, shape):
+        """Helper function - do not call it"""
         outputData = Schema()
         (
             NODE_ELEMENT(outputData).key("data")
@@ -159,17 +129,22 @@ class ImageProcOutputInterface(NoFsm):
         )
 
     def writeImageToOutputs(self, img, timestamp=None):
-
+        """Writes the image to all the output channels"""
         if not isinstance(img, ImageData):
             raise RuntimeError(
                 "Trying to feed writeImageToOutputs with invalid "
                 "imageData")
 
         # write data to output channel
-        self.writeChannel('output', Hash("data.image", img), timestamp)
+        self.writeChannel('ppOutput', Hash("data.image", img), timestamp)
 
         # swap image dimensions for DAQ compatibility
         daqImg = ImageData(img.getData().reshape(self.daqShape))
 
         # send data to DAQ output channel
         self.writeChannel('daqOutput', Hash("data.image", daqImg), timestamp)
+
+    def signalEndOfStreams(self):
+        """Signals end-of-stream to all the output channels"""
+        self.signalEndOfStream("ppOutput")
+        self.signalEndOfStream("daqOutput")

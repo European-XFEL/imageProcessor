@@ -4,14 +4,14 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-import time
-
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp, Unit,
     VECTOR_INT32_ELEMENT,
 )
+
+from processing_utils.rate_calculator import RateCalculator
 
 
 @KARABO_CLASSINFO("ImageApplyRoi", "2.2")
@@ -77,15 +77,14 @@ class ImageApplyRoi(PythonDevice):
         # always call superclass constructor first!
         super(ImageApplyRoi, self).__init__(configuration)
 
-        # frames per second
-        self.lastTime = None
-        self.counter = 0
-
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         self.registerInitialFunction(self.initialization)
+
+        # Variables for frames per second computation
+        self.frame_rate = RateCalculator(refresh_interval=1.0)
 
     def initialization(self):
         """ This method will be called after the constructor. """
@@ -140,21 +139,7 @@ class ImageApplyRoi(PythonDevice):
         disable = self.get("disable")
         roi = self.get("roi")
 
-        try:
-            self.counter += 1
-            currentTime = time.time()
-            if self.lastTime is None:
-                self.counter = 0
-                self.lastTime = currentTime
-            elif (self.lastTime is not None and
-                  (currentTime - self.lastTime) > 1.):
-                fps = self.counter / (currentTime - self.lastTime)
-                self.set("frameRate", fps)
-                self.log.DEBUG("Acquisition rate %f Hz" % fps)
-                self.counter = 0
-                self.lastTime = currentTime
-        except Exception as e:
-            self.log.ERROR("Exception caught in processImage: %s" % str(e))
+        self.refreshFrameRate()
 
         try:
             if disable:
@@ -186,3 +171,10 @@ class ImageApplyRoi(PythonDevice):
             return False
 
         return True
+
+    def refreshFrameRate(self):
+        self.frame_rate.update()
+        fps = self.frame_rate.refresh()
+        if fps:
+            self['frameRate'] = fps
+            self.log.DEBUG('Input rate %f Hz' % fps)
