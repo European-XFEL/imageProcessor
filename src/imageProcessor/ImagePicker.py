@@ -14,7 +14,9 @@ from karabo.bound import (
     PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
 )
 
-from .common import FrameRate, ImageProcOutputInterface
+from processing_utils.rate_calculator import RateCalculator
+
+from .common import ImageProcOutputInterface
 
 
 @KARABO_CLASSINFO("ImagePicker", "2.2")
@@ -141,8 +143,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         self.registerInitialFunction(self.initialization)
 
         # Variables for frames per second computation
-        self.frameRateIn = FrameRate(refresh_interval=1.0)
-        self.frameRateOut = FrameRate(refresh_interval=1.0)
+        self.frame_rate_in = RateCalculator(refresh_interval=1.0)
+        self.frame_rate_out = RateCalculator(refresh_interval=1.0)
 
     def initialization(self):
         """ This method will be called after the constructor. """
@@ -185,7 +187,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                 # otherwise it is queued
                 if not self.searchForMatch({'ts': ts, 'imageData': imageData}):
                     with self.buffer_lock:
-                        self.imageBuffer.append({'ts': ts, 'imageData': imageData})
+                        self.imageBuffer.append(
+                            {'ts': ts, 'imageData': imageData})
 
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
@@ -260,15 +263,15 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         return match_found
 
     def refreshFrameRateIn(self):
-        self.frameRateIn.update()
-        fpsIn = self.frameRateIn.refresh()
+        self.frame_rate_in.update()
+        fpsIn = self.frame_rate_in.refresh()
         if fpsIn:
             self['inFrameRate'] = fpsIn
             self.log.DEBUG('Input rate %f Hz' % fpsIn)
 
     def refreshFrameRateOut(self):
-        self.frameRateOut.update()
-        fpsOut = self.frameRateOut.refresh()
+        self.frame_rate_out.update()
+        fpsOut = self.frame_rate_out.refresh()
         if fpsOut:
             self['outFrameRate'] = fpsOut
             self.log.DEBUG('Output rate %f Hz' % fpsOut)
@@ -292,7 +295,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         if inputChannel == 'imageInput':
             self['inFrameRate'] = 0
             self['outFrameRate'] = 0
-            self.signalEndOfStream("output")
+            self.signalEndOfStreams()
 
         if not self.isActive():
             # Signals end of stream

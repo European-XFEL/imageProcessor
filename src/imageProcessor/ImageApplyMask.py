@@ -9,7 +9,6 @@
 import numpy as np
 import os.path
 from PIL import Image
-import time
 
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
@@ -21,6 +20,8 @@ from karabo.bound import (
 from image_processing.image_processing import (
     imageApplyMask, imageSelectRegion
 )
+
+from processing_utils.rate_calculator import RateCalculator
 
 
 @KARABO_CLASSINFO("ImageApplyMask", "2.2")
@@ -36,10 +37,6 @@ class ImageApplyMask(PythonDevice):
         # Mask
         self.mask = None
 
-        # frames per second
-        self.lastTime = None
-        self.counter = 0
-
         # Register additional slots
         self._ss.registerSlot(self.resetMask)
         self._ss.registerSlot(self.loadMask)
@@ -49,6 +46,9 @@ class ImageApplyMask(PythonDevice):
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         self.registerInitialFunction(self.initialization)
+
+        # Variables for frames per second computation
+        self.frame_rate = RateCalculator(refresh_interval=1.0)
 
     @staticmethod
     def expectedParameters(expected):
@@ -174,22 +174,7 @@ class ImageApplyMask(PythonDevice):
     ##############################################
 
     def processImage(self, imageData, ts):
-
-        try:
-            self.counter += 1
-            currentTime = time.time()
-            if self.lastTime is None:
-                self.counter = 0
-                self.lastTime = currentTime
-            elif (self.lastTime is not None and
-                  (currentTime - self.lastTime) > 1.):
-                fps = self.counter / (currentTime-self.lastTime)
-                self.set("frameRate", fps)
-                self.log.DEBUG("Acquisition rate %f Hz" % fps)
-                self.counter = 0
-                self.lastTime = currentTime
-        except Exception as e:
-            self.log.ERROR("Exception caught in processImage: %s" % str(e))
+        self.refreshFrameRate()
 
         try:
             disable = self.get("disable")
@@ -295,3 +280,10 @@ class ImageApplyMask(PythonDevice):
 
         except Exception as e:
             self.log.ERROR("Exception caught in loadMask: %s" % str(e))
+
+    def refreshFrameRate(self):
+        self.frame_rate.update()
+        fps = self.frame_rate.refresh()
+        if fps:
+            self['frameRate'] = fps
+            self.log.DEBUG('Input rate %f Hz' % fps)

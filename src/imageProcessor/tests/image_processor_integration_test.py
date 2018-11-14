@@ -20,7 +20,7 @@ class TestImageProcessor(BoundDeviceTestCase):
         # The .egg-info is placed in the parent directory.
         # plugin_dir=egg_dir assures that the pkg_resources plugin loader
         # will identify the test devices as valid plugins with an entry point.
-        egg_dir = op.join(op.split(own_dir)[:-1])[0]
+        egg_dir = op.dirname(own_dir)
         class_ids = ['ImageProcessor', 'TestCamera']
         self.start_server(SERVER_ID, class_ids, plugin_dir=egg_dir)
         print(SERVER_ID)
