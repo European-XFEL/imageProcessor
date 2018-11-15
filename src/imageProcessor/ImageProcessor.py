@@ -280,6 +280,14 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
+            BOOL_ELEMENT(expected).key("enablePolynomial")
+                .displayedName("Polynomial Gaussian Fits")
+                .description("Add a 1st order polynomial term (ramp) gaussian "
+                             "fits.")
+                .assignmentOptional().defaultValue(False)
+                .reconfigurable()
+                .commit(),
+
             STRING_ELEMENT(expected).key("gauss1dStartValues")
                 .displayedName("1d gauss fit start values")
                 .description("selects how 1d gauss fit starting values are "
@@ -1107,6 +1115,7 @@ class ImageProcessor(PythonDevice):
         # 1-D Gaussian Fits
         if self.get("do1DFit"):
 
+            enable_polynomial = self.get("enablePolynomial")
             gauss1dStartValues = self.get("gauss1dStartValues")
 
             t0 = time.time()
@@ -1140,7 +1149,8 @@ class ImageProcessor(PythonDevice):
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
                 # 1-d gaussian fit
-                out = image_processing.fitGauss(data, p0)
+                out = image_processing.fitGauss(data, p0, enablePolynomial=
+                                                enable_polynomial)
                 pX = out[0]  # parameters
                 cX = out[1]  # covariance
                 successX = out[2]  # error
@@ -1185,7 +1195,8 @@ class ImageProcessor(PythonDevice):
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
                 # 1-d gaussian fit
-                out = image_processing.fitGauss(data, p0)
+                out = image_processing.fitGauss(data, p0, enablePolynomial=
+                                                enable_polynomial)
                 pY = out[0]  # parameters
                 cY = out[1]  # covariance
                 successY = out[2]  # error
@@ -1325,7 +1336,9 @@ class ImageProcessor(PythonDevice):
                         p0 = None
 
                     # 2-d gaussian fit
-                    out = image_processing.fitGauss2DRot(data, p0)
+                    out = image_processing.fitGauss2DRot(data, p0,
+                                                         enablePolynomial=
+                                                         enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy, theta
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
@@ -1350,7 +1363,8 @@ class ImageProcessor(PythonDevice):
                         p0 = None
 
                     # 2-d gaussian fit
-                    out = image_processing.fitGauss(data, p0)
+                    out = image_processing.fitGauss(data, p0, enablePolynomial=
+                                                    enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
