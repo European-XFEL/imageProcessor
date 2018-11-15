@@ -5,7 +5,7 @@
 #############################################################################
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
+    DOUBLE_ELEMENT, Hash, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
     NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
     UINT32_ELEMENT, Unit
 )
@@ -186,12 +186,14 @@ class TwoPeakFinder(PythonDevice):
 
             peaks = find_peaks(img_x, zero_point)
 
-            self['peak1Value'] = peaks[0]
-            self['peak1Position'] = peaks[1]
-            self['peak1Fwhm'] = peaks[2]
-            self['peak2Value'] = peaks[3]
-            self['peak2Position'] = peaks[4]
-            self['peak2Fwhm'] = peaks[5]
+            h = Hash()
+            h.set('peak1Value', peaks[0])
+            h.set('peak1Position', peaks[1])
+            h.set('peak1Fwhm', peaks[2])
+            h.set('peak2Value', peaks[3])
+            h.set('peak2Position', peaks[4])
+            h.set('peak2Fwhm', peaks[5])
+            self.set(h, ts)
 
         except Exception as e:
             self.log.ERROR("Exception caught in processImage: {}".format(e))
