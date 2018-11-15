@@ -1,6 +1,6 @@
 #############################################################################
 # Author: <andrea.parenti@xfel.eu>
-# Created on November 27, 2015
+# Created on November 14, 2018
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
@@ -15,6 +15,15 @@ from image_processing.image_processing import (
 )
 
 from processing_utils.rate_calculator import RateCalculator
+
+
+def find_peaks(img_x, zero_point):
+    """Find two peaks - one left one right - from zero_point"""
+    value_1, pos_1, fwhm_1 = peakParametersEval(img_x[:zero_point])
+    value_2, pos_2, fwhm_2 = peakParametersEval(img_x[zero_point:])
+    pos_2 += zero_point
+
+    return value_1, pos_1, fwhm_1, value_2, pos_2, fwhm_2
 
 
 @KARABO_CLASSINFO("TwoPeakFinder", "2.2")
@@ -172,20 +181,17 @@ class TwoPeakFinder(PythonDevice):
 
         try:
             img = image_data.getData()  # np.ndarray
-            imgX = imageSumAlongY(img)  # sum along y axis
-            zeroPoint = self['zeroPoint']
+            img_x = imageSumAlongY(img)  # sum along y axis
+            zero_point = self['zeroPoint']
 
-            peak_value_1, peak_pos_1, fwhm_1 = peakParametersEval(
-                imgX[:zeroPoint])
-            peak_value_2, peak_pos_2, fwhm_2 = peakParametersEval(
-                imgX[zeroPoint:])
+            peaks = find_peaks(img_x, zero_point)
 
-            self['peak1Value'] = peak_value_1
-            self['peak1Position'] = peak_pos_1
-            self['peak1Fwhm'] = fwhm_1
-            self['peak2Value'] = peak_value_2
-            self['peak2Position'] = peak_pos_2
-            self['peak2Fwhm'] = fwhm_2
+            self['peak1Value'] = peaks[0]
+            self['peak1Position'] = peaks[1]
+            self['peak1Fwhm'] = peaks[2]
+            self['peak2Value'] = peaks[3]
+            self['peak2Position'] = peaks[4]
+            self['peak2Fwhm'] = peaks[5]
 
         except Exception as e:
             self.log.ERROR("Exception caught in processImage: {}".format(e))
