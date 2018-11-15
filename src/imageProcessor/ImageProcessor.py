@@ -282,8 +282,8 @@ class ImageProcessor(PythonDevice):
 
             BOOL_ELEMENT(expected).key("enablePolynomial")
                 .displayedName("Polynomial Gaussian Fits")
-                .description("Add a 1st order polynomial term (ramp) to 1-d "
-                             "and non rotational 2-d gaussian fits.")
+                .description("Add a 1st order polynomial term (ramp) gaussian "
+                             "fits.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
@@ -1336,7 +1336,9 @@ class ImageProcessor(PythonDevice):
                         p0 = None
 
                     # 2-d gaussian fit
-                    out = image_processing.fitGauss2DRot(data, p0)
+                    out = image_processing.fitGauss2DRot(data, p0,
+                                                         enablePolynomial=
+                                                         enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy, theta
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
