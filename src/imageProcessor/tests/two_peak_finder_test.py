@@ -18,7 +18,7 @@ class TwoPeakFinder_TestCase(unittest.TestCase):
 
     def test_finding(self):
         x = np.arange(2048)
-        img_x = gauss1d(x, 1000, 300, 20) + gauss1d(x, 800, 600, 25)
+         = gauss1d(x, 1000, 300, 20) + gauss1d(x, 800, 600, 25)
         img_x = img_x.astype(np.uint16)
         zero_point = 450
         peaks = find_peaks(img_x, zero_point)

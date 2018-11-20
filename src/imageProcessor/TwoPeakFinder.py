@@ -78,7 +78,8 @@ class TwoPeakFinder(PythonDevice):
 
             UINT32_ELEMENT(expected).key('zeroPoint')
                 .displayedName('Zero Point')
-                .description("Zero point for the two peaks finding.")
+                .description("The device will try to find a peak left, and "
+                             "a peak right, from this point.")
                 .unit(Unit.PIXEL)
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
