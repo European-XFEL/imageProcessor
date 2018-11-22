@@ -207,13 +207,13 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            INT32_ELEMENT(expected).key("absThreshold")
+            FLOAT_ELEMENT(expected).key("absThreshold")
                 .displayedName("Pixel Absolute threshold")
                 .description("The pixel absolute threshold. "
                              "Non-zero pixel absolute threshold discards "
                              "the pixel relative threshold.")
-                .assignmentOptional().defaultValue(0)
-                .minInc(0)
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0)
                 .reconfigurable()
                 .commit(),
 
@@ -1071,7 +1071,7 @@ class ImageProcessor(PythonDevice):
             t0 = time.time()
             try:
                 # Set a threshold to cut away noise
-                if absThr:
+                if absThr > 0.0:
                     img2 = image_processing.\
                         imageSetThreshold(img, min(absThr, img.max()))
                 else:
