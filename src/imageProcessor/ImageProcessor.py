@@ -207,10 +207,21 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
+            FLOAT_ELEMENT(expected).key("absThreshold")
+                .displayedName("Pixel Absolute threshold")
+                .description("The pixel absolute threshold. "
+                             "Non-zero pixel absolute threshold discards "
+                             "the pixel relative threshold.")
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0)
+                .reconfigurable()
+                .commit(),
+
             FLOAT_ELEMENT(expected).key("threshold")
                 .displayedName("Pixel Relative threshold")
                 .description("The pixel threshold for centre-of-mass "
-                             "calculation (fraction of highest value).")
+                             "calculation (fraction of highest value). "
+                             "Discarded by non-zero absolute threshold.")
                 .assignmentOptional().defaultValue(0.10)
                 .minInc(0.0).maxInc(1.0)
                 .reconfigurable()
@@ -859,6 +870,7 @@ class ImageProcessor(PythonDevice):
         comRange = self.get("comRange")
         fitRange = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
+        absThr = self.get("absThreshold")
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
         absolutePositions = self.get("absolutePositions")
@@ -1059,7 +1071,12 @@ class ImageProcessor(PythonDevice):
             t0 = time.time()
             try:
                 # Set a threshold to cut away noise
-                img2 = image_processing.imageSetThreshold(img, thr * img.max())
+                if absThr > 0.0:
+                    img2 = image_processing.\
+                        imageSetThreshold(img, min(absThr, img.max()))
+                else:
+                    img2 = image_processing.\
+                        imageSetThreshold(img, thr * img.max())
 
                 # Centre-of-mass and widths
                 if comRange == "user-defined":
