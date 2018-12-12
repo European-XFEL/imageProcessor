@@ -189,9 +189,9 @@ class ImageProcessor(PythonDevice):
 
             VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
                 .displayedName("User Defined Range")
-                .description("The user-defined range for centre-of-mass "
-                             "and gaussian fit(s). Region "
-                             "[lowX, highX) x [lowY, highY)"
+                .description("The user-defined range for centre-of-mass, "
+                             "gaussian fit(s) and Sum along the x & y axes."
+                             " Region [lowX, highX) x [lowY, highY)"
                              " specified as [lowX, highX, lowY, highY]")
                 .assignmentOptional().defaultValue([0, 400, 0, 400])
                 .minSize(4).maxSize(4)
@@ -1039,8 +1039,13 @@ class ImageProcessor(PythonDevice):
         if self.get("doXYSum"):
             t0 = time.time()
             try:
-                imgX = image_processing.imageSumAlongY(img)  # sum along y axis
-                imgY = image_processing.imageSumAlongX(img)  # sum along x axis
+                xmin = np.maximum(userDefinedRange[0], 0)
+                xmax = np.minimum(userDefinedRange[1], imageWidth)
+                ymin = np.maximum(userDefinedRange[2], 0)
+                ymax = np.minimum(userDefinedRange[3], imageHeight)
+                data = img[ymin:ymax, xmin:xmax]
+                imgX = image_processing.imageSumAlongY(data)  # sum along y axis
+                imgY = image_processing.imageSumAlongX(data)  # sum along x axis
 
             except Exception as e:
                 self.log.WARN("Could not sum image along x or y axis: %s." %
