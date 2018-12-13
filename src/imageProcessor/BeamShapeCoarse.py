@@ -23,37 +23,37 @@ from processing_utils.rate_calculator import RateCalculator
 class BeamShapeCoarse(DaqCompliant, Device):
     x0 = UInt32(
         displayedName="Center X",
-        description="X coordinate of the maximum intensity pixel",
+        description="X coordinate of the maximum intensity pixel.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     y0 = UInt32(
         displayedName="Center Y",
-        description="Y coordinate of the maximum intensity pixel",
+        description="Y coordinate of the maximum intensity pixel.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     fwhmX = UInt32(
         displayedName="FWHM X",
-        description="Full Widh at Half Maximum for X projection, "
-                    "A.K.A. beam width",
+        description="Full Width at Half Maximum for X projection, "
+                    "A.K.A. beam width.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     fwhmY = UInt32(
         displayedName="FWHM Y",
-        description="Full Widh at Half Maximum for Y projection, "
-                    "A.K.A. beam height",
+        description="Full Width at Half Maximum for Y projection, "
+                    "A.K.A. beam height.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     frameRate = Double(
         displayedName="Input Frame Rate",
-        description="Rate of processed images",
+        description="Rate of processed images.",
         unitSymbol=Unit.HERTZ,
         accessMode=AccessMode.READONLY,
     )
