@@ -1,2 +1,5 @@
-git+https://git.xfel.eu/gitlab/Karabo/rtd-conf-py.git
+git+https://git.xfel.eu/gitlab/xfel-rtd/rtd-conf.git
 slumber
+traits
+breathe
+

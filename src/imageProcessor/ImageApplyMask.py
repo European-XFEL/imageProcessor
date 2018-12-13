@@ -90,14 +90,15 @@ class ImageApplyMask(PythonDevice):
                 .commit(),
 
             BOOL_ELEMENT(expected).key("disable")
-                .description("Disable mask")
+                .displayedName("Disable Mask")
+                .description("No mask will be applied, if set to True.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
             STRING_ELEMENT(expected).key("maskType")
                 .displayedName("Mask Type")
-                .description("Mask type: rectangular or arbitrary (loaded "
+                .description("The mask type: rectangular or arbitrary (loaded "
                              "from file).")
                 .options("rectangular,fromFile")
                 .assignmentOptional().defaultValue("fromFile")
@@ -116,19 +117,21 @@ class ImageApplyMask(PythonDevice):
 
             PATH_ELEMENT(expected).key("maskFilename")
                 .displayedName("Mask Filename")
-                .description("The full filename to the mask. File format "
-                             "must be 'npy', 'raw' or TIFF.")
+                .description("The full path to the mask file. File format "
+                             "must be 'npy', 'raw' or TIFF. "
+                             "Pixel value will be set to 0, where mask is <=0.")
                 .assignmentOptional().defaultValue("mask.npy")
                 .reconfigurable()
                 .commit(),
 
             SLOT_ELEMENT(expected).key("resetMask")
                 .displayedName("Reset Mask")
+                .description("Discard the loaded mask.")
                 .commit(),
 
             SLOT_ELEMENT(expected).key("loadMask")
                 .displayedName("Load Mask")
-                .description("Load mask from a file")
+                .description("Load the mask from a file.")
                 .commit(),
         )
 
