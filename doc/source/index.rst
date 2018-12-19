@@ -24,6 +24,7 @@ Contents:
    user_docu_picker
    user_docu_spectrum
    user_docu_beam_shape_coarse
+   user_docu_thumbnail
    :maxdepth: 2
 
 
