@@ -57,15 +57,16 @@ class ImageApplyRoi(PythonDevice):
                 .commit(),
 
             BOOL_ELEMENT(expected).key("disable")
-                .description("Disable ROI")
+                .displayedName("Disable ROI")
+                .description("No ROI will be applied, if set to True.")
                 .assignmentOptional().defaultValue(False)
                 .init()
                 .commit(),
 
             VECTOR_INT32_ELEMENT(expected).key("roi")
                 .displayedName("ROI")
-                .description("The user-defined region of interest (ROI),"
-                             " specified as [lowX, highX, lowY, highY].")
+                .description("The user-defined region of interest (ROI), "
+                             "specified as [lowX, highX, lowY, highY].")
                 .assignmentOptional().defaultValue([0, 10000, 0, 10000])
                 .minSize(4).maxSize(4)
                 .reconfigurable()
