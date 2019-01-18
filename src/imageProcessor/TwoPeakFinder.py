@@ -19,8 +19,9 @@ from processing_utils.rate_calculator import RateCalculator
 
 def find_peaks(img_x, zero_point):
     """Find two peaks - one left one right - from zero_point"""
-    value_1, pos_1, fwhm_1 = peakParametersEval(img_x[:zero_point])
+    value_1, pos_1, fwhm_1 = peakParametersEval(img_x[zero_point::-1])
     value_2, pos_2, fwhm_2 = peakParametersEval(img_x[zero_point:])
+    pos_1 = zero_point - pos_1
     pos_2 += zero_point
 
     return value_1, pos_1, fwhm_1, value_2, pos_2, fwhm_2
