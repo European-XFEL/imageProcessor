@@ -10,7 +10,7 @@ import numpy as np
 from karabo.middlelayer import (
     AccessMode, Assignment, Configurable, DaqDataType, Device, Double,
     get_timestamp, InputChannel, Node, OutputChannel, QuantityValue, State,
-    VectorDouble, VectorInt32
+    VectorDouble, VectorInt32, VectorString, DaqPolicy
 )
 
 from image_processing.image_processing import imageSumAlongY
@@ -32,6 +32,13 @@ class ImageToSpectrum(Device):
     def __init__(self, configuration):
         super(ImageToSpectrum, self).__init__(configuration)
         self.output.noInputShared = "drop"
+
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
 
     @InputChannel(
         raw=False,

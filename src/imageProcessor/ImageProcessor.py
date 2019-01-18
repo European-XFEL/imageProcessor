@@ -17,7 +17,7 @@ from karabo.bound import (
     INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
     NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
     SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, Unit,
-    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT
+    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -59,6 +59,12 @@ class ImageProcessor(PythonDevice):
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
