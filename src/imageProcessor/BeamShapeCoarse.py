@@ -7,8 +7,8 @@
 from asyncio import coroutine
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Device, Double, get_timestamp, InputChannel,
-    QuantityValue, Slot, State, UInt32, Unit, VectorString, DaqPolicy
+    AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
+    InputChannel, QuantityValue, Slot, State, UInt32, Unit, VectorString
 )
 
 from image_processing.image_processing import (
