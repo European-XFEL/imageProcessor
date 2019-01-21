@@ -7,9 +7,9 @@ from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Configurable, DaqDataType, Device, Double,
-    get_timestamp, InputChannel, Node, OutputChannel, QuantityValue, State,
-    VectorDouble, VectorInt32, VectorString, DaqPolicy
+    AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
+    Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
+    State, VectorDouble, VectorInt32, VectorString
 )
 
 from image_processing.image_processing import imageSumAlongY
