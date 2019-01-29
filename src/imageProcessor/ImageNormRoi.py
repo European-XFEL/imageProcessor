@@ -69,10 +69,11 @@ class ImageNormRoi(Device):
             norm = norm_image.astype('double')
             difference = data - norm
             spectrum = imageSumAlongY(difference)
-            self.spectrumIntegral = QuantityValue(spectrum.sum(), ts)
+            self.spectrumIntegral = QuantityValue(spectrum.sum(),
+                                                  timestamp=ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
-            self.spectrumIntegral = QuantityValue(np.NaN, ts)
+            self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
             return
 
         # Write spectrum to output channel
