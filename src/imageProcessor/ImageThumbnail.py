@@ -56,7 +56,7 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
             VECTOR_INT32_ELEMENT(expected).key("thumbCanvas")
                 .displayedName("Canvas")
                 .description("Shape of canvas where thumbnail must fit: "
-                             "[width (X), height (Y)]")
+                             "[height (Y), width (X)]")
                 .assignmentOptional().defaultValue([240, 180])
                 .minSize(2).maxSize(2)
                 .reconfigurable()
@@ -65,8 +65,8 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
             BOOL_ELEMENT(expected).key("resample")
                 .displayedName("Resample")
                 .description("Binned pixels are averaged. Set to true for "
-                             "better quality thumbnail, at the price of more "
-                             "CPU load")
+                             "better quality thumbnail, at the price of "
+                             "higher CPU load")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit()

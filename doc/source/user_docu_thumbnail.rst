@@ -5,10 +5,10 @@ Image Thumbnail
 ***************
 
 The `ImageThumbnail` device is meant to reduce the input image for preview
-purposes. expects an image in input.
+purposes. It expects an image in input.
 
 It lets the user specify the size of a canvas where the output thumbnail image
-must fit. It outputs the image downscaled to fit in the specivied canvas.
+must fit. It outputs the image downscaled to fit in the specified canvas.
 Downscaled image is obtained by means of the `thumbnail` function from the
 :rtd:`image-processing` package.
 
@@ -21,7 +21,7 @@ Input to the Device
 =======================  =======================================================
 Property key             Description
 =======================  =======================================================
-thumbCanvas              | Shape of the canvas where thumbanail must fit [X, Y]
+thumbCanvas              | Shape of the canvas where thumbanail must fit [Y, X]
 resample                 | If ``True`` binned pixel are averaged. Set to `False`
                          | to spare CPU load, set to `True` to avoid aliasing.
 =======================  =======================================================
