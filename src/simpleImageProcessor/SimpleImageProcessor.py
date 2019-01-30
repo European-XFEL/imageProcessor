@@ -6,8 +6,6 @@
 import math
 import time
 
-import numpy as np
-
 from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice,
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
