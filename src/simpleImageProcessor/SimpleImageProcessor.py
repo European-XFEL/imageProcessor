@@ -27,8 +27,8 @@ class SimpleImageProcessor(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -295,9 +295,9 @@ class SimpleImageProcessor(PythonDevice):
         self.set(h)
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         if data.has('data.image'):
             self.processImage(data['data.image'])
@@ -311,7 +311,7 @@ class SimpleImageProcessor(PythonDevice):
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self.set("frameRate", 0.)
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
