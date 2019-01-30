@@ -24,8 +24,8 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
@@ -86,9 +86,9 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
 
     def onData(self, data, metaData):
         firstImage = False
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
             firstImage = True
 
         try:
@@ -134,7 +134,7 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStreams()
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def refreshFrameRate(self):
         self.frame_rate.update()
