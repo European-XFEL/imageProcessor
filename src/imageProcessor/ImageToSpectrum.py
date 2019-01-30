@@ -44,19 +44,10 @@ class ImageToSpectrum(Device):
         if self.state != State.ACTIVE:
             self.state = State.ACTIVE
 
-        if hasattr(data, 'data.image'):
-            image = getattr(data, 'data.image')
-        elif hasattr(data, 'image'):
-            # To ensure backward compatibility
-            # with older versions of cameras
-            image = getattr(data, 'image')
-        else:
-            self.logger.error("Data contains no image at 'data.image")
-            return
-
         ts = get_timestamp(meta.timestamp.timestamp)
 
         try:
+            image = data.data.image
             # Calculate spectrum
             spectrum = imageSumAlongY(image.pixels.value)
         except Exception as e:
@@ -72,10 +63,11 @@ class ImageToSpectrum(Device):
                 cropSpectrum = spectrum
             else:
                 cropSpectrum = spectrum[lowX:highX]
-            self.spectrumIntegral = QuantityValue(cropSpectrum.sum(), ts)
+            self.spectrumIntegral = QuantityValue(cropSpectrum.sum(),
+                                                  timestamp=ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
-            self.spectrumIntegral = QuantityValue(np.NaN, ts)
+            self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
             return
 
         # Write spectrum to output channel
