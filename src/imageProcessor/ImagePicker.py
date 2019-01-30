@@ -12,6 +12,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT,
     PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -37,6 +38,12 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             NODE_ELEMENT(data).key("data")

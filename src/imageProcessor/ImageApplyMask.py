@@ -14,7 +14,8 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PATH_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
-    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT
+    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from image_processing.image_processing import (
@@ -57,6 +58,12 @@ class ImageApplyMask(PythonDevice):
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
