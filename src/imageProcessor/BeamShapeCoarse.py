@@ -7,8 +7,8 @@
 from asyncio import coroutine
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Device, Double, get_timestamp, InputChannel,
-    QuantityValue, Slot, State, UInt32, Unit
+    AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
+    InputChannel, QuantityValue, Slot, State, UInt32, Unit, VectorString
 )
 
 from image_processing.image_processing import (
@@ -21,6 +21,13 @@ from processing_utils.rate_calculator import RateCalculator
 
 
 class BeamShapeCoarse(DaqCompliant, Device):
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
+
     x0 = UInt32(
         displayedName="Center X",
         description="X coordinate of the maximum intensity pixel.",

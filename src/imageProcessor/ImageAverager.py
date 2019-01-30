@@ -9,7 +9,7 @@ import time
 from karabo.bound import (
     BOOL_ELEMENT, FLOAT_ELEMENT, ImageData, INPUT_CHANNEL, KARABO_CLASSINFO,
     OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
 )
 
 from image_processing.image_running_mean import ImageRunningMean
@@ -76,6 +76,12 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.PASSIVE, State.ACTIVE)
                 .setNewDefaultValue(State.PASSIVE)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             INPUT_CHANNEL(expected).key("input")
