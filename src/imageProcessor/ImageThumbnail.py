@@ -57,7 +57,7 @@ class ImageThumbnail(PythonDevice, ImageProcOutputInterface):
                 .displayedName("Canvas")
                 .description("Shape of canvas where thumbnail must fit: "
                              "[height (Y), width (X)]")
-                .assignmentOptional().defaultValue([240, 180])
+                .assignmentOptional().defaultValue([180, 240])
                 .minSize(2).maxSize(2)
                 .reconfigurable()
                 .commit(),
