@@ -57,8 +57,8 @@ class ImageProcessor(PythonDevice):
         outputData = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -365,7 +365,7 @@ class ImageProcessor(PythonDevice):
                 .description("The maximum image pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
-                # As pixels are usually UINT16, default alarmHigh will never fire
+            # As pixels are usually UINT16, default alarmHigh will never fire
                 .alarmHigh(65536).needsAcknowledging(False)
                 .commit(),
 
@@ -374,7 +374,7 @@ class ImageProcessor(PythonDevice):
                 .description("The mean image pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
-                # As pixels are usually UINT16, default alarmHigh will never fire
+            # As pixels are usually UINT16, default alarmHigh will never fire
                 .alarmHigh(65536).needsAcknowledging(False)
                 .commit(),
 
@@ -871,9 +871,9 @@ class ImageProcessor(PythonDevice):
 
     def onData(self, data, metaData):
         firstImage = False
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
             firstImage = True
 
         try:
@@ -909,7 +909,7 @@ class ImageProcessor(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData, ts):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
@@ -1091,8 +1091,9 @@ class ImageProcessor(PythonDevice):
                 ymin = np.maximum(userDefinedRange[2], 0)
                 ymax = np.minimum(userDefinedRange[3], imageHeight)
                 data = img[ymin:ymax, xmin:xmax]
-                imgX = image_processing.imageSumAlongY(data)  # sum along y axis
-                imgY = image_processing.imageSumAlongX(data)  # sum along x axis
+                # Sums along Y- and X-axes
+                imgX = image_processing.imageSumAlongY(data)
+                imgY = image_processing.imageSumAlongX(data)
 
             except Exception as e:
                 self.log.WARN("Could not sum image along x or y axis: %s." %
@@ -1218,8 +1219,8 @@ class ImageProcessor(PythonDevice):
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
                 # 1D gaussian fit
-                out = image_processing.fitGauss(data, p0, enablePolynomial=
-                                                enable_polynomial)
+                out = image_processing.fitGauss(
+                    data, p0, enablePolynomial=enable_polynomial)
                 pX = out[0]  # parameters
                 cX = out[1]  # covariance
                 successX = out[2]  # error
@@ -1264,8 +1265,8 @@ class ImageProcessor(PythonDevice):
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
                 # 1D gaussian fit
-                out = image_processing.fitGauss(data, p0, enablePolynomial=
-                                                enable_polynomial)
+                out = image_processing.fitGauss(
+                    data, p0, enablePolynomial=enable_polynomial)
                 pY = out[0]  # parameters
                 cY = out[1]  # covariance
                 successY = out[2]  # error
@@ -1405,9 +1406,8 @@ class ImageProcessor(PythonDevice):
                         p0 = None
 
                     # 2D gaussian fit
-                    out = image_processing.fitGauss2DRot(data, p0,
-                                                         enablePolynomial=
-                                                         enable_polynomial)
+                    out = image_processing.fitGauss2DRot(
+                        data, p0, enablePolynomial=enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy, theta
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
@@ -1432,8 +1432,8 @@ class ImageProcessor(PythonDevice):
                         p0 = None
 
                     # 2D gaussian fit
-                    out = image_processing.fitGauss(data, p0, enablePolynomial=
-                                                    enable_polynomial)
+                    out = image_processing.fitGauss(
+                        data, p0, enablePolynomial=enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error

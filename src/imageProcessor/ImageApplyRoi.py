@@ -22,8 +22,8 @@ class ImageApplyRoi(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
@@ -107,9 +107,9 @@ class ImageApplyRoi(PythonDevice):
                 self.log.ERROR("New ROI is invalid -> rejected")
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         try:
             if data.has('data.image'):
@@ -134,7 +134,7 @@ class ImageApplyRoi(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData, ts):
         disable = self.get("disable")
