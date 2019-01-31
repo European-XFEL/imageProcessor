@@ -56,8 +56,8 @@ class ImageApplyMask(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             VECTOR_STRING_ELEMENT(expected).key("interfaces")
@@ -125,8 +125,8 @@ class ImageApplyMask(PythonDevice):
             PATH_ELEMENT(expected).key("maskFilename")
                 .displayedName("Mask Filename")
                 .description("The full path to the mask file. File format "
-                             "must be 'npy', 'raw' or TIFF. "
-                             "Pixel value will be set to 0, where mask is <=0.")
+                             "must be 'npy', 'raw' or TIFF. Pixel value "
+                             "will be set to 0, where mask is <=0.")
                 .assignmentOptional().defaultValue("mask.npy")
                 .reconfigurable()
                 .commit(),
@@ -150,9 +150,9 @@ class ImageApplyMask(PythonDevice):
     ##############################################
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         try:
             if data.has('data.image'):
@@ -177,7 +177,7 @@ class ImageApplyMask(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     ##############################################
     #   Implementation of processImage           #

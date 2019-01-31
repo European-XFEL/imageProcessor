@@ -48,8 +48,8 @@ class ImageToSpectrum(Device):
     )
     @coroutine
     def input(self, data, meta):
-        if self.state != State.ACTIVE:
-            self.state = State.ACTIVE
+        if self.state != State.PROCESSING:
+            self.state = State.PROCESSING
 
         ts = get_timestamp(meta.timestamp.timestamp)
 
@@ -84,7 +84,7 @@ class ImageToSpectrum(Device):
 
     @input.endOfStream
     def input(self, name):
-        self.state = State.PASSIVE
+        self.state = State.ON
         # TODO: send EOS to output (not possible in 2.2.4 yet)
 
     roiDefault = [0, 0]
@@ -126,4 +126,4 @@ class ImageToSpectrum(Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
-        self.state = State.PASSIVE
+        self.state = State.ON

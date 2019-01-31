@@ -88,8 +88,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
             self.y0 = QuantityValue(coord_y, timestamp=img_timestamp)
             self.fwhmX = QuantityValue(fwhm_x, timestamp=img_timestamp)
             self.fwhmY = QuantityValue(fwhm_y, timestamp=img_timestamp)
-            if self.state != State.ACTIVE:
-                self.state = State.ACTIVE
+            if self.state != State.PROCESSING:
+                self.state = State.PROCESSING
             self.frame_rate.update()
             fps = self.frame_rate.refresh()
             if fps:
@@ -103,8 +103,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
 
     @input.endOfStream
     def input(self, name):
-        if self.state != State.PASSIVE:
-            self.state = State.PASSIVE
+        if self.state != State.ON:
+            self.state = State.ON
 
     @coroutine
     def onInitialization(self):
@@ -112,8 +112,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
 
-        self.state = State.PASSIVE
+        self.state = State.ON
 
     @Slot(displayedName='Reset', allowedStates=[State.ERROR])
     def resetError(self):
-        self.state = State.PASSIVE
+        self.state = State.ON

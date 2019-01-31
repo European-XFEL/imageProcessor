@@ -46,8 +46,8 @@ class ImageNormRoi(Device):
         assignment=Assignment.MANDATORY)
     @coroutine
     def input(self, data, meta):
-        if self.state != State.ACTIVE:
-            self.state = State.ACTIVE
+        if self.state != State.PROCESSING:
+            self.state = State.PROCESSING
 
         image = data.data.image.pixels.value
         ts = get_timestamp(meta.timestamp.timestamp)
@@ -91,7 +91,7 @@ class ImageNormRoi(Device):
 
     @input.endOfStream
     def input(self, name):
-        self.state = State.PASSIVE
+        self.state = State.ON
 
     roiDefault = [0, 0]
 
@@ -140,4 +140,4 @@ class ImageNormRoi(Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
-        self.state = State.PASSIVE
+        self.state = State.ON

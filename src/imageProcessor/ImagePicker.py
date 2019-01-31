@@ -36,8 +36,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
                 .commit(),
 
             VECTOR_STRING_ELEMENT(expected).key("interfaces")
@@ -168,8 +168,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         if self.isChannelActive['inputImage'] is False:
             self.isChannelActive['inputImage'] = True
             self.log.INFO("Start of Image Stream")
-        if self.get("state") == State.PASSIVE:
-            self.updateState(State.ACTIVE)
+        if self.get("state") == State.ON:
+            self.updateState(State.PROCESSING)
 
         if data.has('data.image'):
             imageData = data['data.image']
@@ -210,8 +210,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         if self.isChannelActive['inputTrainId'] is False:
             self.isChannelActive['inputTrainId'] = True
             self.log.INFO("Start of Train ID Stream")
-        if self.get("state") == State.PASSIVE:
-            self.updateState(State.ACTIVE)
+        if self.get("state") == State.ON:
+            self.updateState(State.PROCESSING)
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
@@ -306,4 +306,4 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
 
         if not self.isActive():
             # Signals end of stream
-            self.updateState(State.PASSIVE)
+            self.updateState(State.ON)
