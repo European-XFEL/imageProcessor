@@ -7,10 +7,11 @@ import math
 import time
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
-    Hash, MetricPrefix, Schema, State, Unit)
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Unit,
+    VECTOR_STRING_ELEMENT
+)
 
 from image_processing import image_processing
 
@@ -27,6 +28,12 @@ class SimpleImageProcessor(PythonDevice):
             OVERWRITE_ELEMENT(expected).key("state")
                 .setNewOptions(State.ON, State.PROCESSING)
                 .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
