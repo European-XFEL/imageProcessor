@@ -62,7 +62,7 @@ class TestImageProcessor(BoundDeviceTestCase):
         state1 = None
         state2 = None
         nTries = 0
-        while state1 != State.PASSIVE.name or state2 != State.ON.name:
+        while state1 != State.ON.name or state2 != State.ON.name:
             try:
                 state1 = config1['state']
                 state2 = config2['state']
@@ -115,10 +115,10 @@ class TestImageProcessor(BoundDeviceTestCase):
             state1 = config1['state']
             fps = config1['frameRate']
             t1 = time()
-            while state1 != State.PASSIVE.name and not fps == 0.:
+            while state1 != State.ON.name and not fps == 0.:
                 state1 = config1['state']
                 fps = config1['frameRate']
                 if time() - t1 > self._waitTime:
-                    raise TimeoutError("Waiting for processor to be passive "
+                    raise TimeoutError("Waiting for processor to be ON "
                                        "timed out")
                 sleep(SLEEP_TIME)
