@@ -6,13 +6,12 @@
 import math
 import time
 
-import numpy as np
-
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice,
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, INT32_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
-    Hash, MetricPrefix, Schema, State, Unit)
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Unit,
+    VECTOR_STRING_ELEMENT
+)
 
 from image_processing import image_processing
 
@@ -27,8 +26,14 @@ class SimpleImageProcessor(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -295,9 +300,9 @@ class SimpleImageProcessor(PythonDevice):
         self.set(h)
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         if data.has('data.image'):
             self.processImage(data['data.image'])
@@ -311,7 +316,7 @@ class SimpleImageProcessor(PythonDevice):
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self.set("frameRate", 0.)
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
