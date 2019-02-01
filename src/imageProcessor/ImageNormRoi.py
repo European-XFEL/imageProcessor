@@ -7,9 +7,9 @@ from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Configurable, DaqDataType, Device, Double,
-    get_timestamp, InputChannel, Node, OutputChannel, QuantityValue, State,
-    VectorDouble, VectorInt32
+    AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
+    Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
+    State, VectorDouble, VectorInt32, VectorString
 )
 
 from image_processing.image_processing import imageSumAlongY
@@ -31,6 +31,14 @@ class ImageNormRoi(Device):
         super(ImageNormRoi, self).__init__(configuration)
         self.output.noInputShared = "drop"
 
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
+
+
     @InputChannel(
         raw=False,
         displayedName="Input",
@@ -38,8 +46,8 @@ class ImageNormRoi(Device):
         assignment=Assignment.MANDATORY)
     @coroutine
     def input(self, data, meta):
-        if self.state != State.ACTIVE:
-            self.state = State.ACTIVE
+        if self.state != State.PROCESSING:
+            self.state = State.PROCESSING
 
         image = data.data.image.pixels.value
         ts = get_timestamp(meta.timestamp.timestamp)
@@ -69,10 +77,11 @@ class ImageNormRoi(Device):
             norm = norm_image.astype('double')
             difference = data - norm
             spectrum = imageSumAlongY(difference)
-            self.spectrumIntegral = QuantityValue(spectrum.sum(), ts)
+            self.spectrumIntegral = QuantityValue(spectrum.sum(),
+                                                  timestamp=ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
-            self.spectrumIntegral = QuantityValue(np.NaN, ts)
+            self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
             return
 
         # Write spectrum to output channel
@@ -82,7 +91,7 @@ class ImageNormRoi(Device):
 
     @input.endOfStream
     def input(self, name):
-        self.state = State.PASSIVE
+        self.state = State.ON
 
     roiDefault = [0, 0]
 
@@ -131,4 +140,4 @@ class ImageNormRoi(Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
-        self.state = State.PASSIVE
+        self.state = State.ON

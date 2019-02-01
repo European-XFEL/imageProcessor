@@ -19,6 +19,7 @@ setup(name='imageProcessor',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
               'ImagePicker = imageProcessor.ImagePicker:ImagePicker',
               'TwoPeakFinder = imageProcessor.TwoPeakFinder:TwoPeakFinder',
+              'ImageThumbnail = imageProcessor.ImageThumbnail:ImageThumbnail',
           ],
           'karabo.middlelayer_device': [
               'ImageToSpectrum = imageProcessor.ImageToSpectrum:ImageToSpectrum',

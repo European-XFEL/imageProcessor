@@ -12,6 +12,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INT32_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT,
     PythonDevice, Schema, State, Timestamp, Unit, UINT32_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -25,7 +26,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
     This device has two input channels (inputImage and inputTrainid).
     inputImage expects an image stream (e.g. from a camera)
     inputTrainId is used to get its timestamp
-    images whose train id equals inputTrainId + trainIdOffset are forwarded to
+    images whose train ID equals inputTrainId + trainIdOffset are forwarded to
     output channel, while others are discarded.
 
     """
@@ -35,8 +36,14 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
@@ -58,14 +65,14 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
                 .commit(),
 
             INPUT_CHANNEL(expected).key("inputTrainId")
-                .displayedName("Input Train Id")
+                .displayedName("Input Train ID")
                 .dataSchema(Schema())
                 .commit(),
 
             BOOL_ELEMENT(expected).key("isDisabled")
                 .displayedName("Disabled")
                 .description("When disabled, all images received in input are"
-                             "forwarded to output channel")
+                             "forwarded to output channel.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
@@ -91,27 +98,27 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
 
             INT32_ELEMENT(expected).key("trainIdOffset")
                 .displayedName("Train ID Offset")
-                .description("Positive: output image train id is greater than "
-                             "input train Id (delay). "
-                             "Negative: output image train id is lower than "
+                .description("Positive: output image train ID is greater than "
+                             "input train ID (delay). "
+                             "Negative: output image train ID is lower than "
                              "input train (advance)")
                 .assignmentOptional().defaultValue(0)
                 .reconfigurable()
                 .commit(),
 
             UINT32_ELEMENT(expected).key("imgBufferSize")
-                .displayedName("Images buffer size")
-                .description("Number of image to be kept waitng for "
-                             "matching train id")
+                .displayedName("Images Buffer Size")
+                .description("Number of images to be kept waiting for "
+                             "a matching train ID.")
                 .minInc(1)
                 .assignmentOptional().defaultValue(5)
                 .init()
                 .commit(),
 
-            UINT32_ELEMENT(expected).key("trainidBufferSize")
-                .displayedName("Train Ids buffer size")
-                .description("Number of train ids to be kept waitng for image "
-                             "with matching train id")
+            UINT32_ELEMENT(expected).key("trainIdBufferSize")
+                .displayedName("Train IDs Buffer Size")
+                .description("Number of train IDs to be kept waiting for an "
+                             "image with matching train ID.")
                 .minInc(1)
                 .assignmentOptional().defaultValue(5)
                 .init()
@@ -129,7 +136,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         self.counter = 0
 
         self.imageBuffer = None
-        self.trainidBuffer = None
+        self.trainIdBuffer = None
         self.buffer_lock = Lock()
 
         self.isChannelActive = {'inputImage': False, 'inputTrainId': False}
@@ -149,7 +156,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
     def initialization(self):
         """ This method will be called after the constructor. """
         self.imageBuffer = deque(maxlen=self.get("imgBufferSize"))
-        self.trainidBuffer = deque(maxlen=self.get("trainidBufferSize"))
+        self.trainIdBuffer = deque(maxlen=self.get("trainIdBufferSize"))
 
     def isActive(self):
         return any(self.isChannelActive.values())
@@ -161,8 +168,8 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         if self.isChannelActive['inputImage'] is False:
             self.isChannelActive['inputImage'] = True
             self.log.INFO("Start of Image Stream")
-        if self.get("state") == State.PASSIVE:
-            self.updateState(State.ACTIVE)
+        if self.get("state") == State.ON:
+            self.updateState(State.PROCESSING)
 
         if data.has('data.image'):
             imageData = data['data.image']
@@ -194,7 +201,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
     def onDataTrainId(self, data, metaData):
-        if self.trainidBuffer is None:
+        if self.trainIdBuffer is None:
             return
 
         if self.get("isDisabled"):
@@ -202,16 +209,16 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
 
         if self.isChannelActive['inputTrainId'] is False:
             self.isChannelActive['inputTrainId'] = True
-            self.log.INFO("Start of Train Id Stream")
-        if self.get("state") == State.PASSIVE:
-            self.updateState(State.ACTIVE)
+            self.log.INFO("Start of Train ID Stream")
+        if self.get("state") == State.ON:
+            self.updateState(State.PROCESSING)
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
         tid = ts.getTrainId()
 
         with self.buffer_lock:
-            self.trainidBuffer.append(tid)
+            self.trainIdBuffer.append(tid)
 
         self.searchForMatch(ts)
 
@@ -222,14 +229,14 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
         If item is a timestamp, it searches for images in self.imageBuffer
            queue where train ID matches
         if item has the form {timestamp: image_data} it searches if it matches
-           any of the queued train ids in self.trainidBuffer
+           any of the queued train IDs in self.trainidBuffer
 
         if match is found returns True, False otherwise
 
         Assumptions:
-        - train ids and images are ordered (i.e. timestamps are not decreasing)
+        - train IDs and images are ordered (i.e. timestamps are not decreasing)
         - there may be more images with same trainid (e.g. frameRate > 10Hz)
-        - on train id channel no trainid is received more than once
+        - on train ID channel no trainid is received more than once
         """
         match_found = False
         offset = self.get("trainIdOffset")
@@ -249,7 +256,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
             try:
                 img = item
                 img_tid = img['ts'].getTrainId()
-                for tid in self.trainidBuffer:
+                for tid in self.trainIdBuffer:
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
@@ -278,7 +285,7 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
 
     def cleanupImageQueue(self, tid):
         """
-        Remove from image queue images with older train id
+        Remove from image queue images with older train ID
 
         should be called with self.buffer_lock acquired
         """
@@ -299,4 +306,4 @@ class ImagePicker(PythonDevice, ImageProcOutputInterface):
 
         if not self.isActive():
             # Signals end of stream
-            self.updateState(State.PASSIVE)
+            self.updateState(State.ON)

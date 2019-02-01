@@ -8,7 +8,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp, Unit,
-    VECTOR_INT32_ELEMENT,
+    VECTOR_INT32_ELEMENT, VECTOR_STRING_ELEMENT
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -22,8 +22,14 @@ class ImageApplyRoi(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
@@ -57,15 +63,16 @@ class ImageApplyRoi(PythonDevice):
                 .commit(),
 
             BOOL_ELEMENT(expected).key("disable")
-                .description("Disable ROI")
+                .displayedName("Disable ROI")
+                .description("No ROI will be applied, if set to True.")
                 .assignmentOptional().defaultValue(False)
                 .init()
                 .commit(),
 
             VECTOR_INT32_ELEMENT(expected).key("roi")
                 .displayedName("ROI")
-                .description("The user-defined region of interest (ROI),"
-                             " specified as [lowX, highX, lowY, highY].")
+                .description("The user-defined region of interest (ROI), "
+                             "specified as [lowX, highX, lowY, highY].")
                 .assignmentOptional().defaultValue([0, 10000, 0, 10000])
                 .minSize(4).maxSize(4)
                 .reconfigurable()
@@ -106,9 +113,9 @@ class ImageApplyRoi(PythonDevice):
                 self.log.ERROR("New ROI is invalid -> rejected")
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         try:
             if data.has('data.image'):
@@ -133,7 +140,7 @@ class ImageApplyRoi(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData, ts):
         disable = self.get("disable")

@@ -17,7 +17,7 @@ from karabo.bound import (
     INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
     NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
     SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, Unit,
-    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT
+    VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -57,8 +57,14 @@ class ImageProcessor(PythonDevice):
         outputData = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -81,152 +87,52 @@ class ImageProcessor(PythonDevice):
                 .setNewDefaultValue("drop")
                 .commit(),
 
-            DOUBLE_ELEMENT(expected).key("frameRate")
-                .displayedName("Frame Rate")
-                .description("The actual frame rate.")
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageWidth")
-                .displayedName("Image Width")
-                .description("The image width.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageOffsetX")
-                .displayedName("Image Offset X")
-                .description("The image offset in X direction, i.e. the X "
-                             "position of its top-left corner.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageBinningX")
-                .displayedName("Image Binning X")
-                .description("The image binning in X direction.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageHeight")
-                .displayedName("Image Height")
-                .description("The image height.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageOffsetY")
-                .displayedName("Image Offset Y")
-                .description("The image offset in Y direction, i.e. the Y "
-                             "position of its top-left corner.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            INT32_ELEMENT(expected).key("imageBinningY")
-                .displayedName("Image Binning Y")
-                .description("The image binning in Y direction.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("pixelSize")
-                .displayedName("Pixel Size")
-                .description("The pixel size.")
-                .assignmentOptional().defaultValue(0.)
-                .minInc(0.)
-                .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
-                .reconfigurable()
-                .commit(),
+            # General Settings
 
             BOOL_ELEMENT(expected).key("filterImagesByThreshold")
                 .displayedName("Filter Images by Threshold")
-                .description("If True, images will be fitted only if maximum "
-                             "pixel value exceeds user's defined threshold.")
+                .description("If True, images will be only processed if "
+                             "maximum pixel value exceeds user's defined "
+                             "threshold.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
             FLOAT_ELEMENT(expected).key("imageThreshold")
                 .displayedName("Image Threshold")
-                .description("The threshold for image fitting.")
+                .description("The threshold for processing an image.")
                 .assignmentOptional().defaultValue(0.)
                 .minInc(0.)
                 .unit(Unit.NUMBER)
                 .reconfigurable()
                 .commit(),
 
-            STRING_ELEMENT(expected).key("comRange")
-                .displayedName("Centre-of-Mass Range")
-                .description("The range to be used for Centre-of-Mass "
-                             "calculation. Can be the full image, or a "
-                             "user-defined range.")
-                .assignmentOptional().defaultValue("full")
-                .options("full user-defined")
-                .reconfigurable()
-                .commit(),
-
-            STRING_ELEMENT(expected).key("fitRange")
-                .displayedName("Fit Range")
-                .description("The range to be used for fitting. Can be the "
-                             "full image, auto-determined range, "
-                             "user-defined range.")
-                .assignmentOptional().defaultValue("auto")
-                .options("full auto user-defined")
-                .reconfigurable()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("rangeForAuto")
-                .displayedName("Range for Auto")
-                .description("The range for auto mode (in standard "
-                             "deviations).")
-                .assignmentOptional().defaultValue(3.0)
-                .minInc(0.)
-                .reconfigurable()
-                .commit(),
-
-            VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
-                .displayedName("User Defined Range")
-                .description("The user-defined range for centre-of-mass "
-                             "and gaussian fit(s). Region "
-                             "[lowX, highX) x [lowY, highY)"
-                             " specified as [lowX, highX, lowY, highY]")
-                .assignmentOptional().defaultValue([0, 400, 0, 400])
-                .minSize(4).maxSize(4)
-                .reconfigurable()
-                .commit(),
-
             BOOL_ELEMENT(expected).key("absolutePositions")
                 .displayedName("Peak Absolute Position")
-                .description("If True, the peak position will be w.r.t. to "
-                             "the full frame, taking into account current "
-                             "settings for ROI and binning.")
+                .description("If True, the centre-of-mass and fit results "
+                             "will take into account the current settings "
+                             "for ROI and binning.")
                 .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("threshold")
-                .displayedName("Pixel Relative threshold")
-                .description("The pixel threshold for centre-of-mass "
-                             "calculation (fraction of highest value).")
-                .assignmentOptional().defaultValue(0.10)
-                .minInc(0.0).maxInc(1.0)
+            BOOL_ELEMENT(expected).key("subtractBkgImage")
+                .displayedName("Subtract Background Image")
+                .description("Subtract the loaded background image.")
+                .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
-            VECTOR_INT32_ELEMENT(expected).key("integrationRegion")
-                .displayedName("Integration Region")
-                .description("The region to be integrated over.  Region "
-                             "[lowX, highX) x [lowY, highY)"
-                             " specified as [lowX, highX, lowY, highY]")
-                .assignmentOptional().defaultValue([0, 400, 0, 400])
-                .minSize(4).maxSize(4)
+            BOOL_ELEMENT(expected).key("subtractImagePedestal")
+                .displayedName("Subtract Image Pedestal")
+                .description("Subtract the image pedestal (ie image = image "
+                             "- image.min()). This is done after background "
+                             "subtraction.")
+                .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
 
-            # Image processing enable bits
+            # Enabling Features
 
             BOOL_ELEMENT(expected).key("doMinMaxMean")
                 .displayedName("Min/Max/Mean")
@@ -238,67 +144,38 @@ class ImageProcessor(PythonDevice):
 
             BOOL_ELEMENT(expected).key("doBinCount")
                 .displayedName("Pixel Value Frequency")
-                .description("Frequency distribution of pixel values.")
+                .description("Calculate the frequency distribution of pixel "
+                             "values.")
                 .assignmentOptional().defaultValue(False)
-                .reconfigurable()
-                .commit(),
-
-            BOOL_ELEMENT(expected).key("subtractBkgImage")
-                .displayedName("Subtract Background Image")
-                .description("Subtract the background image.")
-                .assignmentOptional().defaultValue(False)
-                .reconfigurable()
-                .commit(),
-
-            BOOL_ELEMENT(expected).key("subtractImagePedestal")
-                .displayedName("Subtract Image Pedestal")
-                .description("Subtract the image pedestal (ie image = image "
-                             "- image.min()).")
-                .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
 
             BOOL_ELEMENT(expected).key("doXYSum")
-                .displayedName("Sum along X-Y Axes")
-                .description("Sum image along the x- and y-axes.")
+                .displayedName("Integrate along Axes")
+                .description("Integrate the image along the x- and y-axes.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
             BOOL_ELEMENT(expected).key("doCOfM")
                 .displayedName("Centre-Of-Mass")
-                .description("Calculates centre-of-mass and widths.")
+                .description("Calculate centre-of-mass and widths.")
                 .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
 
             BOOL_ELEMENT(expected).key("do1DFit")
-                .displayedName("1-D Gaussian Fits")
-                .description("Perform a 1-d gaussian fit of the x- and "
+                .displayedName("1D Gaussian Fits")
+                .description("Perform a 1D gaussian fit of the x- and "
                              "y-distributions.")
                 .assignmentOptional().defaultValue(True)
                 .reconfigurable()
                 .commit(),
 
-            STRING_ELEMENT(expected).key("gauss1dStartValues")
-                .displayedName("1d gauss fit start values")
-                .description("selects how 1d gauss fit starting values are "
-                             "evaluated")
-                .options("last_fit_result,raw_peak")
-                .assignmentOptional().defaultValue("last_fit_result")
-                .reconfigurable()
-                .commit(),
-
             BOOL_ELEMENT(expected).key("do2DFit")
-                .displayedName("2-D Gaussian Fit")
-                .description("Perform a 2-d gaussian fits.")
-                .assignmentOptional().defaultValue(False)
-                .reconfigurable()
-                .commit(),
-
-            BOOL_ELEMENT(expected).key("doGaussRotation")
-                .displayedName("Allow Gaussian Rotation")
-                .description("Allow the 2D gaussian to be rotated.")
+                .displayedName("2D Gaussian Fit")
+                .description("Perform a 2D gaussian fits."
+                             "Be careful: It can be slow!")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
@@ -310,80 +187,188 @@ class ImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            # Image processing times
+            # Options for Centre-of-Mass
 
-            FLOAT_ELEMENT(expected).key("minMaxMeanTime")
-                .displayedName("Min/Max/Mean Evaluation Time")
-                .unit(Unit.SECOND)
+            STRING_ELEMENT(expected).key("comRange")
+                .displayedName("Centre-of-Mass Range")
+                .description("The range to be used for the centre-of-mass "
+                             "calculation. Can be the full range, or a "
+                             "user-defined one.")
+                .assignmentOptional().defaultValue("full")
+                .options("full user-defined")
+                .reconfigurable()
+                .commit(),
+
+            VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
+                .displayedName("User Defined Range")
+                .description("The user-defined range for centre-of-mass, "
+                             "gaussian fit(s) and integrals along the x & y "
+                             "axes."
+                             " Region [lowX, highX) x [lowY, highY)"
+                             " specified as [lowX, highX, lowY, highY]")
+                .assignmentOptional().defaultValue([0, 400, 0, 400])
+                .minSize(4).maxSize(4)
+                .reconfigurable()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("absThreshold")
+                .displayedName("Pixel Absolute threshold")
+                .description("Pixels below this threshold will not be "
+                             "used for the centre-of-mass calculation. "
+                             "If greater than 0, the relative threshold "
+                             "will not be used.")
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0)
+                .reconfigurable()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("threshold")
+                .displayedName("Pixel Relative threshold")
+                .description("Pixels below this relative threshold "
+                             "(fraction of the highest value) will not be "
+                             "used for the centre-of-mass calculation. "
+                             "It will only be applied if no absolute "
+                             "threshold is set.")
+                .assignmentOptional().defaultValue(0.10)
+                .minInc(0.0).maxInc(1.0)
+                .reconfigurable()
+                .commit(),
+
+            # Options for Gaussian Fit
+
+            FLOAT_ELEMENT(expected).key("pixelSize")
+                .displayedName("Pixel Size")
+                .description("The pixel size. It will be used when evaluating "
+                             "the beam size.")
+                .assignmentOptional().defaultValue(0.)
+                .minInc(0.)
+                .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+                .reconfigurable()
+                .commit(),
+
+            STRING_ELEMENT(expected).key("fitRange")
+                .displayedName("Fit Range")
+                .description("The range to be used for fitting. Can be the "
+                             "full range, an auto-determined, or the "
+                             "user-defined one.")
+                .assignmentOptional().defaultValue("auto")
+                .options("full auto user-defined")
+                .reconfigurable()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("rangeForAuto")
+                .displayedName("Range for Auto")
+                .description("The automatic range for 'auto' mode (in "
+                             "standard deviations).")
+                .assignmentOptional().defaultValue(3.0)
+                .minInc(0.)
+                .reconfigurable()
+                .commit(),
+
+            # userDefinedRange can be found in Centre-of-Mass section
+
+            BOOL_ELEMENT(expected).key("enablePolynomial")
+                .displayedName("Polynomial Gaussian Fits")
+                .description("Add a 1st order polynomial term (ramp) to "
+                             "gaussian fits.")
+                .assignmentOptional().defaultValue(False)
+                .reconfigurable()
+                .commit(),
+
+            STRING_ELEMENT(expected).key("gauss1dStartValues")
+                .displayedName("1D gauss fit start values")
+                .description("Selects how 1D gauss fit starting values are "
+                             "evaluated")
+                .options("last_fit_result,raw_peak")
+                .assignmentOptional().defaultValue("last_fit_result")
+                .reconfigurable()
+                .commit(),
+
+            BOOL_ELEMENT(expected).key("doGaussRotation")
+                .displayedName("Allow Gaussian Rotation")
+                .description("Allow the 2D gaussian to be rotated.")
+                .assignmentOptional().defaultValue(False)
+                .reconfigurable()
+                .commit(),
+
+            # Options for Integration
+
+            VECTOR_INT32_ELEMENT(expected).key("integrationRegion")
+                .displayedName("Integration Region")
+                .description("The region to be integrated over.  Region "
+                             "[lowX, highX) x [lowY, highY)"
+                             " specified as [lowX, highX, lowY, highY]")
+                .assignmentOptional().defaultValue([0, 400, 0, 400])
+                .minSize(4).maxSize(4)
+                .reconfigurable()
+                .commit(),
+
+            # Output - General Properties
+
+            DOUBLE_ELEMENT(expected).key("frameRate")
+                .displayedName("Frame Rate")
+                .description("The actual frame rate. "
+                             "It is refreshed once per second.")
+                .unit(Unit.HERTZ)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("binCountTime")
-                .displayedName("Pixel Value Frequency Time")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageWidth")
+                .displayedName("Image Width")
+                .description("The width of the incoming image.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("subtractBkgImageTime")
-                .displayedName("Background Image Subtraction Time")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageOffsetX")
+                .displayedName("Image Offset X")
+                .description("If the incoming image has a ROI, this "
+                             "represents the X position of the top-left "
+                             "corner.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("subtractPedestalTime")
-                .displayedName("Pedestal Subtraction Time")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageBinningX")
+                .displayedName("Image Binning X")
+                .description("The image binning in the X direction.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("xYSumTime")
-                .displayedName("Image X-Y Sums Time")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageHeight")
+                .displayedName("Image Height")
+                .description("The height of the incoming image.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("cOfMTime")
-                .displayedName("Centre-Of-Mass Time")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageOffsetY")
+                .displayedName("Image Offset Y")
+                .description("If the incoming image has a ROI, this "
+                             "represents the Y position of the top-left "
+                             "corner.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("xFitTime")
-                .displayedName("1D Gaussian Fit Time (X distribution)")
-                .unit(Unit.SECOND)
+            INT32_ELEMENT(expected).key("imageBinningY")
+                .displayedName("Image Binning Y")
+                .description("The image binning in the Y direction.")
+                .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
-
-            FLOAT_ELEMENT(expected).key("yFitTime")
-                .displayedName("1D Gaussian Fit Time (Y distribution)")
-                .unit(Unit.SECOND)
-                .readOnly()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("fitTime")
-                .displayedName("2D Gaussian Fit Time")
-                .unit(Unit.SECOND)
-                .readOnly()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("integrationTime")
-                .displayedName("Region Integration Time")
-                .unit(Unit.SECOND)
-                .readOnly()
-                .commit(),
-
-            # Image processing outputs
 
             DOUBLE_ELEMENT(expected).key("minPxValue")
                 .displayedName("Min Px Value")
-                .description("Minimum pixel value.")
+                .description("The minimum image pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
                 .displayedName("Max Pixel Value")
-                .description("Maximum pixel value.")
+                .description("The maximum image pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
             # As pixels are usually UINT16, default alarmHigh will never fire
@@ -392,94 +377,145 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("meanPxValue")
                 .displayedName("Mean Pixel Value")
-                .description("Mean pixel value.")
+                .description("The mean image pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
             # As pixels are usually UINT16, default alarmHigh will never fire
                 .alarmHigh(65536).needsAcknowledging(False)
                 .commit(),
 
-            NODE_ELEMENT(outputData).key("data")
-                .displayedName("Data")
-                .setDaqDataType(DaqDataType.TRAIN)
+            # Image processing times
+
+            FLOAT_ELEMENT(expected).key("minMaxMeanTime")
+                .displayedName("Min/Max/Mean Evaluation Time")
+                .description("Time spent for evaluating min, max, mean "
+                             "pixel value.")
+                .unit(Unit.SECOND)
+                .readOnly()
                 .commit(),
 
-            VECTOR_INT32_ELEMENT(outputData).key("data.imgBinCount")
-                .displayedName("Pixel counts distribution")
-                .description("Distribution of the image pixel counts.")
-                .unit(Unit.NUMBER)
-                .readOnly().initialValue([0])
+            FLOAT_ELEMENT(expected).key("binCountTime")
+                .displayedName("Pixel Value Frequency Time")
+                .description("Time spent for calculating the frequency "
+                             "distribution of pixel values.")
+                .unit(Unit.SECOND)
+                .readOnly()
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgX")
-                .displayedName("X Distribution")
-                .description("Image sum along the Y-axis.")
-                .readOnly().initialValue([0])
+            FLOAT_ELEMENT(expected).key("subtractBkgImageTime")
+                .displayedName("Background Image Subtraction Time")
+                .description("Time spent in subtracting the background image.")
+                .unit(Unit.SECOND)
+                .readOnly()
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgY")
-                .displayedName("Y Distribution")
-                .description("Image sum along the X-axis.")
-                .readOnly().initialValue([0])
+            FLOAT_ELEMENT(expected).key("subtractPedestalTime")
+                .displayedName("Pedestal Subtraction Time")
+                .description("Time spent in subtracting the image pedestal.")
+                .unit(Unit.SECOND)
+                .readOnly()
                 .commit(),
 
-            OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("Output")
-                .dataSchema(outputData)
+            FLOAT_ELEMENT(expected).key("xYSumTime")
+                .displayedName("Image X-Y Integration Time")
+                .description("Time spent in integrating the image in X and Y.")
+                .unit(Unit.SECOND)
+                .readOnly()
                 .commit(),
+
+            FLOAT_ELEMENT(expected).key("cOfMTime")
+                .displayedName("Centre-Of-Mass Time")
+                .description("Time spent in evaluating the centre-of-mass.")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("xFitTime")
+                .displayedName("1D Gaussian Fit Time (X)")
+                .description("Time spent in 1D Gaussian fit of the X "
+                             "distribution.")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("yFitTime")
+                .displayedName("1D Gaussian Fit Time (Y)")
+                .description("Time spent in 1D Gaussian fit of the Y "
+                             "distribution.")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("fitTime")
+                .displayedName("2D Gaussian Fit Time")
+                .description("Time spent in 2D Gaussian fit of the image.")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("integrationTime")
+                .displayedName("Region Integration Time")
+                .description("Time spent in integrating over a region.")
+                .unit(Unit.SECOND)
+                .readOnly()
+                .commit(),
+
+            # Output - Centre-of-Mass
 
             DOUBLE_ELEMENT(expected).key("x0")
                 .displayedName("x0 (Centre-Of-Mass)")
-                .description("x0 from centre-of-mass.")
+                .description("X position of the centre-of-mass.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("sx")
                 .displayedName("sigma_x (Centre-Of-Mass)")
-                .description("sigma_x from centre-of-mass.")
+                .description("Standard deviation in X of the centre-of-mass.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("y0")
                 .displayedName("y0 (Centre-Of-Mass)")
-                .description("y0 from Centre-Of-Mass.")
+                .description("Y position of the centre-of-mass.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("sy")
                 .displayedName("sigma_y (Centre-Of-Mass)")
-                .description("sigma_y from Centre-Of-Mass.")
+                .description("Standard deviation in Y of the centre-of-mass.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
+            # Output - Gaussian Fit (1D)
+
             INT32_ELEMENT(expected).key("xFitSuccess")
                 .displayedName("x Success (1D Fit)")
-                .description("1-D Gaussian Fit Success (1-4 if fit "
+                .description("1D Gaussian fit success (1-4 if fit "
                              "converged).")
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ax1d")
                 .displayedName("Ax (1D Fit)")
-                .description("Amplitude Ax from 1D Fit.")
+                .description("Amplitude Ax from the 1D fit.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("x01d")
                 .displayedName("x0 (1D Fit)")
-                .description("x0 from 1D Fit.")
+                .description("x0 peak position from 1D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ex01d")
                 .displayedName("sigma(x0) (1D Fit)")
-                .description("Uncertainty on x0 from 1D Fit.")
+                .description("Uncertainty on x0 estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -487,14 +523,14 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sx1d")
                 .displayedName("sigma_x (1D Fit)")
-                .description("sigma_x from 1D Fit.")
+                .description("Standard deviation on x0 from 1D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("esx1d")
                 .displayedName("sigma(sigma_x) (1D Fit)")
-                .description("Uncertainty on sigma_x from 1D Fit.")
+                .description("Uncertainty on standard deviation estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -509,28 +545,28 @@ class ImageProcessor(PythonDevice):
 
             INT32_ELEMENT(expected).key("yFitSuccess")
                 .displayedName("y Success (1D Fit)")
-                .description("1-D Gaussian Fit Success (1-4 if fit "
+                .description("1D Gaussian Fit Success (1-4 if fit "
                              "converged).")
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ay1d")
                 .displayedName("Ay (1D Fit)")
-                .description("Amplitude Ay from 1D Fit.")
+                .description("Amplitude Ay from 1D fit.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("y01d")
                 .displayedName("y0 (1D Fit)")
-                .description("y0 from 1D Fit.")
+                .description("y0 peak position from 1D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ey01d")
                 .displayedName("sigma(y0) (1D Fit)")
-                .description("Uncertainty on y0 from 1D Fit.")
+                .description("Uncertainty on y0 estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -538,14 +574,14 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sy1d")
                 .displayedName("sigma_y (1D Fit)")
-                .description("sigma_y from 1D Fit.")
+                .description("Standard deviation on y0 from 1D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("esy1d")
                 .displayedName("sigma(sigma_y) (1D Fit)")
-                .description("Uncertainty on sigma_y from 1D Fit.")
+                .description("Uncertainty on standard deviation estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -559,30 +595,32 @@ class ImageProcessor(PythonDevice):
                 .readOnly()
                 .commit(),
 
+            # Output - Gaussian Fit (2D)
+
             INT32_ELEMENT(expected).key("fitSuccess")
                 .displayedName("Success (2D Fit)")
-                .description("2-D Gaussian Fit Success (1-4 if fit "
+                .description("2D Gaussian fit success (1-4 if fit "
                              "converged).")
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("a2d")
                 .displayedName("A (2D Fit)")
-                .description("Amplitude A from 2D Fit.")
+                .description("Amplitude from 2D fit.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("x02d")
                 .displayedName("x0 (2D Fit)")
-                .description("x0 from 2D Fit.")
+                .description("x0 peak position from 2D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ex02d")
                 .displayedName("sigma(x0) (2D Fit)")
-                .description("Uncertainty on x0 from 2D Fit.")
+                .description("Uncertainty on x0 estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -590,14 +628,14 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sx2d")
                 .displayedName("sigma_x (2D Fit)")
-                .description("sigma_x from 2D Fit.")
+                .description("Standard deviation on x0 from 2D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("esx2d")
                 .displayedName("sigma(sigma_x) (2D Fit)")
-                .description("Uncertainty on sigma_x from 2D Fit.")
+                .description("Uncertainty on standard deviation estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -612,14 +650,14 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("y02d")
                 .displayedName("y0 (2D Fit)")
-                .description("y0 from 2D Fit.")
+                .description("y0 peak position from 2D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("ey02d")
                 .displayedName("sigma(y0) (2D Fit)")
-                .description("Uncertainty on y0 from 2D Fit.")
+                .description("Uncertainty on y0 estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -627,14 +665,14 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sy2d")
                 .displayedName("sigma_y (2D Fit)")
-                .description("sigma_y from 2D Fit.")
+                .description("Standard deviation on y0 from 2D fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("esy2d")
                 .displayedName("sigma(sigma_y) (2D Fit)")
-                .description("Uncertainty on sigma_y from 2D Fit.")
+                .description("Uncertainty on standard deviation estimation.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -649,18 +687,20 @@ class ImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("theta2d")
                 .displayedName("theta (2D Fit)")
-                .description("Rotation angle from 2D Fit.")
+                .description("Rotation angle from 2D fit.")
                 .unit(Unit.RADIAN)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("etheta2d")
                 .displayedName("sigma(theta) (2D Fit)")
-                .description("Uncertainty on rotation angle from 2D Fit.")
+                .description("Uncertainty on rotation angle estimation.")
                 .expertAccess()
                 .unit(Unit.RADIAN)
                 .readOnly()
                 .commit(),
+
+            # Output - integration
 
             DOUBLE_ELEMENT(expected).key("regionIntegral")
                 .displayedName("Integral Over Region")
@@ -677,6 +717,38 @@ class ImageProcessor(PythonDevice):
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
+
+            # Other outputs
+
+            NODE_ELEMENT(outputData).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            VECTOR_INT32_ELEMENT(outputData).key("data.imgBinCount")
+                .displayedName("Pixel counts distribution")
+                .description("Distribution of the image pixel counts.")
+                .unit(Unit.NUMBER)
+                .readOnly().initialValue([0])
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgX")
+                .displayedName("X Distribution")
+                .description("Image integral along the Y-axis.")
+                .readOnly().initialValue([0])
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(outputData).key("data.imgY")
+                .displayedName("Y Distribution")
+                .description("Image integral along the X-axis.")
+                .readOnly().initialValue([0])
+                .commit(),
+
+            OUTPUT_CHANNEL(expected).key("output")
+                .displayedName("Output")
+                .dataSchema(outputData)
+                .commit(),
+
         )
 
     def __init__(self, configuration):
@@ -805,9 +877,9 @@ class ImageProcessor(PythonDevice):
 
     def onData(self, data, metaData):
         firstImage = False
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
             firstImage = True
 
         try:
@@ -843,7 +915,7 @@ class ImageProcessor(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     def processImage(self, imageData, ts):
         filterImagesByThreshold = self.get("filterImagesByThreshold")
@@ -851,6 +923,7 @@ class ImageProcessor(PythonDevice):
         comRange = self.get("comRange")
         fitRange = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
+        absThr = self.get("absThreshold")
         thr = self.get("threshold")
         userDefinedRange = self.get("userDefinedRange")
         absolutePositions = self.get("absolutePositions")
@@ -1019,8 +1092,14 @@ class ImageProcessor(PythonDevice):
         if self.get("doXYSum"):
             t0 = time.time()
             try:
-                imgX = image_processing.imageSumAlongY(img)  # sum along y axis
-                imgY = image_processing.imageSumAlongX(img)  # sum along x axis
+                xmin = np.maximum(userDefinedRange[0], 0)
+                xmax = np.minimum(userDefinedRange[1], imageWidth)
+                ymin = np.maximum(userDefinedRange[2], 0)
+                ymax = np.minimum(userDefinedRange[3], imageHeight)
+                data = img[ymin:ymax, xmin:xmax]
+                # Sums along Y- and X-axes
+                imgX = image_processing.imageSumAlongY(data)
+                imgY = image_processing.imageSumAlongX(data)
 
             except Exception as e:
                 self.log.WARN("Could not sum image along x or y axis: %s." %
@@ -1041,7 +1120,7 @@ class ImageProcessor(PythonDevice):
             outHash.set("data.imgX", [0.0])
             outHash.set("data.imgY", [0.0])
 
-        # Centre-Of-Mass and widths
+        # Centre-of-Mass and widths
         x0 = None
         y0 = None
         sx = None
@@ -1051,9 +1130,14 @@ class ImageProcessor(PythonDevice):
             t0 = time.time()
             try:
                 # Set a threshold to cut away noise
-                img2 = image_processing.imageSetThreshold(img, thr * img.max())
+                if absThr > 0.0:
+                    img2 = image_processing.\
+                        imageSetThreshold(img, min(absThr, img.max()))
+                else:
+                    img2 = image_processing.\
+                        imageSetThreshold(img, thr * img.max())
 
-                # Centre-of-mass and widths
+                # Centre-of-Mass and widths
                 if comRange == "user-defined":
                     img3 = img2[userDefinedRange[2]:userDefinedRange[3],
                                 userDefinedRange[0]:userDefinedRange[1]]
@@ -1104,9 +1188,10 @@ class ImageProcessor(PythonDevice):
             h.set("y0", 0.0)
             h.set("sx", 0.0)
 
-        # 1-D Gaussian Fits
+        # 1D Gaussian Fits
         if self.get("do1DFit"):
 
+            enable_polynomial = self.get("enablePolynomial")
             gauss1dStartValues = self.get("gauss1dStartValues")
 
             t0 = time.time()
@@ -1139,8 +1224,9 @@ class ImageProcessor(PythonDevice):
                 else:
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
-                # 1-d gaussian fit
-                out = image_processing.fitGauss(data, p0)
+                # 1D gaussian fit
+                out = image_processing.fitGauss(
+                    data, p0, enablePolynomial=enable_polynomial)
                 pX = out[0]  # parameters
                 cX = out[1]  # covariance
                 successX = out[2]  # error
@@ -1149,7 +1235,7 @@ class ImageProcessor(PythonDevice):
                 self.ax1d, self.x01d, self.sx1d = pX[0], pX[1] + xmin, pX[2]
 
             except Exception as e:
-                self.log.WARN("Could not do 1-d gaussian fit [x]: %s." %
+                self.log.WARN("Could not do 1D gaussian fit [x]: %s." %
                               str(e))
                 return
 
@@ -1184,8 +1270,9 @@ class ImageProcessor(PythonDevice):
                 else:
                     raise RuntimeError("unexpected gauss1dStartValues option")
 
-                # 1-d gaussian fit
-                out = image_processing.fitGauss(data, p0)
+                # 1D gaussian fit
+                out = image_processing.fitGauss(
+                    data, p0, enablePolynomial=enable_polynomial)
                 pY = out[0]  # parameters
                 cY = out[1]  # covariance
                 successY = out[2]  # error
@@ -1194,7 +1281,7 @@ class ImageProcessor(PythonDevice):
                 self.ay1d, self.y01d, self.sy1d = pY[0], pY[1] + ymin, pY[2]
 
             except Exception as e:
-                self.log.WARN("Could not do 1-d gaussian fit [y]: %s." %
+                self.log.WARN("Could not do 1D gaussian fit [y]: %s." %
                               str(e))
                 return
 
@@ -1283,7 +1370,7 @@ class ImageProcessor(PythonDevice):
                 h.set("ax1d", ax1d)
                 h.set("ay1d", ay1d)
 
-            self.log.DEBUG("1-d gaussian fit: done!")
+            self.log.DEBUG("1D gaussian fit: done!")
         else:
             h.set("xFitSuccess", 0)
             h.set("ax1d", 0.0)
@@ -1298,7 +1385,7 @@ class ImageProcessor(PythonDevice):
             h.set("sy1d", 0.0)
             h.set("beamHeight1d", 0.0)
 
-        # 2-D Gaussian Fits
+        # 2D Gaussian Fits
         rotation = self.get("doGaussRotation")
         if self.get("do2DFit"):
             t0 = time.time()
@@ -1324,8 +1411,9 @@ class ImageProcessor(PythonDevice):
                     else:
                         p0 = None
 
-                    # 2-d gaussian fit
-                    out = image_processing.fitGauss2DRot(data, p0)
+                    # 2D gaussian fit
+                    out = image_processing.fitGauss2DRot(
+                        data, p0, enablePolynomial=enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy, theta
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
@@ -1349,8 +1437,9 @@ class ImageProcessor(PythonDevice):
                     else:
                         p0 = None
 
-                    # 2-d gaussian fit
-                    out = image_processing.fitGauss(data, p0)
+                    # 2D gaussian fit
+                    out = image_processing.fitGauss(
+                        data, p0, enablePolynomial=enable_polynomial)
                     pXY = out[0]  # parameters: A, x0, y0, sx, sy
                     cXY = out[1]  # covariance
                     successXY = out[2]  # error
@@ -1360,7 +1449,7 @@ class ImageProcessor(PythonDevice):
                         pXY[0], pXY[1] + xmin, pXY[2] + ymin, pXY[3], pXY[4])
 
             except Exception as e:
-                self.log.WARN("Could not do 2-d gaussian fit: %s." % str(e))
+                self.log.WARN("Could not do 2D gaussian fit: %s." % str(e))
                 return
 
             t1 = time.time()
@@ -1419,7 +1508,7 @@ class ImageProcessor(PythonDevice):
                     h.set("theta2d", 0.0)
                     h.set("etheta2d", 0.0)
 
-            self.log.DEBUG("2-d gaussian fit: done!")
+            self.log.DEBUG("2D gaussian fit: done!")
         else:
             h.set("fitSuccess", 0)
             h.set("a2d", 0.0)
