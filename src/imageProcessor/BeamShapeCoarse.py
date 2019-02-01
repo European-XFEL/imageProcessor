@@ -7,8 +7,8 @@
 from asyncio import coroutine
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Device, Double, get_timestamp, InputChannel,
-    QuantityValue, Slot, State, UInt32, Unit
+    AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
+    InputChannel, QuantityValue, Slot, State, UInt32, Unit, VectorString
 )
 
 from image_processing.image_processing import (
@@ -21,39 +21,46 @@ from processing_utils.rate_calculator import RateCalculator
 
 
 class BeamShapeCoarse(DaqCompliant, Device):
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
+
     x0 = UInt32(
         displayedName="Center X",
-        description="X coordinate of the maximum intensity pixel",
+        description="X coordinate of the maximum intensity pixel.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     y0 = UInt32(
         displayedName="Center Y",
-        description="Y coordinate of the maximum intensity pixel",
+        description="Y coordinate of the maximum intensity pixel.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     fwhmX = UInt32(
         displayedName="FWHM X",
-        description="Full Widh at Half Maximum for X projection, "
-                    "A.K.A. beam width",
+        description="Full Width at Half Maximum for X projection, "
+                    "A.K.A. beam width.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     fwhmY = UInt32(
         displayedName="FWHM Y",
-        description="Full Widh at Half Maximum for Y projection, "
-                    "A.K.A. beam height",
+        description="Full Width at Half Maximum for Y projection, "
+                    "A.K.A. beam height.",
         unitSymbol=Unit.PIXEL,
         accessMode=AccessMode.READONLY
     )
 
     frameRate = Double(
         displayedName="Input Frame Rate",
-        description="Rate of processed images",
+        description="Rate of processed images.",
         unitSymbol=Unit.HERTZ,
         accessMode=AccessMode.READONLY,
     )
@@ -81,8 +88,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
             self.y0 = QuantityValue(coord_y, timestamp=img_timestamp)
             self.fwhmX = QuantityValue(fwhm_x, timestamp=img_timestamp)
             self.fwhmY = QuantityValue(fwhm_y, timestamp=img_timestamp)
-            if self.state != State.ACTIVE:
-                self.state = State.ACTIVE
+            if self.state != State.PROCESSING:
+                self.state = State.PROCESSING
             self.frame_rate.update()
             fps = self.frame_rate.refresh()
             if fps:
@@ -96,8 +103,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
 
     @input.endOfStream
     def input(self, name):
-        if self.state != State.PASSIVE:
-            self.state = State.PASSIVE
+        if self.state != State.ON:
+            self.state = State.ON
 
     @coroutine
     def onInitialization(self):
@@ -105,8 +112,8 @@ class BeamShapeCoarse(DaqCompliant, Device):
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
 
-        self.state = State.PASSIVE
+        self.state = State.ON
 
     @Slot(displayedName='Reset', allowedStates=[State.ERROR])
     def resetError(self):
-        self.state = State.PASSIVE
+        self.state = State.ON

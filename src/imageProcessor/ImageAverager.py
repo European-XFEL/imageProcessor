@@ -9,7 +9,7 @@ import time
 from karabo.bound import (
     BOOL_ELEMENT, FLOAT_ELEMENT, ImageData, INPUT_CHANNEL, KARABO_CLASSINFO,
     OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
 )
 
 from image_processing.image_running_mean import ImageRunningMean
@@ -74,8 +74,14 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
         inputData = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             INPUT_CHANNEL(expected).key("input")
@@ -156,9 +162,9 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
     def onData(self, data, metaData):
         """ This function will be called whenever a data token is availabe"""
         firstImage = False
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
             firstImage = True
 
         self.refreshFrameRateIn()
@@ -222,7 +228,7 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self.resetAverage()
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
         self.signalEndOfStreams()
 
     def resetAverage(self):

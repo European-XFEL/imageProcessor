@@ -14,7 +14,8 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PATH_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
-    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT
+    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from image_processing.image_processing import (
@@ -55,8 +56,14 @@ class ImageApplyMask(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.PASSIVE, State.ACTIVE)
-                .setNewDefaultValue(State.PASSIVE)
+                .setNewOptions(State.ON, State.PROCESSING)
+                .setNewDefaultValue(State.ON)
+                .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key("interfaces")
+                .displayedName("Interfaces")
+                .readOnly()
+                .initialValue(["Processor"])
                 .commit(),
 
             NODE_ELEMENT(data).key("data")
@@ -90,14 +97,15 @@ class ImageApplyMask(PythonDevice):
                 .commit(),
 
             BOOL_ELEMENT(expected).key("disable")
-                .description("Disable mask")
+                .displayedName("Disable Mask")
+                .description("No mask will be applied, if set to True.")
                 .assignmentOptional().defaultValue(False)
                 .reconfigurable()
                 .commit(),
 
             STRING_ELEMENT(expected).key("maskType")
                 .displayedName("Mask Type")
-                .description("Mask type: rectangular or arbitrary (loaded "
+                .description("The mask type: rectangular or arbitrary (loaded "
                              "from file).")
                 .options("rectangular,fromFile")
                 .assignmentOptional().defaultValue("fromFile")
@@ -116,19 +124,21 @@ class ImageApplyMask(PythonDevice):
 
             PATH_ELEMENT(expected).key("maskFilename")
                 .displayedName("Mask Filename")
-                .description("The full filename to the mask. File format "
-                             "must be 'npy', 'raw' or TIFF.")
+                .description("The full path to the mask file. File format "
+                             "must be 'npy', 'raw' or TIFF. Pixel value "
+                             "will be set to 0, where mask is <=0.")
                 .assignmentOptional().defaultValue("mask.npy")
                 .reconfigurable()
                 .commit(),
 
             SLOT_ELEMENT(expected).key("resetMask")
                 .displayedName("Reset Mask")
+                .description("Discard the loaded mask.")
                 .commit(),
 
             SLOT_ELEMENT(expected).key("loadMask")
                 .displayedName("Load Mask")
-                .description("Load mask from a file")
+                .description("Load the mask from a file.")
                 .commit(),
         )
 
@@ -140,9 +150,9 @@ class ImageApplyMask(PythonDevice):
     ##############################################
 
     def onData(self, data, metaData):
-        if self.get("state") == State.PASSIVE:
+        if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.ACTIVE)
+            self.updateState(State.PROCESSING)
 
         try:
             if data.has('data.image'):
@@ -167,7 +177,7 @@ class ImageApplyMask(PythonDevice):
         self.set("frameRate", 0.)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.PASSIVE)
+        self.updateState(State.ON)
 
     ##############################################
     #   Implementation of processImage           #

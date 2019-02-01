@@ -8,9 +8,9 @@ from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Configurable, DaqDataType, Device, Double,
-    get_timestamp, InputChannel, Node, OutputChannel, QuantityValue, State,
-    VectorDouble, VectorInt32
+    AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
+    Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
+    State, VectorDouble, VectorInt32, VectorString
 )
 
 from image_processing.image_processing import imageSumAlongY
@@ -33,6 +33,13 @@ class ImageToSpectrum(Device):
         super(ImageToSpectrum, self).__init__(configuration)
         self.output.noInputShared = "drop"
 
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
+
     @InputChannel(
         raw=False,
         displayedName="Input",
@@ -41,22 +48,13 @@ class ImageToSpectrum(Device):
     )
     @coroutine
     def input(self, data, meta):
-        if self.state != State.ACTIVE:
-            self.state = State.ACTIVE
-
-        if hasattr(data, 'data.image'):
-            image = getattr(data, 'data.image')
-        elif hasattr(data, 'image'):
-            # To ensure backward compatibility
-            # with older versions of cameras
-            image = getattr(data, 'image')
-        else:
-            self.logger.error("Data contains no image at 'data.image")
-            return
+        if self.state != State.PROCESSING:
+            self.state = State.PROCESSING
 
         ts = get_timestamp(meta.timestamp.timestamp)
 
         try:
+            image = data.data.image
             # Calculate spectrum
             spectrum = imageSumAlongY(image.pixels.value)
         except Exception as e:
@@ -72,10 +70,11 @@ class ImageToSpectrum(Device):
                 cropSpectrum = spectrum
             else:
                 cropSpectrum = spectrum[lowX:highX]
-            self.spectrumIntegral = QuantityValue(cropSpectrum.sum(), ts)
+            self.spectrumIntegral = QuantityValue(cropSpectrum.sum(),
+                                                  timestamp=ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
-            self.spectrumIntegral = QuantityValue(np.NaN, ts)
+            self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
             return
 
         # Write spectrum to output channel
@@ -85,7 +84,7 @@ class ImageToSpectrum(Device):
 
     @input.endOfStream
     def input(self, name):
-        self.state = State.PASSIVE
+        self.state = State.ON
         # TODO: send EOS to output (not possible in 2.2.4 yet)
 
     roiDefault = [0, 0]
@@ -127,4 +126,4 @@ class ImageToSpectrum(Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
-        self.state = State.PASSIVE
+        self.state = State.ON
