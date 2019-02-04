@@ -15,12 +15,10 @@ from image_processing.image_processing import (
     imageSumAlongX, imageSumAlongY, peakParametersEval
 )
 
-from DaqCompliancy.DaqCompliancy import DaqCompliant
-
 from processing_utils.rate_calculator import RateCalculator
 
 
-class BeamShapeCoarse(DaqCompliant, Device):
+class BeamShapeCoarse(Device):
     interfaces = VectorString(
         displayedName="Interfaces",
         defaultValue=["Processor"],
