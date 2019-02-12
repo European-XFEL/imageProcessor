@@ -6,8 +6,8 @@
 
 from karabo.bound import (
     DOUBLE_ELEMENT, Hash, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
-    NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
+    State, Timestamp, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_processing import (
@@ -42,6 +42,11 @@ class TwoPeakFinder(PythonDevice):
 
         # Variables for frames per second computation
         self.frame_rate = RateCalculator(refresh_interval=1.0)
+
+        # Register additional slot
+        self.KARABO_SLOT(self.reset)
+
+        self.MAX_ERROR_COUNT = 5
 
     @staticmethod
     def expectedParameters(expected):
@@ -135,6 +140,19 @@ class TwoPeakFinder(PythonDevice):
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
+
+            UINT32_ELEMENT(expected).key('errorCount')
+                .displayedName("Error Count")
+                .description("Number of errors.")
+                .unit(Unit.COUNT)
+                .readOnly().initialValue(0)
+                .commit(),
+
+            SLOT_ELEMENT(expected).key('reset')
+                .displayedName('Reset')
+                .description('Reset error count.')
+                .commit(),
+
         )
 
     def initialization(self):
@@ -165,7 +183,10 @@ class TwoPeakFinder(PythonDevice):
             self.process_image(image_data, ts)  # Process image
 
         except Exception as e:
-            self.log.ERROR("Exception caught in onData: {}".format(e))
+            error_count = self['errorCount']
+            self['errorCount'] = error_count + 1
+            if error_count < self.MAX_ERROR_COUNT:
+                self.log.ERROR("Exception caught in onData: {}".format(e))
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
@@ -173,6 +194,10 @@ class TwoPeakFinder(PythonDevice):
         # Signals end of stream
         self.signalEndOfStream('output')
         self.updateState(State.PASSIVE)
+
+    def reset(self):
+        self.log.INFO('Reset error counter')
+        self['errorCounter'] = 0
 
     ##############################################
     #   Implementation of processImage           #
@@ -198,7 +223,11 @@ class TwoPeakFinder(PythonDevice):
             self.set(h, ts)
 
         except Exception as e:
-            self.log.ERROR("Exception caught in processImage: {}".format(e))
+            error_count = self['errorCount']
+            self['errorCount'] = error_count + 1
+            if error_count < self.MAX_ERROR_COUNT:
+                self.log.ERROR("Exception caught in processImage: {}"
+                               .format(e))
 
     def refresh_frame_rate(self):
         self.frame_rate.update()
