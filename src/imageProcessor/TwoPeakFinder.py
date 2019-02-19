@@ -7,7 +7,7 @@
 from karabo.bound import (
     DOUBLE_ELEMENT, Hash, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
     NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
-    State, Timestamp, UINT32_ELEMENT, Unit
+    State, Timestamp, UINT32_ELEMENT, Unit, VECTOR_UINT32_ELEMENT
 )
 
 from image_processing.image_processing import (
@@ -96,6 +96,16 @@ class TwoPeakFinder(PythonDevice):
                 .description("TODO - currently unused")
                 .unit(Unit.NUMBER)
                 .assignmentOptional().defaultValue(0)
+                .reconfigurable()
+                .commit(),
+
+            VECTOR_UINT32_ELEMENT(expected).key('roi')
+                .displayedName('Region-of-Interest')
+                .description("The user-defined region of interest (ROI), "
+                             "specified as [lowX, highX]. "
+                             "[0, 0] will be interpreted as 'whole range'.")
+                .unit(Unit.PIXEL)
+                .assignmentOptional().defaultValue([0, 0])
                 .reconfigurable()
                 .commit(),
 
@@ -197,7 +207,7 @@ class TwoPeakFinder(PythonDevice):
 
     def reset(self):
         self.log.INFO('Reset error counter')
-        self['errorCounter'] = 0
+        self['errorCount'] = 0
 
     ##############################################
     #   Implementation of processImage           #
@@ -208,17 +218,30 @@ class TwoPeakFinder(PythonDevice):
 
         try:
             img = image_data.getData()  # np.ndarray
-            img_x = imageSumAlongY(img)  # sum along y axis
             zero_point = self['zeroPoint']
+            roi = self['roi']
 
-            peaks = find_peaks(img_x, zero_point)
+            if roi and len(roi) == 2 and roi[1] > roi[0] >= 0:
+                low_x = roi[0]
+                high_x = roi[1]
+                if zero_point <= low_x or zero_point >= high_x:
+                    raise RuntimeError("zero_point is outside ROI.")
+
+                # sum along y axis
+                img_x = imageSumAlongY(img[:, low_x:high_x+1])
+            else:
+                # No valid ROI
+                low_x = 0
+                img_x = imageSumAlongY(img)
+
+            peaks = find_peaks(img_x, zero_point-low_x)
 
             h = Hash()
             h.set('peak1Value', peaks[0])
-            h.set('peak1Position', peaks[1])
+            h.set('peak1Position', low_x + peaks[1])
             h.set('peak1Fwhm', peaks[2])
             h.set('peak2Value', peaks[3])
-            h.set('peak2Position', peaks[4])
+            h.set('peak2Position', low_x + peaks[4])
             h.set('peak2Fwhm', peaks[5])
             self.set(h, ts)
 
