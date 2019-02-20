@@ -18,6 +18,7 @@ Contents:
 .. toctree::
    user_docu_processor
    user_docu_avg
+   user_docu_bkg
    user_docu_mask
    user_docu_roi
    user_docu_norm_roi
