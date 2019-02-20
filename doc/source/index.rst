@@ -25,6 +25,7 @@ Contents:
    user_docu_spectrum
    user_docu_beam_shape_coarse
    user_docu_thumbnail
+   user_docu_two_peak_finder
    :maxdepth: 2
 
 
