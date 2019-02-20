@@ -13,6 +13,7 @@ DTYPE_TO_KTYPE = {
     'uint64': Types.UINT64,
     'int64': Types.INT64,
     'float32': Types.FLOAT,
+    'float64': Types.DOUBLE,
     'float': Types.DOUBLE,
     'double': Types.DOUBLE,
 }
