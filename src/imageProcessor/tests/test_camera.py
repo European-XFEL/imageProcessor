@@ -21,7 +21,9 @@ class TestCamera(PythonDevice):
         # always call PythonDevice constructor first!
         super(TestCamera, self).__init__(configuration)
 
-        nd_array = np.ones((1024, 2048), dtype=np.uint16)
+        gauss_x = np.exp(-(np.arange(1024)-400)**2/1000)
+        gauss_y = np.exp(-(np.arange(2048)-600)**2/1600)
+        nd_array = (1000*np.outer(gauss_y, gauss_x)).astype('uint16')
         image_data = ImageData(nd_array)
         self._image_ok = Hash("data.image", image_data)
         self._image_nok = Hash("data.image", 0.)

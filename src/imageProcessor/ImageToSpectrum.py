@@ -10,10 +10,17 @@ import numpy as np
 from karabo.middlelayer import (
     AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
     Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
-    State, Type, VectorDouble, VectorInt32, VectorString
+    Slot, State, Type, Unit, VectorDouble, VectorInt32, VectorString
 )
 
 from image_processing.image_processing import imageSumAlongY
+
+from processing_utils.rate_calculator import RateCalculator
+
+try:
+    from .common import ErrorNode
+except ImportError:
+    from imageProcessor.common import ErrorNode
 
 
 class DataNode(Configurable):
@@ -33,12 +40,24 @@ class ImageToSpectrum(Device):
         super(ImageToSpectrum, self).__init__(configuration)
         self.output.noInputShared = "drop"
 
+    # TODO base class for MDL: interfaces, frameRate, errorCounter, input
+
     interfaces = VectorString(
         displayedName="Interfaces",
         defaultValue=["Processor"],
         accessMode=AccessMode.READONLY,
         daqPolicy=DaqPolicy.OMIT
     )
+
+    frameRate = Double(
+        displayedName="Input Frame Rate",
+        description="Rate of processed images.",
+        unitSymbol=Unit.HERTZ,
+        accessMode=AccessMode.READONLY,
+        defaultValue=0.
+    )
+
+    errorCounter = Node(ErrorNode)
 
     @InputChannel(
         raw=True,
@@ -51,43 +70,54 @@ class ImageToSpectrum(Device):
         if self.state != State.PROCESSING:
             self.state = State.PROCESSING
 
-        ts = get_timestamp(meta.timestamp.timestamp)
-
         try:
+            ts = get_timestamp(meta.timestamp.timestamp)
             img_raw = data["data.image.pixels"]
             img_type = img_raw["type"]
             dtype = np.dtype(Type.types[img_type].numpy)
             shape = img_raw["shape"]
+
             # Convert bare Hash to NDArray
             image = np.frombuffer(img_raw["data"], dtype=dtype).reshape(shape)
-            imageHeight = shape[0]
-            imageWidth = shape[1]
+            image_height = shape[0]
+            image_width = shape[1]
 
-            lowX = np.maximum(self.roi[0], 0)
-            highX = np.minimum(self.roi[1], imageWidth)
-            lowY = np.maximum(self.roi[2], 0)
-            highY = np.minimum(self.roi[3], imageHeight)
+            self.frame_rate.update()
+            fps = self.frame_rate.refresh()
+            if fps:
+                self.frameRate = fps
+
+            low_x = np.maximum(self.roi[0], 0)
+            high_x = np.minimum(self.roi[1], image_width)
+            low_y = np.maximum(self.roi[2], 0)
+            high_y = np.minimum(self.roi[3], image_height)
 
             # Apply ROI
-            if lowX == 0 and highX == 0 and lowY == 0 and highY == 0:
+            if low_x == 0 and high_x == 0 and low_y == 0 and high_y == 0:
                 # In case of [0, 0, 0 , 0] no ROI is applied
-                image_data = image
+                cropped_image = image
             else:
-                image_data = image[lowY:highY, lowX:highX]
-            # Calculate spectrum
-            spectrum = imageSumAlongY(image_data)
-        except Exception as e:
-            self.logger.error("Invalid image received: {}".format(e))
-            return
+                cropped_image = image[low_y:high_y, low_x:high_x]
 
-        try:
-            #Calculate integral
+            # Calculate spectrum
+            spectrum = imageSumAlongY(cropped_image)
+
+            # Calculate integral
             self.spectrumIntegral = QuantityValue(spectrum.sum(),
                                                   timestamp=ts)
+
+            self.errorCounter.update_alarm()  # success
+            if self.status != "PROCESSING":
+                self.status = "PROCESSING"
         except Exception as e:
-            self.logger.error("Caught exception in 'input': {}".format(e))
+            spectrum = np.full((1,), np.nan)
             self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
-            return
+            msg = "Exception while processing input image: {}".format(e)
+            if self.errorCounter.alarmCondition == 0:
+                # Only update if not yet in ALARM
+                self.status = msg
+                self.log.ERROR(msg)
+            self.errorCounter.update_alarm(True)
 
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.astype('double').tolist()
@@ -96,10 +126,12 @@ class ImageToSpectrum(Device):
 
     @input.endOfStream
     def input(self, name):
-        self.state = State.ON
+        self.frameRate = 0.
+        if self.state != State.ON:
+            self.state = State.ON
         # TODO: send EOS to output (not possible in 2.2.4 yet)
 
-    roiDefault = [0, 0, 0, 0]
+    roi_default = [0, 0, 0, 0]
 
     @VectorInt32(
         displayedName="ROI",
@@ -108,15 +140,15 @@ class ImageToSpectrum(Device):
                     "[0, 0, 0, 0] will be interpreted as 'whole range'.",
         minSize=4,
         maxSize=4,
-        defaultValue=roiDefault,
+        defaultValue=roi_default,
     )
     def roi(self, value):
-        if self.validRoi(value):
+        if self.valid_roi(value):
             self.roi = value
         elif self.roi.value is None:
             self.logger.error("Invalid initial ROI = {}, reset to "
                               "default.".format(value.value))
-            self.roi = self.roiDefault
+            self.roi = self.roi_default
         else:
             self.logger.error("Invalid ROI: Cannot apply changes")
 
@@ -131,7 +163,12 @@ class ImageToSpectrum(Device):
         accessMode=AccessMode.READONLY,
     )
 
-    def validRoi(self, roi):
+    @Slot(displayedName='Reset',  description="Reset error count.")
+    def resetError(self):
+        self.errorCounter.error_counter.clear()
+        self.state = State.ON
+
+    def valid_roi(self, roi):
         if any([roi[0] < 0, roi[1] < roi[0], roi[2] < 0, roi[3] < roi[2]]):
             return False
         return True
@@ -140,4 +177,5 @@ class ImageToSpectrum(Device):
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
+        self.frame_rate = RateCalculator(refresh_interval=1.0)
         self.state = State.ON
