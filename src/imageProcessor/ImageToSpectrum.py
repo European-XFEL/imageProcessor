@@ -53,8 +53,18 @@ class ImageToSpectrum(Device):
 
         ts = get_timestamp(meta.timestamp.timestamp)
 
+        lowX = self.roi[0]
+        highX = self.roi[1]
+        lowY = self.roi[2]
+        highY = self.roi[3]
+
         try:
-            image = data.data.image
+            # Apply ROI
+            if all(lowX, highX, lowY, highY):
+                # In case of [0, 0, 0 , 0] no ROI is applied
+                image = data.data.image
+            else:
+                image = data.data.image[lowY:highY, lowX:highX]
             # Calculate spectrum
             spectrum = imageSumAlongY(image.pixels.value)
         except Exception as e:
@@ -62,15 +72,8 @@ class ImageToSpectrum(Device):
             return
 
         try:
-            # Apply ROI and calculate integral
-            lowX = self.roi[0]
-            highX = self.roi[1]
-            if lowX == 0 and highX == 0:
-                # In case of [0, 0] no ROI is applied
-                cropSpectrum = spectrum
-            else:
-                cropSpectrum = spectrum[lowX:highX]
-            self.spectrumIntegral = QuantityValue(cropSpectrum.sum(),
+            #Calculate integral
+            self.spectrumIntegral = QuantityValue(spectrum.sum(),
                                                   timestamp=ts)
         except Exception as e:
             self.logger.error("Caught exception in 'input': {}".format(e))
@@ -87,15 +90,15 @@ class ImageToSpectrum(Device):
         self.state = State.ON
         # TODO: send EOS to output (not possible in 2.2.4 yet)
 
-    roiDefault = [0, 0]
+    roiDefault = [0, 0, 0, 0]
 
     @VectorInt32(
         displayedName="ROI",
         description="The user-defined region of interest (ROI), "
-                    "specified as [lowX, highX]. "
-                    "[0, 0] will be interpreted as 'whole range'.",
-        minSize=2,
-        maxSize=2,
+                    "specified as [lowX, highX, lowY, highY]. "
+                    "[0, 0, 0, 0] will be interpreted as 'whole range'.",
+        minSize=4,
+        maxSize=4,
         defaultValue=roiDefault,
     )
     def roi(self, value):
@@ -105,6 +108,8 @@ class ImageToSpectrum(Device):
             self.logger.error("Invalid initial ROI = {}, reset to "
                               "default.".format(value.value))
             self.roi = self.roiDefault
+        else:
+            self.logger.error("Invalid ROI: Cannot apply changes")
 
     output = OutputChannel(
         ChannelNode,
@@ -118,7 +123,7 @@ class ImageToSpectrum(Device):
     )
 
     def validRoi(self, roi):
-        if roi[0] < 0 or roi[1] < roi[0]:
+        if any([roi[0] < 0, roi[1] < roi[0], roi[2] < 0, roi[3] < roi[2]]):
             return False
         return True
 
