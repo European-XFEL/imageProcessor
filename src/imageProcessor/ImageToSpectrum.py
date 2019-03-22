@@ -55,7 +55,8 @@ class ImageToSpectrum(Device):
 
         try:
             img_raw = data["data.image.pixels"]
-            dtype = Type.types[img_raw["type"]].numpy
+            img_type = img_raw["type"]
+            dtype = np.dtype(Type.types[img_type].numpy)
             shape = img_raw["shape"]
             # Convert bare Hash to NDArray
             image = np.frombuffer(img_raw["data"], dtype=dtype).reshape(shape)
