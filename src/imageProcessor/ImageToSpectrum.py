@@ -53,20 +53,25 @@ class ImageToSpectrum(Device):
 
         ts = get_timestamp(meta.timestamp.timestamp)
 
-        lowX = self.roi[0]
-        highX = self.roi[1]
-        lowY = self.roi[2]
-        highY = self.roi[3]
-
         try:
+            image = data.data.image.pixels.value
+            shape = data.data.image.pixels.shape
+            imageHeight = shape[0]
+            imageWidth = shape[1]
+
+            lowX = np.maximum(self.roi[0], 0)
+            highX = np.minimum(self.roi[1], imageWidth)
+            lowY = np.maximum(self.roi[2], 0)
+            highY = np.minimum(self.roi[3], imageHeight)
+
             # Apply ROI
-            if all(lowX, highX, lowY, highY):
+            if lowX == 0 and highX == 0 and lowY == 0 and highY == 0:
                 # In case of [0, 0, 0 , 0] no ROI is applied
-                image = data.data.image
+                image_data = image
             else:
-                image = data.data.image[lowY:highY, lowX:highX]
+                image_data = image[lowY:highY, lowX:highX]
             # Calculate spectrum
-            spectrum = imageSumAlongY(image.pixels.value)
+            spectrum = imageSumAlongY(image_data)
         except Exception as e:
             self.logger.error("Invalid image received: {}".format(e))
             return
