@@ -10,7 +10,7 @@ import numpy as np
 from karabo.middlelayer import (
     AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
     Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
-    State, VectorDouble, VectorInt32, VectorString
+    State, Type, VectorDouble, VectorInt32, VectorString
 )
 
 from image_processing.image_processing import imageSumAlongY
@@ -41,7 +41,7 @@ class ImageToSpectrum(Device):
     )
 
     @InputChannel(
-        raw=False,
+        raw=True,
         displayedName="Input",
         accessMode=AccessMode.INITONLY,
         assignment=Assignment.MANDATORY
@@ -54,8 +54,12 @@ class ImageToSpectrum(Device):
         ts = get_timestamp(meta.timestamp.timestamp)
 
         try:
-            image = data.data.image.pixels.value
-            shape = data.data.image.pixels.shape
+            img_raw = data["data.image.pixels"]
+            img_type = img_raw["type"]
+            dtype = np.dtype(Type.types[img_type].numpy)
+            shape = img_raw["shape"]
+            # Convert bare Hash to NDArray
+            image = np.frombuffer(img_raw["data"], dtype=dtype).reshape(shape)
             imageHeight = shape[0]
             imageWidth = shape[1]
 
