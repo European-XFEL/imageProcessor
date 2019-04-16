@@ -25,17 +25,17 @@ class ImageExponentialRunnningAverage:
 
     @property
     def __tau(self):
-        return 1.0/self.__images
+        return 1.0/self.__nimages
 
     def __init__(self):
-        self.__images = 1.0
+        self.__nimages = 1.0
         self.__mean = None
 
     def clear(self):
         """Reset the mean"""
         self.__mean = None
 
-    def append(self, image):
+    def append(self, image, n_images):
         """Add a new image to the average"""
         # Check for correct type
         if not isinstance(image, np.ndarray):
@@ -43,6 +43,8 @@ class ImageExponentialRunnningAverage:
         # If running average is empty...
         if self.__mean is None:
             self .__mean = image
+
+        self.__nimages = n_images
 
         # If it's already running, just update the state
         self.__mean = self.__tau * image + (1.0-self.__tau) * self.__mean
@@ -55,7 +57,7 @@ class ImageExponentialRunnningAverage:
     @property
     def size(self):
         """Return the inverse decay rate"""
-        return self.__images
+        return self.__nimages
 
     @property
     def shape(self):
@@ -167,7 +169,7 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
                 .displayedName('Running average Method')
                 .description('The algorithm used for calculating the '
                              'running average.')
-                #.options(["ExactRunningAverage,ExponentialRunningAverage"])
+                .options("ExactRunningAverage,ExponentialRunningAverage")
                 .assignmentOptional()
                 .defaultValue('ExactRunningAverage')
                 .reconfigurable()
