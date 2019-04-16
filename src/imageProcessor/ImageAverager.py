@@ -8,8 +8,8 @@ import time
 
 from karabo.bound import (
     BOOL_ELEMENT, FLOAT_ELEMENT, ImageData, INPUT_CHANNEL, KARABO_CLASSINFO,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
-    UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
 )
 
 from image_processing.image_running_mean import ImageRunningMean
@@ -17,6 +17,53 @@ from image_processing.image_running_mean import ImageRunningMean
 from processing_utils.rate_calculator import RateCalculator
 
 from .common import ImageProcOutputInterface
+
+
+class ImageExponentialRunnningAverage:
+    """Simple, fast and efficient running average method.
+    It does not need an 1000 image ringbuffer."""
+
+    @property
+    def __tau(self):
+        return 1.0/self.__images
+
+    def __init__(self):
+        self.__images = 1.0
+        self.__mean = None
+
+    def clear(self):
+        """Reset the mean"""
+        self.__mean = None
+
+    def append(self, image):
+        """Add a new image to the average"""
+        # Check for correct type
+        if not isinstance(image, np.ndarray):
+            raise ValueError("Image has incorrect type: %s" % str(type(image)))
+        # If running average is empty...
+        if self.__mean is None:
+            self .__mean = image
+
+        # If it's already running, just update the state
+        self.__mean = self.__tau * image + (1.0-self.__tau) * self.__mean
+
+    @property
+    def mean(self):
+        """Returns the current mean"""
+        return self.__mean
+
+    @property
+    def size(self):
+        """Return the inverse decay rate"""
+        return self.__images
+
+    @property
+    def shape(self):
+        if self.__mean is None:
+            return ()
+        else:
+            return self.__mean.shape
+
 
 
 class ImageStandardMean:
@@ -116,6 +163,16 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
                 .reconfigurable()
                 .commit(),
 
+            STRING_ELEMENT(expected).key('runningAvgMethod')
+                .displayedName('Running average Method')
+                .description('The algorithm used for calculating the '
+                             'running average.')
+                #.options(["ExactRunningAverage,ExponentialRunningAverage"])
+                .assignmentOptional()
+                .defaultValue('ExactRunningAverage')
+                .reconfigurable()
+                .commit(),
+
             FLOAT_ELEMENT(expected).key('inFrameRate')
                 .displayedName('Input Frame Rate')
                 .description('The input frame rate.')
@@ -149,6 +206,7 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
         self.KARABO_SLOT(self.resetAverage)
         # Get an instance of the mean calculator
         self.imageRunningMean = ImageRunningMean()
+        self.imageExpRunningMean = ImageExponentialRunnningAverage()
         self.imageStandardMean = ImageStandardMean()
         # Variables for frames per second computation
         self.frame_rate_in = RateCalculator(refresh_interval=1.0)
@@ -204,15 +262,17 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
             self.refreshFrameRateOut()
 
         elif runningAverage:
-            self.imageRunningMean.append(pixels, nImages)
+            if self['runningAvgMethod']=='ExactRunningAverage':
+                self.imageRunningMean.append(pixels, nImages)
+                pixels = self.imageRunningMean.runningMean.astype(dType)
+            elif self['runningAvgMethod']=='ExponentialRunningAverage':
+                self.imageExpRunningMean.append(pixels, nImages)
+                pixels = self.imageExpRunningMean.mean.astype(dType)
 
-            pixels = self.imageRunningMean.runningMean.astype(dType)
             imageData = ImageData(pixels, bitsPerPixel=bpp,
                                   encoding=encoding)
-
             self.writeImageToOutputs(imageData, ts)
             self.refreshFrameRateOut()
-
         else:
             self.imageStandardMean.append(pixels)
             if self.imageStandardMean.size >= nImages:
