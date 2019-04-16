@@ -12,7 +12,7 @@ def _get_version_string():
 
     return get_package_version(dirname(__file__))
 
-setup(name='bunchPicker',
+setup(name='imagePatternPicker',
       version=_get_version_string(),
       author='parenti',
       author_email='parenti',
@@ -23,7 +23,7 @@ setup(name='bunchPicker',
       packages=find_packages('src'),
       entry_points={
           'karabo.bound_device': [
-              'BunchPicker = bunchPicker.BunchPicker:BunchPicker',
+              'ImagePatternPicker = imagePatternPicker.ImagePatternPicker:ImagePatternPicker',
           ],
       },
       package_data={},
