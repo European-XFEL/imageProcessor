@@ -296,6 +296,7 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
     def resetAverage(self):
         self.log.INFO('Reset image average and fps')
         self.imageRunningMean.clear()
+        self.imageExpRunningMean.clear()
         self.imageStandardMean.clear()
         self['inFrameRate'] = 0
         self['outFrameRate'] = 0
