@@ -20,16 +20,27 @@ from .common import ImageProcOutputInterface
 
 
 class ImageExponentialRunnningAverage:
-    """Simple, fast and efficient running average method.
-    It does not need an 1000 image ringbuffer."""
-
-    @property
-    def __tau(self):
-        return 1.0/self.__nimages
-
+    """Simple, fast and efficient running average method, widely used in
+    machine learning to track running statistics. It does not need to store
+    a 100000 image ringbuffer: the running average is held by a single numpy
+    array with the same size as the image and updated as the weighted average
+    of the previous state and the new frame according to:
+    ```
+    AVG_new = w*IMG_new + (1-w)*AVG_old
+    ```
+    The number of averaged frames sets the decay rate and can be changed
+    without clearing the buffer, i.e. you can start with a faster decay and
+    slow it down after initial convergence. The weighted average is stored as
+    a float64 array and must be converted back to the image type.
+    """
     def __init__(self):
         self.__nimages = 1.0
         self.__mean = None
+
+    @property
+    def __tau(self):
+        """The decay rate is the inverse of the number of frames."""
+        return 1.0/self.__nimages
 
     def clear(self):
         """Reset the mean"""
@@ -37,13 +48,18 @@ class ImageExponentialRunnningAverage:
 
     def append(self, image, n_images):
         """Add a new image to the average"""
-        # Check for correct type
+        # Check for correct type and input values
         if not isinstance(image, np.ndarray):
             raise ValueError("Image has incorrect type: %s" % str(type(image)))
-        # If running average is empty...
-        if self.__mean is None:
-            self .__mean = image
+        if n_images <= 0:
+            raise ValueError("The averager's smoothing rate must be positive "
+                             "instead of %f." % n_images)
 
+        # If running average is empty, we explicitly assign the frame as fp64.
+        if self.__mean is None:
+            self .__mean = image.astype(np.float64)
+
+        # We assign the smoothing coefficient
         self.__nimages = n_images
 
         # If it's already running, just update the state
@@ -65,7 +81,6 @@ class ImageExponentialRunnningAverage:
             return ()
         else:
             return self.__mean.shape
-
 
 
 class ImageStandardMean:
