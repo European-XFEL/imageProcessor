@@ -14,8 +14,17 @@ class ImageAverages_TestCase(unittest.TestCase):
         proc.startFsm()
 
 
-class ImageAverages_TestCase(unittest.TestCase):
+class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
     def setUp(self):
+        print("\n\n")
+        print("##############################################################")
+        print("##############################################################")
+        print("##                                                          ##")
+        print("##      Starting Exponential running average test case      ##")
+        print("##                                                          ##")
+        print("##############################################################")
+        print("\n\n")
+
         # Create a dummy camera
         self.testCamera = Configurator(PythonDevice).create("TestCamera", Hash(
             "Logger.priority", "DEBUG",
@@ -30,10 +39,10 @@ class ImageAverages_TestCase(unittest.TestCase):
             "input.connectedOutputChannels", "TestCamera_n539:output"
         ))
         proc.startFsm()
-        self.testCamera.acquire()
-
-        time.sleep(5)
-        self.testCamera.acquire()
+        # self.testCamera.acquire()
+        #
+        # time.sleep(5)
+        # self.testCamera.stop()
 
 
 if __name__ == '__main__':
