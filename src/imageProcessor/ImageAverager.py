@@ -55,12 +55,12 @@ class ImageExponentialRunnningAverage:
             raise ValueError("The averager's smoothing rate must be positive "
                              "instead of %f." % n_images)
 
+        # We assign the smoothing coefficient
+        self.__nimages = n_images
+
         # If running average is empty, we explicitly assign the frame as fp64.
         if self.__mean is None:
             self .__mean = image.astype(np.float64)
-
-        # We assign the smoothing coefficient
-        self.__nimages = n_images
 
         # If it's already running, just update the state
         self.__mean = self.__tau * image + (1.0-self.__tau) * self.__mean
