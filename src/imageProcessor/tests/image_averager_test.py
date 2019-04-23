@@ -16,21 +16,21 @@ class ImageAverages_TestCase(unittest.TestCase):
 
 class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
     def setUp(self):
-        print("\n\n")
-        print("##############################################################")
-        print("##############################################################")
-        print("##                                                          ##")
-        print("##      Starting Exponential running average test case      ##")
-        print("##                                                          ##")
-        print("##############################################################")
-        print("\n\n")
+        self.testCamera.log.INFO("\n\n")
+        self.testCamera.log.INFO("###########################################")
+        self.testCamera.log.INFO("###########################################")
+        self.testCamera.log.INFO("##                                       ##")
+        self.testCamera.log.INFO("## Exponential running average test case ##")
+        self.testCamera.log.INFO("##                                       ##")
+        self.testCamera.log.INFO("###########################################")
+        self.testCamera.log.INFO("\n\n")
 
         # Create a dummy camera
         self.testCamera = Configurator(PythonDevice).create("TestCamera", Hash(
             "Logger.priority", "DEBUG",
             "deviceId", "TestCamera_n539"))
 
-        self.testCamera.log.INFO("Instantiated Testcamera Instance")
+        self.testCamera.log.INFO("Instantiated TestCamera instance")
 
     def tearDown(self):
         pass
@@ -46,9 +46,11 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
         proc.startFsm()
         proc.log.INFO("Instantiated ImageAverager instance in "
                       "exponential running average mode.")
-        # self.testCamera.acquire()
-        #
-        # time.sleep(5)
+
+        self.testCamera.log.INFO("Starting acquisition with TestCamera.")
+        self.testCamera.acquire()
+        
+        time.sleep(5)
         # self.testCamera.stop()
 
 
