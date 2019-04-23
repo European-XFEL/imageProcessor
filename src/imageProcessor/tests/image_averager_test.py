@@ -30,7 +30,12 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
             "Logger.priority", "DEBUG",
             "deviceId", "TestCamera_n539"))
 
-    def test_proc(self):
+        self.testCamera.log.INFO("Instantiated Testcamera Instance")
+
+    def tearDown(self):
+        pass
+
+    def test_instantiation(self):
         proc = Configurator(PythonDevice).create("ImageAverager", Hash(
             "Logger.priority", "DEBUG",
             "deviceId", "ImageAverages_1",
@@ -39,6 +44,8 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
             "input.connectedOutputChannels", "TestCamera_n539:output"
         ))
         proc.startFsm()
+        proc.log.INFO("Instantiated ImageAverager instance in "
+                      "exponential running average mode.")
         # self.testCamera.acquire()
         #
         # time.sleep(5)
