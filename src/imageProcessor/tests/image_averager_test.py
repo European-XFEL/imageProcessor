@@ -16,6 +16,15 @@ class ImageAverages_TestCase(unittest.TestCase):
 
 class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
     def setUp(self):
+
+        # Create a dummy camera
+        self.testCamera = Configurator(PythonDevice).create("TestCamera", Hash(
+            "Logger.priority", "DEBUG",
+            "deviceId", "TestCamera_n539"))
+
+        self.testCamera.log.INFO("Instantiated TestCamera instance")
+        time.sleep(10)
+
         self.testCamera.log.INFO("\n\n")
         self.testCamera.log.INFO("###########################################")
         self.testCamera.log.INFO("###########################################")
@@ -25,12 +34,7 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
         self.testCamera.log.INFO("###########################################")
         self.testCamera.log.INFO("\n\n")
 
-        # Create a dummy camera
-        self.testCamera = Configurator(PythonDevice).create("TestCamera", Hash(
-            "Logger.priority", "DEBUG",
-            "deviceId", "TestCamera_n539"))
 
-        self.testCamera.log.INFO("Instantiated TestCamera instance")
 
     def tearDown(self):
         pass
@@ -41,7 +45,7 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
             "deviceId", "ImageAverages_1",
             "runningAverage", True,
             "runningAvgMethod", "ExponentialRunningAverage",
-            "input.connectedOutputChannels", "TestCamera_n539:output"
+            "input.connectedOutputChannels", ["TestCamera_n539:output"]
         ))
         proc.startFsm()
         proc.log.INFO("Instantiated ImageAverager instance in "
@@ -49,7 +53,7 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
 
         self.testCamera.log.INFO("Starting acquisition with TestCamera.")
         self.testCamera.acquire()
-        
+
         time.sleep(5)
         # self.testCamera.stop()
 
