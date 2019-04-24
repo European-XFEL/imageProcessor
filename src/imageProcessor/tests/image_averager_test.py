@@ -16,8 +16,8 @@ class ImageAverages_TestCase(unittest.TestCase):
 
 class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
     def setUp(self):
-
         # Create a dummy camera
+        # The device instantiates correctly locally and behaves as expected
         self.testCamera = Configurator(PythonDevice).create("TestCamera", Hash(
             "Logger.priority", "DEBUG",
             "deviceId", "TestCamera_n539"))
@@ -25,6 +25,9 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
 
         self.testCamera.log.INFO("Instantiated TestCamera instance")
         time.sleep(10)
+        self.testCamera.log.INFO("Starting acquisition with TestCamera.")
+        self.testCamera.acquire()
+        time.sleep(5)
 
         self.testCamera.log.INFO("\n\n")
         self.testCamera.log.INFO("###########################################")
@@ -35,35 +38,27 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
         self.testCamera.log.INFO("###########################################")
         self.testCamera.log.INFO("\n\n")
 
-
-
     def tearDown(self):
         pass
 
     def test_instantiation(self):
-        proc = Configurator(PythonDevice).create("ImageAverager", Hash(
+        self.imavg = Configurator(PythonDevice).create("ImageAverager", Hash(
             "Logger.priority", "DEBUG",
             "deviceId", "ImageAverages_1",
             "runningAverage", True,
             "runningAvgMethod", "ExponentialRunningAverage",
             "input.connectedOutputChannels", ["TestCamera_n539:output"]
         ))
-        proc.startFsm()
+        self.imavg.startFsm()
 
-        proc.log.INFO("Instantiated ImageAverager instance in "
-                      "exponential running average mode.")
-        time.sleep(5)
-
-        proc.log.INFO("\n")
-        proc.log.INFO("###########################################")
-        proc.log.INFO("##       Averager Instantiated           ##")
-        proc.log.INFO("###########################################")
-        proc.log.INFO("\n")
-
-        self.testCamera.log.INFO("Starting acquisition with TestCamera.")
-        self.testCamera.acquire()
-
-        time.sleep(5)
+        self.imavg.log.INFO("Instantiated ImageAverager instance in "
+                            "exponential running average mode.")
+        time.sleep(3)
+        self.imavg.log.INFO("\n")
+        self.imavg.log.INFO("###########################################")
+        self.imavg.log.INFO("##       Averager Instantiated           ##")
+        self.imavg.log.INFO("###########################################")
+        self.imavg.log.INFO("\n")
         # self.testCamera.stop()
 
 
