@@ -2,6 +2,8 @@ import unittest
 import time
 from karabo.bound import Configurator, Hash, PythonDevice
 
+from ..ImageAverager import ImageAverager
+
 
 class ImageAverages_TestCase(unittest.TestCase):
     def test_proc(self):
