@@ -22,10 +22,10 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
 
         # Test updating and shape
         exp_avg.append(image, 10)
-        self.assertEqual( exp_avg.shape.tolist(), [480, 640, 3])
+        self.assertEqual( exp_avg.shape, (480, 640, 3))
         exp_avg.append(0.5*image, 10)
         exp_avg.append(0.5*image, 10)
-        self.assertEqual( exp_avg.shape.tolist(), [480, 640, 3])
+        self.assertEqual( exp_avg.shape, (480, 640, 3))
         self.assertAlmostEqual( exp_avg.mean[8,8,2], 926.72 )
 
         # Test clear average
@@ -38,6 +38,7 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
         for ii in range(100):
             exp_avg.append(0.5*image, 10)
         self.assertAlmostEqual( exp_avg.mean[8,8,2], 512.0, 0.1 )
+        self.assertEqual( exp_avg.shape, (480, 640, 3))
 
 
 
