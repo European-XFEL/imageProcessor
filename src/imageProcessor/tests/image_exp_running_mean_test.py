@@ -17,31 +17,26 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
         exp_avg = ImageExponentialRunnningAverage()
         self.assertIsNone(exp_avg.mean)
 
-        image = 1024*np.ones([480,640,3], dtype=np.uint16)
-
+        image = 1024 * np.ones([480, 640, 3], dtype=np.uint16)
 
         # Test updating and shape
         exp_avg.append(image, 10)
-        self.assertEqual( exp_avg.shape, (480, 640, 3))
-        exp_avg.append(0.5*image, 10)
-        exp_avg.append(0.5*image, 10)
-        self.assertEqual( exp_avg.shape, (480, 640, 3))
-        self.assertAlmostEqual( exp_avg.mean[8,8,2], 926.72 )
+        self.assertEqual(exp_avg.shape, (480, 640, 3))
+        exp_avg.append(0.5 * image, 10)
+        exp_avg.append(0.5 * image, 10)
+        self.assertEqual(exp_avg.shape, (480, 640, 3))
+        self.assertAlmostEqual(exp_avg.mean[8, 8, 2], 926.72)
 
         # Test clear average
         exp_avg.clear()
         self.assertIsNone(exp_avg.mean)
 
-
         # Test a long averaging run
         exp_avg.clear()
         for ii in range(100):
-            exp_avg.append(0.5*image, 10)
-        self.assertAlmostEqual( exp_avg.mean[8,8,2], 512.0, 0.1 )
-        self.assertEqual( exp_avg.shape, (480, 640, 3))
-
-
-
+            exp_avg.append(0.5 * image, 10)
+        self.assertAlmostEqual(exp_avg.mean[8, 8, 2], 512.0, 0.1)
+        self.assertEqual(exp_avg.shape, (480, 640, 3))
 
 
 if __name__ == '__main__':
