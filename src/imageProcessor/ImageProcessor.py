@@ -1132,10 +1132,11 @@ class ImageProcessor(PythonDevice):
                 # Set a threshold to cut away noise
                 if absThr > 0.0:
                     img2 = image_processing.\
-                        imageSetThreshold(img, min(absThr, img.max()))
+                        imageSetThreshold(img, min(absThr, img.max()),
+                                          copy=True)
                 else:
                     img2 = image_processing.\
-                        imageSetThreshold(img, thr * img.max())
+                        imageSetThreshold(img, thr * img.max(), copy=True)
 
                 # Centre-of-Mass and widths
                 if comRange == "user-defined":
