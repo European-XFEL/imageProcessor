@@ -33,6 +33,7 @@ class ImageExponentialRunnningAverage:
     slow it down after initial convergence. The weighted average is stored as
     a float64 array and must be converted back to the image type.
     """
+
     def __init__(self):
         self.__nimages = 1.0
         self.__mean = None
@@ -40,7 +41,7 @@ class ImageExponentialRunnningAverage:
     @property
     def __tau(self):
         """The decay rate is the inverse of the number of frames."""
-        return 1.0/self.__nimages
+        return 1.0 / self.__nimages
 
     def clear(self):
         """Reset the mean"""
@@ -58,12 +59,12 @@ class ImageExponentialRunnningAverage:
         # We assign the smoothing coefficient
         self.__nimages = n_images
 
-        # If running average is empty, we explicitly assign the frame as fp64.
         if self.__mean is None:
-            self .__mean = image.astype(np.float64)
-
-        # If it's already running, just update the state
-        self.__mean = self.__tau * image + (1.0-self.__tau) * self.__mean
+            # If running average is empty, we explicitly assign fp64
+            self.__mean = image.astype(np.float64)
+        else:
+            # If it's already running, just update the state
+            self.__mean = self.__tau * image + (1.0 - self.__tau) * self.__mean
 
     @property
     def mean(self):
@@ -230,12 +231,13 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
         self.frame_rate_out = RateCalculator(refresh_interval=1.0)
 
     def preReconfigure(self, incomingReconfiguration):
-        if incomingReconfiguration.has('runningAverage'):
+        if incomingReconfiguration.has('runningAverage') or \
+                incomingReconfiguration.has('runningAvgMethod'):
             # Reset averages
             self.resetAverage()
 
     def onData(self, data, metaData):
-        """ This function will be called whenever a data token is availabe"""
+        """ This function will be called whenever a data token is available"""
         firstImage = False
         if self.get("state") == State.ON:
             self.log.INFO("Start of Stream")
@@ -279,10 +281,10 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
             self.refreshFrameRateOut()
 
         elif runningAverage:
-            if self['runningAvgMethod']=='ExactRunningAverage':
+            if self['runningAvgMethod'] == 'ExactRunningAverage':
                 self.imageRunningMean.append(pixels, nImages)
                 pixels = self.imageRunningMean.runningMean.astype(dType)
-            elif self['runningAvgMethod']=='ExponentialRunningAverage':
+            elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                 self.imageExpRunningMean.append(pixels, nImages)
                 pixels = self.imageExpRunningMean.mean.astype(dType)
 

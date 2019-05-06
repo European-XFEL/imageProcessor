@@ -1,5 +1,4 @@
 import unittest
-import time
 import numpy as np
 
 from ..ImageAverager import ImageExponentialRunnningAverage
@@ -37,6 +36,13 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
             exp_avg.append(0.5 * image, 10)
         self.assertAlmostEqual(exp_avg.mean[8, 8, 2], 512.0, 0.1)
         self.assertEqual(exp_avg.shape, (480, 640, 3))
+
+        # Test a very short averaging run
+        exp_avg.clear()
+        exp_avg.append(0.5 * image, 1)
+        exp_avg.append(image, 1)
+        exp_avg.append(image, 1)
+        self.assertAlmostEqual(exp_avg.mean[8, 8, 2], 1024.0, 0.1)
 
 
 if __name__ == '__main__':
