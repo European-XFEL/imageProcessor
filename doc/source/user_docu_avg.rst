@@ -18,11 +18,18 @@ Input to the Device
 Property key             Description
 =======================  =======================================================
 nImages                  | The number of images to be averaged.
-runningAverage           | If ``True``, a `simple moving average`_ is
+runningAverage           | If ``True``, a `moving average`_ is
                          | calculated, otherwise the standard average.
+runningAvgMethod         | The algorithm used to calculate the running average
+                         | it can be either ``ExactRunningAverage`` to use a
+                         | `simple moving average`_, or
+                         | ``ExponentialRunningAverage`` to use an
+                         | `exp moving average`_.
 =======================  =======================================================
 
+.. _moving average: https://en.wikipedia.org/wiki/Moving_average
 .. _simple moving average: https://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
+.. _exp moving average: https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average
 
 Commands
 ========
