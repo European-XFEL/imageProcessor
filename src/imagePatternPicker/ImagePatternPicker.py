@@ -7,7 +7,7 @@
 from karabo.bound import (
     DOUBLE_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, IMAGEDATA_ELEMENT,
     NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
-    State, Timestamp, UINT32_ELEMENT, Unit
+    State, Timestamp, UINT32_ELEMENT, UINT64_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -18,7 +18,8 @@ class ImagePatternPicker(PythonDevice):
 
     @staticmethod
     def expectedParameters(expected):
-        data = Schema()
+        data_in = Schema()
+        data_out = Schema()
         (
             OVERWRITE_ELEMENT(expected).key('state')
             .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
@@ -56,16 +57,16 @@ class ImagePatternPicker(PythonDevice):
             .readOnly()
             .commit(),
 
-            NODE_ELEMENT(data).key('data')
+            NODE_ELEMENT(data_in).key('data')
             .displayedName("Data")
             .commit(),
 
-            IMAGEDATA_ELEMENT(data).key('data.image')
+            IMAGEDATA_ELEMENT(data_in).key('data.image')
             .commit(),
 
             INPUT_CHANNEL(expected).key('input')
             .displayedName("Input")
-            .dataSchema(data)
+            .dataSchema(data_in)
             .commit(),
 
             # Images should be dropped if processor is too slow
@@ -73,9 +74,21 @@ class ImagePatternPicker(PythonDevice):
             .setNewDefaultValue("drop")
             .commit(),
 
+            NODE_ELEMENT(data_out).key('data')
+            .displayedName("Data")
+            .commit(),
+
+            IMAGEDATA_ELEMENT(data_out).key('data.image')
+            .commit(),
+
+            UINT64_ELEMENT(data_out).key('data.trainId')
+            .displayedName('Train ID')
+            .readOnly()
+            .commit(),
+
             OUTPUT_CHANNEL(expected).key("output")
             .displayedName("Output")
-            .dataSchema(data)
+            .dataSchema(data_out)
             .commit(),
         )
 
@@ -104,7 +117,9 @@ class ImagePatternPicker(PythonDevice):
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
-        if (ts.getTrainId() % self['nBunchPatterns']) == self['patternOffset']:
+        train_id = ts.getTrainId()
+        if (train_id % self['nBunchPatterns']) == self['patternOffset']:
+            data['data.trainId'] = train_id
             self.writeChannel('output', data, ts)
             self.refresh_frame_rate_out()
 
