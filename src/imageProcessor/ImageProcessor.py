@@ -13,8 +13,8 @@ import numpy as np
 import time
 
 from karabo.bound import (
-    BOOL_ELEMENT, DaqDataType, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
-    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
+    BOOL_ELEMENT, DaqDataType, Dims, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
+    ImageData, INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
     NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
     SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, Unit,
     VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, VECTOR_STRING_ELEMENT
@@ -75,6 +75,14 @@ class ImageProcessor(PythonDevice):
             SLOT_ELEMENT(expected).key("useAsBackgroundImage")
                 .displayedName("Current Image as Background")
                 .description("Use the current image as background image.")
+                .commit(),
+
+            STRING_ELEMENT(expected).key("imagePath")
+                .displayedName("Image Path")
+                .description("Input image path.")
+                .assignmentOptional().defaultValue("data.image")
+                .expertAccess()
+                .init()
                 .commit(),
 
             INPUT_CHANNEL(expected).key("input")
@@ -338,7 +346,8 @@ class ImageProcessor(PythonDevice):
 
             INT32_ELEMENT(expected).key("imageHeight")
                 .displayedName("Image Height")
-                .description("The height of the incoming image.")
+                .description("The height of the incoming image. "
+                             "Set to 1 for 1D images (spectra).")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
@@ -347,14 +356,16 @@ class ImageProcessor(PythonDevice):
                 .displayedName("Image Offset Y")
                 .description("If the incoming image has a ROI, this "
                              "represents the Y position of the top-left "
-                             "corner.")
+                             "corner. "
+                             "Set to 0 for 1D images (spectra).")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             INT32_ELEMENT(expected).key("imageBinningY")
                 .displayedName("Image Binning Y")
-                .description("The image binning in the Y direction.")
+                .description("The image binning in the Y direction. "
+                             "Set to 1 for 1D images (spectra).")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
@@ -883,25 +894,34 @@ class ImageProcessor(PythonDevice):
             firstImage = True
 
         try:
-            if data.has('data.image'):
-                imageData = data['data.image']
-            elif data.has('image'):
-                # To ensure backward compatibility
-                # with older versions of cameras
-                imageData = data['image']
+            image_path = self['imagePath']
+            if data.has(image_path):
+                imageData = data[image_path]
             else:
-                self.log.DEBUG("data does not have any image")
+                self.log.DEBUG("data does not have any image in "
+                               "{}".format(image_path))
                 return
+
+            if isinstance(imageData, list):
+                # Convert to ImageData
+                data = np.asarray(imageData)
+                dims = Dims(len(imageData))
+                imageData = ImageData(data, dims)
 
             if firstImage:
                 # Update warning levels
                 dims = imageData.getDimensions()
-                imageHeight = dims[0]
-                imageWidth = dims[1]
+                if len(dims) == 2:  # 2d
+                    imageHeight = dims[0]
+                    imageWidth = dims[1]
+                elif len(dims) == 1:  # 1d
+                    imageHeight = 1
+                    imageWidth = dims[0]
+
                 self.updateWarnLevels(0, imageWidth, 0, imageHeight)
 
                 bpp = imageData.getBitsPerPixel()
-                self.updateOutputSchema(imageHeight, imageWidth, bpp)
+                self.updateOutputSchema(imageWidth, imageHeight, bpp)
 
             ts = Timestamp.fromHashAttributes(
                 metaData.getAttributes('timestamp'))
@@ -941,38 +961,47 @@ class ImageProcessor(PythonDevice):
 
         try:
             dims = imageData.getDimensions()
-            imageHeight = dims[0]
-            imageWidth = dims[1]
+            if len(dims) == 2:
+                imageHeight = dims[0]
+                imageWidth = dims[1]
+                is_2d_image = True
+            elif len(dims) == 1:
+                imageHeight = 1
+                imageWidth = dims[0]
+                is_2d_image = False
+            else:
+                self.log.DEBUG("Neither image nor spectrum. dims="
+                               "{}".format(dims))
+
             if imageWidth != self.get("imageWidth"):
                 h.set("imageWidth", imageWidth)
             if imageHeight != self.get("imageHeight"):
                 h.set("imageHeight", imageHeight)
 
-            try:
-                roiOffsets = imageData.getROIOffsets()
+            roiOffsets = imageData.getROIOffsets()
+            if is_2d_image:
                 imageOffsetY = roiOffsets[0]
                 imageOffsetX = roiOffsets[1]
-            except:
-                # Image has no ROI offset
-                imageOffsetX = 0
+            else:
                 imageOffsetY = 0
+                imageOffsetX = roiOffsets[0]
             if imageOffsetX != self.get("imageOffsetX"):
                 h.set("imageOffsetX", imageOffsetX)
             if imageOffsetY != self.get("imageOffsetY"):
                 h.set("imageOffsetY", imageOffsetY)
 
-            try:
-                imageBinning = imageData.getBinning()
+            imageBinning = imageData.getBinning()
+            if is_2d_image:
                 imageBinningY = imageBinning[0]
                 imageBinningX = imageBinning[1]
-                if imageBinningX != self.get("imageBinningX"):
-                    h.set("imageBinningX", imageBinningX)
-                if imageBinningY != self.get("imageBinningY"):
-                    h.set("imageBinningY", imageBinningY)
-            except:
-                # Image has no binning information
+            else:
                 imageBinningY = 1
-                imageBinningX = 1
+                imageBinningX = imageBinning[0]
+
+            if imageBinningX != self.get("imageBinningX"):
+                h.set("imageBinningX", imageBinningX)
+            if imageBinningY != self.get("imageBinningY"):
+                h.set("imageBinningY", imageBinningY)
 
             self.currentImage = imageData.getData()  # np.ndarray
             img = self.currentImage  # Shallow copy
@@ -1089,7 +1118,7 @@ class ImageProcessor(PythonDevice):
         # Sum the image along the x- and y-axes
         imgX = None
         imgY = None
-        if self.get("doXYSum"):
+        if self.get("doXYSum") and is_2d_image:
             t0 = time.time()
             try:
                 xmin = np.maximum(userDefinedRange[0], 0)
@@ -1126,7 +1155,6 @@ class ImageProcessor(PythonDevice):
         sx = None
         sy = None
         if self.get("doCOfM") or self.get("do1DFit") or self.get("do2DFit"):
-
             t0 = time.time()
             try:
                 # Set a threshold to cut away noise
@@ -1139,14 +1167,28 @@ class ImageProcessor(PythonDevice):
                         imageSetThreshold(img, thr * img.max(), copy=True)
 
                 # Centre-of-Mass and widths
-                if comRange == "user-defined":
-                    img3 = img2[userDefinedRange[2]:userDefinedRange[3],
-                                userDefinedRange[0]:userDefinedRange[1]]
-                    (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img3)
-                    x0 += userDefinedRange[0]
-                    y0 += userDefinedRange[2]
-                else:  # "full"
-                    (x0, y0, sx, sy) = image_processing.imageCentreOfMass(img2)
+                if is_2d_image:
+                    if comRange == "user-defined":
+
+                        img3 = img2[userDefinedRange[2]:userDefinedRange[3],
+                                    userDefinedRange[0]:userDefinedRange[1]]
+                        x0, y0, sx, sy = image_processing.\
+                            imageCentreOfMass(img3)
+                        x0 += userDefinedRange[0]
+                        y0 += userDefinedRange[2]
+                    else:  # "full"
+                        x0, y0, sx, sy = image_processing.\
+                            imageCentreOfMass(img2)
+                else:  # 1d
+                    if comRange == "user-defined":
+
+                        img3 = img2[userDefinedRange[0]:userDefinedRange[1]]
+                        (x0, sx) = image_processing.imageCentreOfMass(img3)
+                        x0 += userDefinedRange[0]
+                    else:  # "full"
+                        (x0, sx) = image_processing.imageCentreOfMass(img2)
+                    y0 = 0
+                    sy = 0
 
                 if fitRange == "full":
                     xmin = 0
@@ -1191,14 +1233,16 @@ class ImageProcessor(PythonDevice):
 
         # 1D Gaussian Fits
         if self.get("do1DFit"):
-
             enable_polynomial = self.get("enablePolynomial")
             gauss1dStartValues = self.get("gauss1dStartValues")
 
             t0 = time.time()
             try:
                 if imgX is None:
-                    imgX = image_processing.imageSumAlongY(img)
+                    if is_2d_image:
+                        imgX = image_processing.imageSumAlongY(img)
+                    else:
+                        imgX = img
 
                 # Select sub-range and substract pedestal
                 data = imgX[xmin:xmax]
@@ -1242,51 +1286,54 @@ class ImageProcessor(PythonDevice):
 
             t1 = time.time()
 
-            try:
-                if imgY is None:
-                    imgY = image_processing.imageSumAlongX(img)
+            if is_2d_image:
+                try:
+                    if imgY is None:
+                        imgY = image_processing.imageSumAlongX(img)
 
-                # Select sub-range and substract pedestal
-                data = imgY[ymin:ymax]
-                imgMin = data.min()
-                if imgMin > 0:
-                    data -= data.min()
+                    # Select sub-range and substract pedestal
+                    data = imgY[ymin:ymax]
+                    imgMin = data.min()
+                    if imgMin > 0:
+                        data -= data.min()
 
-                # Initial parameters
-                if gauss1dStartValues == "raw_peak":
-                    # evaluate peak parameters w/o fit
-                    p0 = self.evalStartingPoint(data)
-                elif gauss1dStartValues == "last_fit_result":
-                    if None not in (self.ay1d, self.y01d, self.sy1d):
-                        # Use last fit's parameters as initial estimate
-                        p0 = (self.ay1d, self.y01d - ymin, self.sy1d)
-                    elif None not in (y0, sy):
-                        # Use CoM for initial parameter estimate
-                        p0 = (data.max(), y0 - ymin, sy)
+                    # Initial parameters
+                    if gauss1dStartValues == "raw_peak":
+                        # evaluate peak parameters w/o fit
+                        p0 = self.evalStartingPoint(data)
+                    elif gauss1dStartValues == "last_fit_result":
+                        if None not in (self.ay1d, self.y01d, self.sy1d):
+                            # Use last fit's parameters as initial estimate
+                            p0 = (self.ay1d, self.y01d - ymin, self.sy1d)
+                        elif None not in (y0, sy):
+                            # Use CoM for initial parameter estimate
+                            p0 = (data.max(), y0 - ymin, sy)
+                        else:
+                            # No initial parameters
+                            p0 = None
+                            # TODO may use "p0 = self.evalStartingPoint(data)"
+                            # as well, once it's well tested
                     else:
-                        # No initial parameters
-                        p0 = None
-                        # TODO "p0 = self.evalStartingPoint(data)" may be used
-                        # as well, once it's well tested
-                else:
-                    raise RuntimeError("unexpected gauss1dStartValues option")
+                        raise RuntimeError("unexpected gauss1dStartValues "
+                                           "option")
 
-                # 1D gaussian fit
-                out = image_processing.fitGauss(
-                    data, p0, enablePolynomial=enable_polynomial)
-                pY = out[0]  # parameters
-                cY = out[1]  # covariance
-                successY = out[2]  # error
+                    # 1D gaussian fit
+                    out = image_processing.fitGauss(
+                        data, p0, enablePolynomial=enable_polynomial)
+                    pY = out[0]  # parameters
+                    cY = out[1]  # covariance
+                    successY = out[2]  # error
 
-                # Save fit's parameters
-                self.ay1d, self.y01d, self.sy1d = pY[0], pY[1] + ymin, pY[2]
+                    # Save fit's parameters
+                    self.ay1d, self.y01d, self.sy1d = pY[0], pY[1]+ymin, pY[2]
 
-            except Exception as e:
-                self.log.WARN("Could not do 1D gaussian fit [y]: %s." %
-                              str(e))
-                return
+                except Exception as e:
+                    self.log.WARN("Could not do 1D gaussian fit [y]: %s." %
+                                  str(e))
+                    return
 
-            t2 = time.time()
+                t2 = time.time()
+
             self.averagers["xFitTime"].append(t1 - t0)
             h.set("xFitSuccess", successX)
 
@@ -1326,50 +1373,57 @@ class ImageProcessor(PythonDevice):
                     self.log.WARN("Exception caught after successful X fit: %s"
                                   % str(e))
 
-            self.averagers["yFitTime"].append(t2 - t1)
-            h.set("yFitSuccess", successY)
+            if is_2d_image:
+                self.averagers["yFitTime"].append(t2 - t1)
+                h.set("yFitSuccess", successY)
 
-            if successY in (1, 2, 3, 4):
-                # Successful fit
+                if successY in (1, 2, 3, 4):
+                    # Successful fit
 
-                if cY is None:
-                    self.log.WARN("Successful Y fit with singular covariance "
-                                  "matrix.. Resetting initial fit values.")
-                    self.ay1d = None
-                    self.y01d = None
-                    self.sy1d = None
+                    if cY is None:
+                        self.log.WARN("Successful Y fit with singular "
+                                      "covariance matrix."
+                                      " Resetting initial fit values.")
+                        self.ay1d = None
+                        self.y01d = None
+                        self.sy1d = None
 
-                try:
-                    if absolutePositions:
-                        h.set("y01d",
-                              imageBinningY*(ymin + pY[1] + imageOffsetY))
-                    else:
-                        h.set("y01d", ymin + pY[1])
+                    try:
+                        if absolutePositions:
+                            h.set("y01d",
+                                  imageBinningY*(ymin + pY[1] + imageOffsetY))
+                        else:
+                            h.set("y01d", ymin + pY[1])
 
-                    if cY is not None:
-                        ey01d = math.sqrt(cY[1][1])
-                        esy1d = math.sqrt(cY[2][2])
-                    else:
-                        ey01d = 0.0
-                        esy1d = 0.0
-                    h.set("ey01d", ey01d)
-                    h.set("esy1d", esy1d)
+                        if cY is not None:
+                            ey01d = math.sqrt(cY[1][1])
+                            esy1d = math.sqrt(cY[2][2])
+                        else:
+                            ey01d = 0.0
+                            esy1d = 0.0
+                        h.set("ey01d", ey01d)
+                        h.set("esy1d", esy1d)
 
-                    h.set("sy1d", pY[2])
+                        h.set("sy1d", pY[2])
 
-                    if pixelSize is not None:
-                        beamHeight = self.stdDev2BeamSize * pixelSize * pY[2]
-                        h.set("beamHeight1d", beamHeight)
+                        if pixelSize is not None:
+                            beamHeight = (self.stdDev2BeamSize * pixelSize
+                                          * pY[2])
+                            h.set("beamHeight1d", beamHeight)
 
-                except Exception as e:
-                    self.log.WARN("Exception caught after successful Y fit: %s"
-                                  % str(e))
+                    except Exception as e:
+                        self.log.WARN("Exception caught after successful Y "
+                                      "fit: %s" % str(e))
 
-            if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
-                ax1d = pX[0] / pY[2] / math.sqrt(2 * math.pi)
-                ay1d = pY[0] / pX[2] / math.sqrt(2 * math.pi)
-                h.set("ax1d", ax1d)
-                h.set("ay1d", ay1d)
+                if successX in (1, 2, 3, 4) and successY in (1, 2, 3, 4):
+                    ax1d = pX[0] / pY[2] / math.sqrt(2 * math.pi)
+                    ay1d = pY[0] / pX[2] / math.sqrt(2 * math.pi)
+                    h.set("ax1d", ax1d)
+                    h.set("ay1d", ay1d)
+
+            else:  # 1d
+                if successX in (1, 2, 3, 4):
+                    h.set("ax1d", pX[0])
 
             self.log.DEBUG("1D gaussian fit: done!")
         else:
@@ -1388,7 +1442,7 @@ class ImageProcessor(PythonDevice):
 
         # 2D Gaussian Fits
         rotation = self.get("doGaussRotation")
-        if self.get("do2DFit"):
+        if self.get("do2DFit") and is_2d_image:
             t0 = time.time()
 
             try:
@@ -1536,7 +1590,10 @@ class ImageProcessor(PythonDevice):
                 xmax = np.minimum(integrationRegion[1], imageWidth)
                 ymin = np.maximum(integrationRegion[2], 0)
                 ymax = np.minimum(integrationRegion[3], imageHeight)
-                data = img[ymin:ymax, xmin:xmax]
+                if is_2d_image:
+                    data = img[ymin:ymax, xmin:xmax]
+                else:
+                    data = img[xmin:xmax]
                 integral = np.float64(np.sum(data))
                 h.set("regionIntegral", integral)
                 regionMean = integral / data.size if data.size > 0 else 0.0
