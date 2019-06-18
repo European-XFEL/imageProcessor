@@ -65,7 +65,6 @@ htmlhelp_basename = 'XFELControlDocumentationdoc'
 
 #we add a custom function to work with intersphinx
 import slumber
-import json
 
 # the RTDHOST should be set to localhost if you only compile on RTD
 # otherwise it needs to be set to the server hosting the internal RTD
