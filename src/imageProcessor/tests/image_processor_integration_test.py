@@ -22,7 +22,7 @@ class TestImageProcessor(BoundDeviceTestCase):
         # will identify the test devices as valid plugins with an entry point.
         egg_dir = op.dirname(own_dir)
         class_ids = ['ImageProcessor', 'TestCamera']
-        self.start_server(SERVER_ID, class_ids, plugin_dir=egg_dir)
+        self.start_server('bound', SERVER_ID, class_ids, plugin_dir=egg_dir)
         print(SERVER_ID)
 
     def test_in_sequence(self):
