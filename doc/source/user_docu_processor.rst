@@ -4,13 +4,15 @@
 Image Processor
 ***************
 
-The Image Processor device can provide for each incoming image:
+The Image Processor device can provide for each incoming image (2D) or spectrum
+(1D):
 
 * the minimum, maximum and mean pixel value;
 * the frequency distribution of pixel values;
-* the image integrals in x and y directions;
+* the image integrals in x and y directions (only for 2D images);
 * the centre-of-mass and standard deviation;
-* gaussian fit parameters for the x and y integrals;
+* gaussian fit parameters for the x and y integrals (the latter only for 2D
+  (images);
 * gaussian fit parameters for the 2D image;
 * pixel values integral over a region.
 
@@ -36,6 +38,10 @@ The following properties affect all the algorithms ran in the device.
 =======================  =====================================================
 Property key             Description
 =======================  =====================================================
+imagePath                | The key where the image will be looked for in the
+                         | input data. The default value - ``data.image`` - is
+                         | usually appropriate when the input channel is
+                         | connected to imagers.
 filterImagesByThreshold  | If ``filterImagesByThreshold`` is ``True``, only
                          | images with maximum pixel value exceeding
                          | ``imageThreshold`` will be processed. Others will be
