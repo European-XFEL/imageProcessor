@@ -5,9 +5,10 @@
 #############################################################################
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, IMAGEDATA_ELEMENT,
-    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema,
-    State, Timestamp, UINT32_ELEMENT, UINT64_ELEMENT, Unit
+    DaqDataType, DeviceClient, DOUBLE_ELEMENT, INPUT_CHANNEL,
+    KARABO_CLASSINFO, IMAGEDATA_ELEMENT, NDARRAY_ELEMENT, NODE_ELEMENT,
+    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
+    Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -59,6 +60,7 @@ class ImagePatternPicker(PythonDevice):
 
             NODE_ELEMENT(data_in).key('data')
             .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
             .commit(),
 
             IMAGEDATA_ELEMENT(data_in).key('data.image')
@@ -95,6 +97,9 @@ class ImagePatternPicker(PythonDevice):
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
         super(ImagePatternPicker, self).__init__(configuration)
+
+        self.device_client = DeviceClient()
+
         # Define the first function to be called after the constructor has
         # finished
         self.registerInitialFunction(self.initialization)
@@ -107,6 +112,13 @@ class ImagePatternPicker(PythonDevice):
         # Variables for frames per second computation
         self.frame_rate_in = RateCalculator(refresh_interval=1.0)
         self.frame_rate_out = RateCalculator(refresh_interval=1.0)
+
+        self.device_client.getDevices()  # Somehow needed to connect
+        device_id = self['input.connectedOutputChannels'][0].split(":")[0]
+        if device_id:
+            self.device_client.registerSchemaUpdatedMonitor(
+                self.on_camera_schema_update)
+            self.device_client.getDeviceSchemaNoWait(device_id)
 
     def onData(self, data, metaData):
         if self['state'] == State.ON:
@@ -144,3 +156,60 @@ class ImagePatternPicker(PythonDevice):
         if fps_out:
             self['outFrameRate'] = fps_out
             self.log.DEBUG("Output rate {} Hz".format(fps_out))
+
+    def on_camera_schema_update(self, deviceId, schema):
+        # Look for 'image' in camera's schema
+        output = self['input.connectedOutputChannels'][0].split(":")[1]
+        path = f'{output}.schema.data.image'
+        if schema.has(path):
+            sub = schema.subSchema(path)
+            shape = sub.getDefaultValue('dims')
+            k_type = sub.getDefaultValue('pixels.type')
+
+            self.update_output_schema(shape, k_type)
+
+    def update_output_schema(self, shape, k_type):
+        # Get device configuration before schema update
+        try:
+            outputHostname = self["output.hostname"]
+        except AttributeError as e:
+            # Configuration does not contain "output.hostname"
+            outputHostname = None
+
+        newSchema = Schema()
+        dataSchema = Schema()
+        (
+            NODE_ELEMENT(dataSchema).key("data")
+            .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
+            .commit(),
+
+            IMAGEDATA_ELEMENT(dataSchema).key("data.image")
+            .displayedName("Image")
+            .setDimensions(str(shape).strip("()"))
+            .commit(),
+
+            # Set (overwrite) shape and dtype for internal NDArray element -
+            # needed by DAQ
+            NDARRAY_ELEMENT(dataSchema).key("data.image.pixels")
+            .shape(list(shape))
+            .dtype(Types.values[k_type])
+            .commit(),
+
+            # Set "maxSize" for vector properties - needed by DAQ
+            dataSchema.setMaxSize("data.image.dims", len(shape)),
+            dataSchema.setMaxSize("data.image.dimTypes", len(shape)),
+            dataSchema.setMaxSize("data.image.roiOffsets", len(shape)),
+            dataSchema.setMaxSize("data.image.binning", len(shape)),
+            dataSchema.setMaxSize("data.image.pixels.shape", len(shape)),
+
+            OUTPUT_CHANNEL(newSchema).key("output")
+            .displayedName("Output")
+            .dataSchema(dataSchema)
+            .commit(),
+        )
+        self.updateSchema(newSchema)
+        if outputHostname:
+            # Restore configuration
+            self.log.DEBUG(f"output.hostname: {outputHostname}")
+            self.set("output.hostname", outputHostname)
