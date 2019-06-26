@@ -9,54 +9,26 @@ import os.path
 from PIL import Image
 
 from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, ImageData, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT,
-    PATH_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, PATH_ELEMENT,
+    SLOT_ELEMENT, State, Timestamp
 )
 
 from image_processing.image_processing import imageSubtractBackground
-from processing_utils.rate_calculator import RateCalculator
 
-from .common import ImageProcOutputInterface
+try:
+    from .common import ImageProcOutputInterface
+    from .ImageProcessorBase import ImageProcessorBase
+except ImportError:
+    from imageProcessor.common import ImageProcOutputInterface
+    from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImageBackgroundSubtraction", "2.3")
-class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
+@KARABO_CLASSINFO("ImageBackgroundSubtraction", "2.4")
+class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod
     def expectedParameters(expected):
-        data = Schema()
         (
-            OVERWRITE_ELEMENT(expected).key('state')
-            .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
-            .setNewDefaultValue(State.ON)
-            .commit(),
-
-            NODE_ELEMENT(data).key('data')
-            .displayedName("Data")
-            .commit(),
-
-            IMAGEDATA_ELEMENT(data).key('data.image')
-            .commit(),
-
-            INPUT_CHANNEL(expected).key('input')
-            .displayedName("Input")
-            .dataSchema(data)
-            .commit(),
-
-            # Images should be dropped if processor is too slow
-            OVERWRITE_ELEMENT(expected).key('input.onSlowness')
-            .setNewDefaultValue("drop")
-            .commit(),
-
-            DOUBLE_ELEMENT(expected).key('frameRate')
-            .displayedName("Frame Rate")
-            .description("The actual frame rate.")
-            .unit(Unit.HERTZ)
-            .readOnly()
-            .commit(),
-
             BOOL_ELEMENT(expected).key('disable')
             .displayedName("Disable")
             .description("Disable background subtraction.")
@@ -92,21 +64,10 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
             .description("Use the current image as background image.")
             .commit(),
 
-            UINT32_ELEMENT(expected).key('errorCount')
-            .displayedName("Error Count")
-            .description("Number of errors.")
-            .unit(Unit.COUNT)
-            .readOnly().initialValue(0)
-            .commit(),
-
-            SLOT_ELEMENT(expected).key('reset')
-            .displayedName('Reset')
-            .description("Reset error count.")
-            .commit(),
         )
 
     def __init__(self, configuration):
-        # always call PythonDevice constructor first!
+        # always call superclass constructor first!
         super(ImageBackgroundSubtraction, self).__init__(configuration)
 
         # Current image
@@ -115,21 +76,19 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
         # Background image
         self.bkg_image = None
 
-        # Variables for frames per second computation
-        self.frame_rate = RateCalculator(refresh_interval=1.0)
-
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         # Register additional slots
-        self.registerSlot(self.resetBackgroundImage)
-        self.registerSlot(self.save)
-        self.registerSlot(self.load)
-        self.registerSlot(self.useAsBackgroundImage)
-        self.KARABO_SLOT(self.reset)
+        self.KARABO_SLOT(self.resetBackgroundImage)
+        self.KARABO_SLOT(self.save)
+        self.KARABO_SLOT(self.load)
+        self.KARABO_SLOT(self.useAsBackgroundImage)
 
-        self.MAX_ERROR_COUNT = 5  # TODO make it reconfigurable?
+    def preReconfigure(self, configuration):
+        # always call ImageProcessorBase preReconfigure first!
+        super(ImageBackgroundSubtraction, self).preReconfigure(configuration)
 
     ##############################################
     #   Implementation of Callbacks              #
@@ -137,9 +96,7 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
 
     def onData(self, data, metaData):
         first_image = False
-        if self['state'] == State.ERROR:
-            return
-        elif self['state'] == State.ON:
+        if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
             self.updateState(State.PROCESSING)
             first_image = True
@@ -154,12 +111,8 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
-            error_count = self['errorCount']
-            self['errorCount'] = error_count + 1
-            if error_count < self.MAX_ERROR_COUNT:
-                self.log.ERROR("Exception caught in onData: {}".format(e))
-            elif self['state'] != State.ERROR:
-                self.updateState(State.ERROR)
+            msg = "Exception caught in onData: {}".format(e)
+            self.update_alarm(error=True, msg=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -170,16 +123,16 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
 
         self.process_image(image_data, ts)
 
-    def onEndOfStream(self):
+    def onEndOfStream(self, inputChannel):
         self.log.INFO("onEndOfStream called")
-        self['frameRate'] = 0.
-        self['errorCount'] = 0
+        self['inFrameRate'] = 0.
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
+        self['status'] = 'ON'
 
     def process_image(self, image_data, ts):
-        self.refresh_frame_rate()
+        self.refresh_frame_rate_in()
 
         try:
             self.current_image = image_data.getData()  # np.ndarray
@@ -212,39 +165,21 @@ class ImageBackgroundSubtraction(PythonDevice, ImageProcOutputInterface):
                                        encoding=encoding)
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Image sent to output channel")
+                self.update_alarm()  # Success
 
             else:
-                error_count = self['errorCount']
-                self['errorCount'] = error_count + 1
-                if error_count < self.MAX_ERROR_COUNT:
-                    self.log.WARN("Cannot subtract background image... "
-                                  "shapes are different: {} != {}"
-                                  .format(self.bkg_image.shape, img.shape))
+                msg = ("Cannot subtract background image... shapes are "
+                       "different: {} != {}"
+                       .format(self.bkg_image.shape, img.shape))
+                self.update_alarm(error=True, msg=msg)
 
         except Exception as e:
-            error_count = self['errorCount']
-            self['errorCount'] = error_count + 1
-            if error_count < self.MAX_ERROR_COUNT:
-                self.log.ERROR("Exception caught in processImage: {}"
-                               .format(e))
-            elif self['state'] != State.ERROR:
-                self.updateState(State.ERROR)
-
-    def refresh_frame_rate(self):
-        self.frame_rate.update()
-        fps = self.frame_rate.refresh()
-        if fps:
-            self['frameRate'] = fps
-            self.log.DEBUG("Input rate {} Hz".format(fps))
+            msg = "Exception caught in process_image: {}".format(e)
+            self.update_alarm(error=True, msg=msg)
 
     ##############################################
     #   Implementation of Slots                  #
     ##############################################
-
-    def reset(self):
-        self.log.INFO("Reset error counter")
-        self['errorCount'] = 0
-        self.updateState(State.ON)
 
     def resetBackgroundImage(self):
         self.log.INFO("Reset background image")

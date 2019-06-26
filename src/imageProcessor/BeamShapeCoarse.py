@@ -8,7 +8,7 @@ from asyncio import coroutine
 
 from karabo.middlelayer import (
     AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
-    InputChannel, QuantityValue, Slot, State, UInt32, Unit, VectorString
+    InputChannel, Node, QuantityValue, Slot, State, UInt32, Unit, VectorString
 )
 
 from image_processing.image_processing import (
@@ -17,8 +17,16 @@ from image_processing.image_processing import (
 
 from processing_utils.rate_calculator import RateCalculator
 
+try:
+    from .common import ErrorNode
+except ImportError:
+    from imageProcessor.common import ErrorNode
+
 
 class BeamShapeCoarse(Device):
+
+    # TODO base class for MDL: interfaces, frameRate, errorCounter, input
+
     interfaces = VectorString(
         displayedName="Interfaces",
         defaultValue=["Processor"],
@@ -61,7 +69,10 @@ class BeamShapeCoarse(Device):
         description="Rate of processed images.",
         unitSymbol=Unit.HERTZ,
         accessMode=AccessMode.READONLY,
+        defaultValue=0.
     )
+
+    errorCounter = Node(ErrorNode)
 
     @InputChannel(
         raw=False,
@@ -71,47 +82,54 @@ class BeamShapeCoarse(Device):
     )
     @coroutine
     def input(self, data, meta):
+        if self.state != State.PROCESSING:
+            self.state = State.PROCESSING
+
         try:
-            img_timestamp = get_timestamp(meta.timestamp.timestamp)
+            ts = get_timestamp(meta.timestamp.timestamp)
+            image = data.data.image.pixels.value
 
-            img = data.data.image.pixels.value
-
-            x_projection = imageSumAlongY(img)
-            y_projection = imageSumAlongX(img)
-
-            _, coord_x, fwhm_x = peakParametersEval(x_projection)
-            _, coord_y, fwhm_y = peakParametersEval(y_projection)
-
-            self.x0 = QuantityValue(coord_x, timestamp=img_timestamp)
-            self.y0 = QuantityValue(coord_y, timestamp=img_timestamp)
-            self.fwhmX = QuantityValue(fwhm_x, timestamp=img_timestamp)
-            self.fwhmY = QuantityValue(fwhm_y, timestamp=img_timestamp)
-            if self.state != State.PROCESSING:
-                self.state = State.PROCESSING
             self.frame_rate.update()
             fps = self.frame_rate.refresh()
             if fps:
                 self.frameRate = fps
+
+            x_projection = imageSumAlongY(image)
+            y_projection = imageSumAlongX(image)
+
+            _, coord_x, fwhm_x = peakParametersEval(x_projection)
+            _, coord_y, fwhm_y = peakParametersEval(y_projection)
+
+            self.x0 = QuantityValue(coord_x, timestamp=ts)
+            self.y0 = QuantityValue(coord_y, timestamp=ts)
+            self.fwhmX = QuantityValue(fwhm_x, timestamp=ts)
+            self.fwhmY = QuantityValue(fwhm_y, timestamp=ts)
+
+            self.errorCounter.update_alarm()  # success
+            if self.status != "PROCESSING":
+                self.status = "PROCESSING"
         except Exception as e:
-            if self.state != State.ERROR:
-                self.state = State.ERROR
-            msg = "Exception while processing input image: {}".format(e)
-            if self.status != msg:
+            if self.errorCounter.alarmCondition == 0:
+                msg = "Exception while processing input image: {}".format(e)
+                # Only update if not yet in ALARM
                 self.status = msg
+                self.log.ERROR(msg)
+            self.errorCounter.update_alarm(True)
 
     @input.endOfStream
     def input(self, name):
+        self.frameRate = 0.
         if self.state != State.ON:
             self.state = State.ON
+
+    @Slot(displayedName='Reset', description="Reset error count.")
+    def resetError(self):
+        self.errorCounter.error_counter.clear()
+        self.state = State.ON
 
     @coroutine
     def onInitialization(self):
         """ This method will be called when the device starts.
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
-
-        self.state = State.ON
-
-    @Slot(displayedName='Reset', allowedStates=[State.ERROR])
-    def resetError(self):
         self.state = State.ON

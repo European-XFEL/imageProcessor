@@ -2,5 +2,4 @@ build/
 dist/
 .idea/
 src/imageProcessor.egg-info/
-src/imageProcessor/__pycache__/
-src/imageProcessor/tests/__pycache__/
+__pycache__/

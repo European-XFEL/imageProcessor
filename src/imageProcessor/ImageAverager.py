@@ -4,19 +4,22 @@ Creation date: January, 2017, 05:21 PM
 Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
 """
 import numpy as np
-import time
 
 from karabo.bound import (
-    BOOL_ELEMENT, FLOAT_ELEMENT, ImageData, INPUT_CHANNEL, KARABO_CLASSINFO,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
+    BOOL_ELEMENT, DOUBLE_ELEMENT, ImageData, KARABO_CLASSINFO, SLOT_ELEMENT,
+    State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_running_mean import ImageRunningMean
 
 from processing_utils.rate_calculator import RateCalculator
 
-from .common import ImageProcOutputInterface
+try:
+    from .common import ImageProcOutputInterface
+    from .ImageProcessorBase import ImageProcessorBase
+except ImportError:
+    from imageProcessor.common import ImageProcOutputInterface
+    from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
 class ImageExponentialRunnningAverage:
@@ -131,104 +134,71 @@ class ImageStandardMean:
             return self.__mean.shape
 
 
-@KARABO_CLASSINFO('ImageAverager', '2.0')
-class ImageAverager(PythonDevice, ImageProcOutputInterface):
+@KARABO_CLASSINFO('ImageAverager', '2.4')
+class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod
     def expectedParameters(expected):
-        inputData = Schema()
         (
-            OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.ON, State.PROCESSING)
-                .setNewDefaultValue(State.ON)
-                .commit(),
-
-            VECTOR_STRING_ELEMENT(expected).key("interfaces")
-                .displayedName("Interfaces")
-                .readOnly()
-                .initialValue(["Processor"])
-                .commit(),
-
-            INPUT_CHANNEL(expected).key("input")
-                .displayedName("Input")
-                .dataSchema(inputData)
-                .commit(),
-
-            # Images should be dropped if processor is too slow
-            OVERWRITE_ELEMENT(expected).key("input.onSlowness")
-                .setNewDefaultValue("drop")
-                .commit(),
-
             SLOT_ELEMENT(expected).key('resetAverage')
-                .displayedName('Reset Average')
-                .description('Reset averaged image.')
-                .commit(),
+            .displayedName('Reset Average')
+            .description('Reset averaged image.')
+            .commit(),
 
             UINT32_ELEMENT(expected).key('nImages')
-                .displayedName('Number of Images')
-                .description('Number of images to be averaged.')
-                .unit(Unit.NUMBER)
-                .assignmentOptional().defaultValue(5)
-                .minInc(1)
-                .reconfigurable()
-                .commit(),
+            .displayedName('Number of Images')
+            .description('Number of images to be averaged.')
+            .unit(Unit.NUMBER)
+            .assignmentOptional().defaultValue(5)
+            .minInc(1)
+            .reconfigurable()
+            .commit(),
 
             BOOL_ELEMENT(expected).key('runningAverage')
-                .displayedName('Running Average')
-                .description('Calculate running average (instead of '
-                             'standard).')
-                .assignmentOptional().defaultValue(True)
-                .reconfigurable()
-                .commit(),
+            .displayedName('Running Average')
+            .description('Calculate running average (instead of '
+                         'standard).')
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
 
             STRING_ELEMENT(expected).key('runningAvgMethod')
-                .displayedName('Running average Method')
-                .description('The algorithm used for calculating the '
-                             'running average.')
-                .options("ExactRunningAverage,ExponentialRunningAverage")
-                .assignmentOptional()
-                .defaultValue('ExactRunningAverage')
-                .reconfigurable()
-                .commit(),
+            .displayedName('Running average Method')
+            .description('The algorithm used for calculating the '
+                         'running average.')
+            .options("ExactRunningAverage,ExponentialRunningAverage")
+            .assignmentOptional()
+            .defaultValue('ExactRunningAverage')
+            .reconfigurable()
+            .commit(),
 
-            FLOAT_ELEMENT(expected).key('inFrameRate')
-                .displayedName('Input Frame Rate')
-                .description('The input frame rate.')
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key('outFrameRate')
-                .displayedName('Output Frame Rate')
-                .description('The output frame rate.')
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key('latency')
-                .displayedName('Image Latency')
-                .description('The latency of the incoming image.'
-                             'Smaller values are closer to realtime.')
-                .unit(Unit.SECOND)
-                .readOnly()
-                .commit(),
+            DOUBLE_ELEMENT(expected).key('outFrameRate')
+            .displayedName('Output Frame Rate')
+            .description('The output frame rate.')
+            .unit(Unit.HERTZ)
+            .readOnly()
+            .commit(),
         )
 
     def __init__(self, configuration):
-        # always call PythonDevice constructor first!
+        # always call superclass constructor first!
         super(ImageAverager, self).__init__(configuration)
-        # Register channel callback
-        self.KARABO_ON_DATA('input', self.onData)
-        self.KARABO_ON_EOS('input', self.onEndOfStream)
-        # Register additional slot
-        self.KARABO_SLOT(self.resetAverage)
+
         # Get an instance of the mean calculator
-        self.imageRunningMean = ImageRunningMean()
-        self.imageExpRunningMean = ImageExponentialRunnningAverage()
-        self.imageStandardMean = ImageStandardMean()
+        self.image_running_mean = ImageRunningMean()
+        self.image_exp_running_mean = ImageExponentialRunnningAverage()
+        self.image_standard_mean = ImageStandardMean()
+
         # Variables for frames per second computation
         self.frame_rate_in = RateCalculator(refresh_interval=1.0)
         self.frame_rate_out = RateCalculator(refresh_interval=1.0)
+
+        # Register channel callback
+        self.KARABO_ON_DATA('input', self.onData)
+        self.KARABO_ON_EOS('input', self.onEndOfStream)
+
+        # Register additional slot
+        self.KARABO_SLOT(self.resetAverage)
 
     def preReconfigure(self, incomingReconfiguration):
         if incomingReconfiguration.has('runningAverage') or \
@@ -237,97 +207,114 @@ class ImageAverager(PythonDevice, ImageProcOutputInterface):
             self.resetAverage()
 
     def onData(self, data, metaData):
-        """ This function will be called whenever a data token is available"""
-        firstImage = False
-        if self.get("state") == State.ON:
+        """ This function will be called whenever a data token is availabe"""
+        first_image = False
+        if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
             self.updateState(State.PROCESSING)
-            firstImage = True
+            first_image = True
 
-        self.refreshFrameRateIn()
+        self.refresh_frame_rate_in()
 
-        if data.has('data.image'):
-            inputImage = data['data.image']
-        elif data.has('image'):
-            # To ensure backward compatibility
-            # with older versions of cameras
-            inputImage = data['image']
-        else:
-            self.log.DEBUG("Data contains no image at 'data.image'")
+        try:
+            if data.has('data.image'):
+                image_data = data['data.image']
+            elif data.has('image'):
+                # To ensure backward compatibility
+                # with older versions of cameras
+                image_data = data['image']
+            else:
+                raise RuntimeError("data does not contain any image")
+
+            ts = Timestamp.fromHashAttributes(
+                metaData.getAttributes('timestamp'))
+
+            if first_image:
+                # Update schema
+                self.updateOutputSchema(image_data)
+
+            self.process_image(image_data, ts)  # Process image
+
+        except Exception as e:
+            msg = "Exception caught in onData: {}".format(e)
+            self.update_alarm(error=True, msg=msg)
             return
 
-        ts = Timestamp.fromHashAttributes(
-            metaData.getAttributes('timestamp'))
-        pixels = inputImage.getData()
-        bpp = inputImage.getBitsPerPixel()
-        encoding = inputImage.getEncoding()
-
-        dType = str(pixels.dtype)
-        if firstImage:
-            # Update schema
-            self.updateOutputSchema(inputImage)
-
-        # Compute latency
-        header = inputImage.getHeader()
-        if header.has('creationTime'):
-            self['latency'] = time.time() - header['creationTime']
-
-        # Compute average
-        nImages = self['nImages']
-        runningAverage = self['runningAverage']
-        if nImages == 1:
-            # No averaging needed
-            self.writeImageToOutputs(inputImage, ts)
-            self.refreshFrameRateOut()
-
-        elif runningAverage:
-            if self['runningAvgMethod'] == 'ExactRunningAverage':
-                self.imageRunningMean.append(pixels, nImages)
-                pixels = self.imageRunningMean.runningMean.astype(dType)
-            elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
-                self.imageExpRunningMean.append(pixels, nImages)
-                pixels = self.imageExpRunningMean.mean.astype(dType)
-
-            imageData = ImageData(pixels, bitsPerPixel=bpp,
-                                  encoding=encoding)
-            self.writeImageToOutputs(imageData, ts)
-            self.refreshFrameRateOut()
-        else:
-            self.imageStandardMean.append(pixels)
-            if self.imageStandardMean.size >= nImages:
-                pixels = self.imageStandardMean.mean.astype(dType)
-                imageData = ImageData(pixels, bitsPerPixel=bpp,
-                                      encoding=encoding)
-
-                self.writeImageToOutputs(imageData, ts)
-                self.refreshFrameRateOut()
-
-                self.imageStandardMean.clear()
-
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream")
-        self.resetAverage()
-        self.updateState(State.ON)
+        self.log.INFO("onEndOfStream called")
+        self['inFrameRate'] = 0.
+        self['outFrameRate'] = 0.
+        # Signals end of stream
         self.signalEndOfStreams()
+        self.updateState(State.ON)
+        self['status'] = 'ON'
+
+    def refresh_frame_rate_out(self):
+        self.frame_rate_out.update()
+        fps_out = self.frame_rate_out.refresh()
+        if fps_out:
+            self['outFrameRate'] = fps_out
+            self.log.DEBUG("Output rate {} Hz".format(fps_out))
+
+    def process_image(self, input_image, ts):
+        try:
+            pixels = input_image.getData()
+            bpp = input_image.getBitsPerPixel()
+            encoding = input_image.getEncoding()
+
+            d_type = str(pixels.dtype)
+
+            # Compute average
+            n_images = self['nImages']
+            running_average = self['runningAverage']
+            if n_images == 1:
+                # No averaging needed
+                self.writeImageToOutputs(input_image, ts)
+                self.update_alarm()  # Success
+                self.refresh_frame_rate_out()
+                return
+
+            elif running_average:
+                if self['runningAvgMethod'] == 'ExactRunningAverage':
+                    self.image_running_mean.append(pixels, n_images)
+                    pixels = self.image_running_mean.runningMean.astype(d_type)
+                elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
+                    self.image_exp_running_mean.append(pixels, n_images)
+                    pixels = self.image_exp_running_mean.mean.astype(d_type)
+                image_data = ImageData(pixels, bitsPerPixel=bpp,
+                                       encoding=encoding)
+
+                self.writeImageToOutputs(image_data, ts)
+                self.update_alarm()  # Success
+                self.refresh_frame_rate_out()
+                return
+
+            else:
+                self.image_standard_mean.append(pixels)
+                if self.image_standard_mean.size >= n_images:
+                    pixels = self.image_standard_mean.mean.astype(d_type)
+                    image_data = ImageData(pixels, bitsPerPixel=bpp,
+                                           encoding=encoding)
+
+                    self.writeImageToOutputs(image_data, ts)
+                    self.update_alarm()  # Success
+                    self.refresh_frame_rate_out()
+
+                    self.image_standard_mean.clear()
+                    return
+
+        except Exception as e:
+            msg = "Exception caught in process_image: {}".format(e)
+            self.update_alarm(error=True, msg=msg)
+
+    ##############################################
+    #   Implementation of Slots                  #
+    ##############################################
 
     def resetAverage(self):
         self.log.INFO('Reset image average and fps')
-        self.imageRunningMean.clear()
-        self.imageExpRunningMean.clear()
-        self.imageStandardMean.clear()
+        self.image_running_mean.clear()
+        self.image_exp_running_mean.clear()
+        self.image_standard_mean.clear()
         self['inFrameRate'] = 0
         self['outFrameRate'] = 0
-
-    def refreshFrameRateIn(self):
-        self.frame_rate_in.update()
-        fpsIn = self.frame_rate_in.refresh()
-        if fpsIn:
-            self['inFrameRate'] = fpsIn
-            self.log.DEBUG('Input rate %f Hz' % fpsIn)
-
-    def refreshFrameRateOut(self):
-        self.frame_rate_out.update()
-        fpsOut = self.frame_rate_out.refresh()
-        if fpsOut:
-            self['outFrameRate'] = fpsOut
-            self.log.DEBUG('Output rate %f Hz' % fpsOut)
