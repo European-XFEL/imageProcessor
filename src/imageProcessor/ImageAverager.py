@@ -168,7 +168,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                          'running average.')
             .options("ExactRunningAverage,ExponentialRunningAverage")
             .assignmentOptional()
-            .defaultValue('ExactRunningAverage')
+            .defaultValue('ExponentialRunningAverage')
             .reconfigurable()
             .commit(),
 
