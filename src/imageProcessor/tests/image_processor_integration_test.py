@@ -90,11 +90,11 @@ class TestImageProcessor(BoundDeviceTestCase):
                 sleep(SLEEP_TIME)
 
             state1 = config1['state']
-            fps = config1['frameRate']
+            fps = config1['inFrameRate']
             t1 = time()
             while state1 != State.ACTIVE.name and not fps > 0.:
                 state1 = config1['state']
-                fps = config1['frameRate']
+                fps = config1['inFrameRate']
                 if time() - t1 > 1.5:
                     # fps is refreshed every 1 s, thus timeout must be larger.
                     raise TimeoutError("Waiting for processor to be active "
@@ -113,11 +113,11 @@ class TestImageProcessor(BoundDeviceTestCase):
                 sleep(SLEEP_TIME)
 
             state1 = config1['state']
-            fps = config1['frameRate']
+            fps = config1['inFrameRate']
             t1 = time()
             while state1 != State.ON.name and not fps == 0.:
                 state1 = config1['state']
-                fps = config1['frameRate']
+                fps = config1['inFrameRate']
                 if time() - t1 > self._waitTime:
                     raise TimeoutError("Waiting for processor to be ON "
                                        "timed out")
