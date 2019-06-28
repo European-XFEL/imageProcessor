@@ -245,7 +245,7 @@ class ImageProcessor(ImageProcessorBase):
             .description("The automatic range for 'auto' mode (in "
                          "standard deviations).")
             .assignmentOptional().defaultValue(3.0)
-            .minInc(0.)
+            .minExc(0.)
             .reconfigurable()
             .commit(),
 
@@ -787,9 +787,28 @@ class ImageProcessor(ImageProcessorBase):
 
         self.registerInitialFunction(self.initialization)
 
+        udr = self["userDefinedRange"]
+        if not self.is_user_range_valid(udr):
+            msg = (f"Invalid user defined range {udr}: please verify saved "
+                   f"configuration")
+            self.log.ERROR(msg)
+            raise ValueError(msg)
+
     def initialization(self):
         """ This method will be called after the constructor. """
         self.reset()
+
+    def preReconfigure(self, incomingReconfiguration):
+        if incomingReconfiguration.has("userDefinedRange"):
+            udr = incomingReconfiguration["userDefinedRange"]
+            if not self.is_user_range_valid(udr):
+                del incomingReconfiguration["userDefinedRange"]
+                msg = f"Invalid user defined range {udr} has been discarded."
+                self.log.WARN(msg)
+                self["status"] = msg
+
+    def is_user_range_valid(self, rng):
+        return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
 
     def useAsBackgroundImage(self):
         self.log.INFO("Use current image as background.")
