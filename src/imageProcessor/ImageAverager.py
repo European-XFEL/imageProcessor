@@ -134,7 +134,7 @@ class ImageStandardMean:
             return self.__mean.shape
 
 
-@KARABO_CLASSINFO('ImageAverager', '2.4')
+@KARABO_CLASSINFO('ImageAverager', '2.5')
 class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

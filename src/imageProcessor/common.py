@@ -1,28 +1,13 @@
 from queue import Queue
 
 from karabo.bound import (
-    DaqDataType, Hash, ImageData, IMAGEDATA_ELEMENT, NODE_ELEMENT,
-    NDARRAY_ELEMENT, NoFsm, OUTPUT_CHANNEL, Schema, Types
+    DaqDataType, Hash, ImageData, IMAGEDATA_ELEMENT, NODE_ELEMENT, NoFsm,
+    OUTPUT_CHANNEL, Schema, Types
 )
 
 from karabo.middlelayer import (
     AccessLevel, AccessMode, Configurable, Double, UInt32, Unit
 )
-
-DTYPE_TO_KTYPE = {
-    'uint8': Types.UINT8,
-    'int8': Types.INT8,
-    'uint16': Types.UINT16,
-    'int16': Types.INT16,
-    'uint32': Types.UINT32,
-    'int32': Types.INT32,
-    'uint64': Types.UINT64,
-    'int64': Types.INT64,
-    'float32': Types.FLOAT,
-    'float64': Types.DOUBLE,
-    'float': Types.DOUBLE,
-    'double': Types.DOUBLE,
-}
 
 
 class ErrorNode(Configurable):
@@ -151,7 +136,7 @@ class ImageProcOutputInterface(NoFsm):
         if isinstance(imageData, ImageData):
             pixels = imageData.getData()  # np.ndarray
             shape = pixels.shape
-            kType = DTYPE_TO_KTYPE[pixels.dtype.name]
+            kType = imageData.getType()
         else:
             raise RuntimeError("Trying to update schema with invalid "
                                "imageData")
@@ -207,21 +192,9 @@ class ImageProcOutputInterface(NoFsm):
 
             IMAGEDATA_ELEMENT(outputData).key("data.image")
             .displayedName("Image")
-            .setDimensions(str(shape).strip("()"))
+            .setDimensions(list(shape))
+            .setType(Types.values[self.kType])
             .commit(),
-
-            # Set (overwrite) shape and dtype for internal NDArray element -
-            NDARRAY_ELEMENT(outputData).key("data.image.pixels")
-            .shape(list(shape))
-            .dtype(self.kType)
-            .commit(),
-
-            # Set "maxSize" for vector properties
-            outputData.setMaxSize("data.image.dims", len(shape)),
-            outputData.setMaxSize("data.image.dimTypes", len(shape)),
-            outputData.setMaxSize("data.image.roiOffsets", len(shape)),
-            outputData.setMaxSize("data.image.binning", len(shape)),
-            outputData.setMaxSize("data.image.pixels.shape", len(shape)),
 
             OUTPUT_CHANNEL(schema).key(outputNodeKey)
             .displayedName(outputNodeName)

@@ -18,7 +18,7 @@ except ImportError:
     from imageProcessor.common import ErrorCounter
 
 
-@KARABO_CLASSINFO("ImageProcessorBase", "2.4")
+@KARABO_CLASSINFO("ImageProcessorBase", "2.5")
 class ImageProcessorBase(PythonDevice):
 
     # TODO: move in this class the onData registration and boilerplate code
