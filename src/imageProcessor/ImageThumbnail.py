@@ -19,7 +19,7 @@ except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImageThumbnail", "2.4")
+@KARABO_CLASSINFO("ImageThumbnail", "2.5")
 class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod
