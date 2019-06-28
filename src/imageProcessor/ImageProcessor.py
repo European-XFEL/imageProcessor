@@ -1173,10 +1173,9 @@ class ImageProcessor(ImageProcessorBase):
                     y_max = np.minimum(user_defined_range[3], image_height)
                     # TODO check that x_min<x_max and y_min<y_max
                 else:  # "auto"
-                    x_min = np.maximum(int(x0 - sigmas * sx), 0)
-                    x_max = np.minimum(int(x0 + sigmas * sx), image_width)
-                    y_min = np.maximum(int(y0 - sigmas * sy), 0)
-                    y_max = np.minimum(int(y0 + sigmas * sy), image_height)
+                    x_min, x_max, y_min, y_max = self.auto_fit_range(
+                        x0, y0, sx, sy, sigmas, image_width, image_height)
+
 
             except Exception as e:
                 msg = f"Exception caught whilst calculating CoM: {e}"
@@ -1719,3 +1718,31 @@ class ImageProcessor(ImageProcessorBase):
             # Restore configuration
             self.log.DEBUG(f"output.hostname: {output_hostname}")
             self.set("output.hostname", output_hostname)
+
+    @staticmethod
+    def auto_fit_range(x0, y0, sx, sy, sigmas, image_width, image_height,
+                       min_range=10):
+
+        def increase_range(low_val, high_val, maximum_val, target_range):
+            missing = target_range - (high_val - low_val)
+            if missing > 0:
+                low_val = np.maximum(0, low_val - missing // 2)
+                missing = target_range - (high_val - low_val)
+                high_val = np.minimum(maximum_val, high_val + missing)
+                missing = target_range - (high_val - low_val)
+                if missing > 0:
+                    low_val = np.maximum(0, low_val - missing)
+            return low_val, high_val
+
+        x_min = np.maximum(int(x0 - sigmas * sx), 0)
+        x_max = np.minimum(int(x0 + sigmas * sx), image_width)
+        y_min = np.maximum(int(y0 - sigmas * sy), 0)
+        y_max = np.minimum(int(y0 + sigmas * sy), image_height)
+
+        # ensure that auto range contains at least min_range pixels
+        x_min, x_max = increase_range(x_min, x_max, image_width, min_range)
+        y_min, y_max = increase_range(y_min, y_max, image_height, min_range)
+
+        return x_min, x_max, y_min, y_max
+
+
