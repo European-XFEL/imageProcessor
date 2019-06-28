@@ -25,7 +25,7 @@ except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImagePicker", "2.4")
+@KARABO_CLASSINFO("ImagePicker", "2.5")
 class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
     """
     This device has two input channels (inputImage and inputTrainid).

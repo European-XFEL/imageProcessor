@@ -29,7 +29,7 @@ def find_peaks(img_x, zero_point):
     return value_1, pos_1, fwhm_1, value_2, pos_2, fwhm_2
 
 
-@KARABO_CLASSINFO("TwoPeakFinder", "2.4")
+@KARABO_CLASSINFO("TwoPeakFinder", "2.5")
 class TwoPeakFinder(ImageProcessorBase):
 
     def __init__(self, configuration):

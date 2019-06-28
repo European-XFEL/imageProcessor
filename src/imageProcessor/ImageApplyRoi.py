@@ -17,7 +17,7 @@ except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImageApplyRoi", "2.4")
+@KARABO_CLASSINFO("ImageApplyRoi", "2.5")
 class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

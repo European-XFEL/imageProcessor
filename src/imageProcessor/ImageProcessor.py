@@ -42,7 +42,7 @@ class Average():
         return self.counter
 
 
-@KARABO_CLASSINFO("ImageProcessor", "2.4")
+@KARABO_CLASSINFO("ImageProcessor", "2.5")
 class ImageProcessor(ImageProcessorBase):
     # Numerical factor to convert gaussian standard deviation to beam size
     std_dev_2_beam_size = 4.0
