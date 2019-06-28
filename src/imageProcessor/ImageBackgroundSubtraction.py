@@ -23,7 +23,7 @@ except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImageBackgroundSubtraction", "2.4")
+@KARABO_CLASSINFO("ImageBackgroundSubtraction", "2.5")
 class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod
