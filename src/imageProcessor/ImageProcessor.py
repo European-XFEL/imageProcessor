@@ -1253,7 +1253,7 @@ class ImageProcessor(ImageProcessorBase):
                     else:
                         # No initial parameters
                         p0 = None
-                        # TODO "p0 = self.evalStartingPoint(data)" may be used
+                        # TODO "p0 = self.eval_starting_point(data)" may be used
                         # as well, once it's well tested
                 else:
                     raise RuntimeError("unexpected gauss1dStartValues option")
@@ -1290,7 +1290,7 @@ class ImageProcessor(ImageProcessorBase):
                     # Initial parameters
                     if gauss1d_start_values == "raw_peak":
                         # evaluate peak parameters w/o fit
-                        p0 = self.evalStartingPoint(data)
+                        p0 = self.eval_starting_point(data)
                     elif gauss1d_start_values == "last_fit_result":
                         if None not in (self.ay1d, self.y01d, self.sy1d):
                             # Use last fit's parameters as initial estimate
@@ -1301,7 +1301,7 @@ class ImageProcessor(ImageProcessorBase):
                         else:
                             # No initial parameters
                             p0 = None
-                            # TODO may use "p0 = self.evalStartingPoint(data)"
+                            # TODO may use "p0 = self.eval_starting_point(data)"
                             # as well, once it's well tested
 
                     else:
