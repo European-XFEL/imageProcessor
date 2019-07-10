@@ -10,7 +10,7 @@ import time
 
 from karabo.bound import (
     BOOL_ELEMENT, DaqDataType, Dims, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
-    INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix, NODE_ELEMENT,
+    ImageData, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix, NODE_ELEMENT,
     OUTPUT_CHANNEL, Schema, SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp,
     Unit, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT
 )
@@ -889,7 +889,7 @@ class ImageProcessor(ImageProcessorBase):
                 # Convert to ImageData
                 data = np.asarray(image_data)
                 dims = Dims(len(image_data))
-                image_data = image_data(data, dims)
+                image_data = ImageData(data, dims)
 
             if first_image:
                 # Update warning levels
