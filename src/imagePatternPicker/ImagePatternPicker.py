@@ -158,81 +158,92 @@ class ImagePatternPicker(PythonDevice):
                     device_id = connected_chan.split(":")[0]
                     self.connections[device_id] = {}
                     connected_pipe = connected_chan.split(":")[1]
-                    self.connections[device_id]["in_pipeline"] = connected_pipe
-                    self.connections[device_id]["out_image"] = output_image
+                    self.connections[device_id]["input_pipeline"] = connected_pipe
+                    self.connections[device_id]["output_image"] = output_image
+                    self.connections[device_id]["channel_node"] = chan
                     if device_id:
-                        print(self.connections)
                         self.device_client.registerSchemaUpdatedMonitor(
                             self.on_camera_schema_update)
-#                        self.device_client.getDeviceSchemaNoWait(device_id)
+                        self.device_client.getDeviceSchemaNoWait(device_id)
             except Exception as e:
-                print(e)
+                print("ERROR EXCEPTION: ", e)
             #(KeyError, RuntimeError):
             #    pass
 
     def onData(self, data, metaData):
+        # find channel
+        dev = metaData["source"].split(":")[0]
+        channel = [self.connections[key]["channel_node"]
+                   for key in self.connections.keys() if
+                   dev == key][0]
+        channel_idx = int(channel.split("_")[1])
         if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
             self.updateState(State.PROCESSING)
 
-        self.refresh_frame_rate_in()
+        self.refresh_frame_rate_in(channel_idx)
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
         train_id = ts.getTrainId()
-        if (train_id % self['nBunchPatterns']) == self['patternOffset']:
-            data['data.trainId'] = train_id
-            self.writeChannel('output', data, ts)
-            self.refresh_frame_rate_out()
+        if ((train_id % self['{}.nBunchPatterns'.format(channel)]) ==
+            self['{}.patternOffset'.format(channel)]):
+            data['{}.data.trainId'.format(channel)] = train_id
+            self.writeChannel('{}.output'.format(), data, ts)
+            self.refresh_frame_rate_out(channel_idx)
 
     def onEndOfStream(self, inputChannel):
+        dev = list(inputChannel.getConnectedOutputChannels().keys())[0].split(":")[0]
+        channel = [self.connections[key]["channel_node"]
+                   for key in self.connections.keys() if
+                   dev == key][0]
         self.log.INFO("onEndOfStream called")
-        self['inFrameRate'] = 0.
-        self['outFrameRate'] = 0.
+        self['{}.inFrameRate'.format(channel)] = 0.
+        self['{}.outFrameRate'.format(channel)] = 0.
         # Signals end of stream
-        self.signalEndOfStream("output")
+        self.signalEndOfStream("{}.output".format(channel))
         self.updateState(State.ON)
 
-    def refresh_frame_rate_in(self):
-        self.frame_rate_in.update()
-        fps_in = self.frame_rate_in.refresh()
+    def refresh_frame_rate_in(self, channel_idx):
+        frame_rate = self.frame_rate_in[channel_idx]
+        frame_rate.update()
+        fps_in = frame_rate.refresh()
         if fps_in:
-            self['inFrameRate'] = fps_in
-            self.log.DEBUG("Input rate {} Hz".format(fps_in))
+            self['chan_{}.inFrameRate'.format(channel_idx)] = fps_in
+            self.log.DEBUG("Channel {}: Input rate {} Hz"
+                           .format(channel_idx, fps_in))
 
-    def refresh_frame_rate_out(self):
-        self.frame_rate_out.update()
-        fps_out = self.frame_rate_out.refresh()
+    def refresh_frame_rate_out(self, channel_idx):
+        frame_rate = self.frame_rate_in[channel_idx]
+        frame_rate.update()
+        fps_out = frame_rate.refresh()
         if fps_out:
-            self['outFrameRate'] = fps_out
-            self.log.DEBUG("Output rate {} Hz".format(fps_out))
+            self['chan_{}.outFrameRate'.format(channel_idx)] = fps_out
+            self.log.DEBUG("Channel {}: Output rate {} Hz".
+                           format(channel_idx, fps_out))
 
     def on_camera_schema_update(self, deviceId, schema):
-        print("SCHEMA; ", schema, deviceId, self.connestions)
-        """
         # Look for 'image' in camera's schema
-        output = self.connestions[deviceId]["in_pipeline"]
-        path = self.connestions[deviceId]["out_image"]
-        print(output, path)
-        path = f'{output}.schema.data.image'
+        channel = self.connections[deviceId]["channel_node"]
+        output = self.connections[deviceId]["input_pipeline"]
+        path = self.connections[deviceId]["output_image"]
         if schema.has(path):
             sub = schema.subSchema(path)
             shape = sub.getDefaultValue('dims')
             k_type = sub.getDefaultValue('pixels.type')
-            print(sub, shape, k_type)
-            self.update_output_schema(shape, k_type)
-        """
-    def update_output_schema(self, shape, k_type):
-        """
+            self.update_output_schema(channel, shape, k_type)
+
+    def update_output_schema(self, channel, shape, k_type):
         # Get device configuration before schema update
         try:
-            outputHostname = self["output.hostname"]
+            outputHostname = self["{}.output.hostname".format(channel)]
         except AttributeError as e:
             # Configuration does not contain "output.hostname"
             outputHostname = None
 
         newSchema = Schema()
         dataSchema = Schema()
+
         (
             NODE_ELEMENT(dataSchema).key("data")
             .displayedName("Data")
@@ -258,14 +269,15 @@ class ImagePatternPicker(PythonDevice):
             dataSchema.setMaxSize("data.image.binning", len(shape)),
             dataSchema.setMaxSize("data.image.pixels.shape", len(shape)),
 
-            OUTPUT_CHANNEL(newSchema).key("output")
+            OUTPUT_CHANNEL(newSchema)
+            .key("{}.output".format(channel))
             .displayedName("Output")
             .dataSchema(dataSchema)
             .commit(),
         )
         self.updateSchema(newSchema)
+
         if outputHostname:
             # Restore configuration
-            self.log.DEBUG(f"output.hostname: {outputHostname}")
-            self.set("output.hostname", outputHostname)
-        """
+            self.log.DEBUG("{}.output.hostname: {}".format(channel, outputHostname))
+            self.set("{}.output.hostname".format(channel), outputHostname)
