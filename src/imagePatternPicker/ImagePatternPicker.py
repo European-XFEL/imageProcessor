@@ -214,7 +214,7 @@ class ImagePatternPicker(PythonDevice):
                            .format(channel_idx, fps_in))
 
     def refresh_frame_rate_out(self, channel_idx):
-        frame_rate = self.frame_rate_in[channel_idx]
+        frame_rate = self.frame_rate_out[channel_idx]
         frame_rate.update()
         fps_out = frame_rate.refresh()
         if fps_out:
