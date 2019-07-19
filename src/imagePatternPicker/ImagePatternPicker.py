@@ -189,7 +189,7 @@ class ImagePatternPicker(PythonDevice):
         if ((train_id % self['{}.nBunchPatterns'.format(channel)]) ==
             self['{}.patternOffset'.format(channel)]):
             data['{}.data.trainId'.format(channel)] = train_id
-            self.writeChannel('{}.output'.format(), data, ts)
+            self.writeChannel('{}.output'.format(channel), data, ts)
             self.refresh_frame_rate_out(channel_idx)
 
     def onEndOfStream(self, inputChannel):
