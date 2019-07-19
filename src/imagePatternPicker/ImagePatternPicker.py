@@ -13,87 +13,115 @@ from karabo.bound import (
 
 from processing_utils.rate_calculator import RateCalculator
 
+NR_OF_CHANNELS = 2
+
 
 @KARABO_CLASSINFO("ImagePatternPicker", "2.0")
 class ImagePatternPicker(PythonDevice):
 
     @staticmethod
     def expectedParameters(expected):
-        data_in = Schema()
-        data_out = Schema()
+        data_in = []
+        data_out = []
+
         (
             OVERWRITE_ELEMENT(expected).key('state')
             .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
             .setNewDefaultValue(State.ON)
-            .commit(),
-
-            UINT32_ELEMENT(expected).key("nBunchPatterns")
-            .displayedName("# Bunch Patterns")
-            .description("Number of bunch patterns.")
-            .assignmentOptional().defaultValue(2)
-            .minInc(1)
-            .reconfigurable()
-            .commit(),
-
-            UINT32_ELEMENT(expected).key("patternOffset")
-            .displayedName("Pattern Offset")
-            .description("Image will be forwarded to the output if its "
-                         "trainId satisfies the following relation: "
-                         "(trainId%nBunchPatterns) ==  patternOffset.")
-            .assignmentOptional().defaultValue(1)
-            .reconfigurable()
-            .commit(),
-
-            DOUBLE_ELEMENT(expected).key('inFrameRate')
-            .displayedName('Input Frame Rate')
-            .description('The input frame rate.')
-            .unit(Unit.HERTZ)
-            .readOnly()
-            .commit(),
-
-            DOUBLE_ELEMENT(expected).key('outFrameRate')
-            .displayedName('Output Frame Rate')
-            .description('The output frame rate.')
-            .unit(Unit.HERTZ)
-            .readOnly()
-            .commit(),
-
-            NODE_ELEMENT(data_in).key('data')
-            .displayedName("Data")
-            .setDaqDataType(DaqDataType.TRAIN)
-            .commit(),
-
-            IMAGEDATA_ELEMENT(data_in).key('data.image')
-            .commit(),
-
-            INPUT_CHANNEL(expected).key('input')
-            .displayedName("Input")
-            .dataSchema(data_in)
-            .commit(),
-
-            # Images should be dropped if processor is too slow
-            OVERWRITE_ELEMENT(expected).key('input.onSlowness')
-            .setNewDefaultValue("drop")
-            .commit(),
-
-            NODE_ELEMENT(data_out).key('data')
-            .displayedName("Data")
-            .commit(),
-
-            IMAGEDATA_ELEMENT(data_out).key('data.image')
-            .commit(),
-
-            UINT64_ELEMENT(data_out).key('data.trainId')
-            .displayedName('Train ID')
-            .readOnly()
-            .commit(),
-
-            OUTPUT_CHANNEL(expected).key("output")
-            .displayedName("Output")
-            .dataSchema(data_out)
-            .commit(),
+            .commit()
         )
 
+        for idx in range(NR_OF_CHANNELS):
+
+            data_in.append(Schema())
+            data_out.append(Schema())
+
+            (
+                NODE_ELEMENT(expected)
+                .key('chan_{}'.format(idx))
+                .displayedName("Channel {}".format(idx))
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+                UINT32_ELEMENT(expected)
+                .key("chan_{}.nBunchPatterns".format(idx))
+                .displayedName("# Bunch Patterns")
+                .description("Number of bunch patterns.")
+                .assignmentOptional().defaultValue(2)
+                .minInc(1)
+                .reconfigurable()
+                .commit(),
+
+                UINT32_ELEMENT(expected)
+                .key("chan_{}.patternOffset".format(idx))
+                .displayedName("Pattern Offset")
+                .description("Image will be forwarded to the output if its "
+                             "trainId satisfies the following relation: "
+                             "(trainId%nBunchPatterns) ==  patternOffset.")
+                .assignmentOptional().defaultValue(1)
+                .reconfigurable()
+                .commit(),
+
+                DOUBLE_ELEMENT(expected)
+                .key('chan_{}.inFrameRate'.format(idx))
+                .displayedName('Input Frame Rate')
+                .description('The input frame rate.')
+                .unit(Unit.HERTZ)
+                .readOnly()
+                .commit(),
+
+                DOUBLE_ELEMENT(expected)
+                .key('chan_{}.outFrameRate'.format(idx))
+                .displayedName('Output Frame Rate')
+                .description('The output frame rate.')
+                .unit(Unit.HERTZ)
+                .readOnly()
+                .commit(),
+
+                NODE_ELEMENT(data_in[-1])
+                .key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+                IMAGEDATA_ELEMENT(data_in[-1])
+                .key("data.image")
+                .commit(),
+
+                INPUT_CHANNEL(expected)
+                .key("chan_{}.input".format(idx))
+                .displayedName("Input")
+                .dataSchema(data_in[-1])
+                .commit(),
+
+                # Images should be dropped if processor is too slow
+                OVERWRITE_ELEMENT(expected)
+                .key('chan_{}.input.onSlowness'.format(idx))
+                .setNewDefaultValue("drop")
+                .commit(),
+
+                NODE_ELEMENT(data_out[-1])
+                .key('data')
+                .displayedName("Data")
+                .commit(),
+
+                IMAGEDATA_ELEMENT(data_out[-1])
+                .key('data.image')
+                .commit(),
+
+                UINT64_ELEMENT(data_out[-1])
+                .key('data.trainId')
+                .displayedName('Train ID')
+                .readOnly()
+                .commit(),
+
+                OUTPUT_CHANNEL(expected)
+                .key("chan_{}.output".format(idx))
+                .displayedName("Output")
+                .dataSchema(data_out[-1])
+                .commit(),
+            )
+        
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
         super(ImagePatternPicker, self).__init__(configuration)
@@ -105,20 +133,42 @@ class ImagePatternPicker(PythonDevice):
         self.registerInitialFunction(self.initialization)
 
     def initialization(self):
-        # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
+        self.frame_rate_in = []
+        self.frame_rate_out = []
+        self.connections = {}
+        for idx in range(NR_OF_CHANNELS):
+            chan = "chan_{}".format(idx)
+            # Register call-backs
+            self.KARABO_ON_DATA("{}.input".format(chan), self.onData)
+            self.KARABO_ON_EOS("{}.input".format(chan), self.onEndOfStream)
 
-        # Variables for frames per second computation
-        self.frame_rate_in = RateCalculator(refresh_interval=1.0)
-        self.frame_rate_out = RateCalculator(refresh_interval=1.0)
+            # Variables for frames per second computation
+            self.frame_rate_in.append(RateCalculator(refresh_interval=1.0))
+            self.frame_rate_out.append(RateCalculator(refresh_interval=1.0))
 
         self.device_client.getDevices()  # Somehow needed to connect
-        device_id = self['input.connectedOutputChannels'][0].split(":")[0]
-        if device_id:
-            self.device_client.registerSchemaUpdatedMonitor(
-                self.on_camera_schema_update)
-            self.device_client.getDeviceSchemaNoWait(device_id)
+        for idx in range(NR_OF_CHANNELS):
+            chan = "chan_{}".format(idx)
+            input_chan = '{}.input.connectedOutputChannels'.format(chan)
+            output_image = '{}.output.schema.data.image'.format(chan)
+            try:
+                inputs = self[input_chan]
+                if inputs:
+                    connected_chan = inputs[0]
+                    device_id = connected_chan.split(":")[0]
+                    self.connections[device_id] = {}
+                    connected_pipe = connected_chan.split(":")[1]
+                    self.connections[device_id]["in_pipeline"] = connected_pipe
+                    self.connections[device_id]["out_image"] = output_image
+                    if device_id:
+                        print(self.connections)
+                        self.device_client.registerSchemaUpdatedMonitor(
+                            self.on_camera_schema_update)
+#                        self.device_client.getDeviceSchemaNoWait(device_id)
+            except Exception as e:
+                print(e)
+            #(KeyError, RuntimeError):
+            #    pass
 
     def onData(self, data, metaData):
         if self['state'] == State.ON:
@@ -158,17 +208,22 @@ class ImagePatternPicker(PythonDevice):
             self.log.DEBUG("Output rate {} Hz".format(fps_out))
 
     def on_camera_schema_update(self, deviceId, schema):
+        print("SCHEMA; ", schema, deviceId, self.connestions)
+        """
         # Look for 'image' in camera's schema
-        output = self['input.connectedOutputChannels'][0].split(":")[1]
+        output = self.connestions[deviceId]["in_pipeline"]
+        path = self.connestions[deviceId]["out_image"]
+        print(output, path)
         path = f'{output}.schema.data.image'
         if schema.has(path):
             sub = schema.subSchema(path)
             shape = sub.getDefaultValue('dims')
             k_type = sub.getDefaultValue('pixels.type')
-
+            print(sub, shape, k_type)
             self.update_output_schema(shape, k_type)
-
+        """
     def update_output_schema(self, shape, k_type):
+        """
         # Get device configuration before schema update
         try:
             outputHostname = self["output.hostname"]
@@ -213,3 +268,4 @@ class ImagePatternPicker(PythonDevice):
             # Restore configuration
             self.log.DEBUG(f"output.hostname: {outputHostname}")
             self.set("output.hostname", outputHostname)
+        """
