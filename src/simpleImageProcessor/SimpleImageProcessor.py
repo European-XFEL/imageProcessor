@@ -139,6 +139,29 @@ class SimpleImageProcessor(PythonDevice):
                 .init()
                 .commit(),
 
+            FLOAT_ELEMENT(expected).key("absThreshold")
+                .displayedName("Pixel Absolute threshold")
+                .description("Pixels below this threshold will not be "
+                             "used for the centre-of-mass calculation. "
+                             "If greater than 0, the relative threshold "
+                             "will not be used.")
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0)
+                .reconfigurable()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("threshold")
+                .displayedName("Pixel Relative threshold")
+                .description("Pixels below this relative threshold "
+                             "(fraction of the highest value) will not be "
+                             "used for the centre-of-mass calculation. "
+                             "It will only be applied if no absolute "
+                             "threshold is set.")
+                .assignmentOptional().defaultValue(0.0)
+                .minInc(0.0).maxInc(1.0)
+                .reconfigurable()
+                .commit(),
+
             # Image processing outputs
 
             BOOL_ELEMENT(expected).key("success")
@@ -320,6 +343,8 @@ class SimpleImageProcessor(PythonDevice):
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
+        abs_thr = self.get("absThreshold")
+        thr = self.get("threshold")
 
         h = Hash()  # Empty hash
         # default is no success in processing
@@ -406,12 +431,27 @@ class SimpleImageProcessor(PythonDevice):
 
             self.log.DEBUG("Image pedestal subtraction: done!")
 
+        # ---------------------
+        # Remove Noise
+
+        if abs_thr > 0.0:
+            img2 = image_processing. \
+                imageSetThreshold(img, min(abs_thr, img.max()),
+                                  copy=True)
+
+        elif thr > 0.0:
+            img2 = image_processing. \
+                imageSetThreshold(img, thr * img.max(), copy=True)
+
+        else:
+            img2 = img
+
         # ------------------------------------------------
         # 1-D Gaussian Fits
 
         # ------------------------------------------------
         # X Fitting
-        imgX = image_processing.imageSumAlongY(img)
+        imgX = image_processing.imageSumAlongY(img2)
 
         # Initial parameters
         p0 = image_processing.peakParametersEval(imgX)
@@ -429,7 +469,7 @@ class SimpleImageProcessor(PythonDevice):
 
         # ------------------------------------------------
         # Y Fitting
-        imgY = image_processing.imageSumAlongX(img)
+        imgY = image_processing.imageSumAlongX(img2)
 
         # Initial parameters
         p0 = image_processing.peakParametersEval(imgY)
