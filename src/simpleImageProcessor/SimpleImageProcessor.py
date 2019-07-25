@@ -150,7 +150,7 @@ class SimpleImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("threshold")
+            FLOAT_ELEMENT(expected).key("relThreshold")
                 .displayedName("Pixel Relative threshold")
                 .description("Pixels below this relative threshold "
                              "(fraction of the highest value) will not be "
@@ -344,7 +344,7 @@ class SimpleImageProcessor(PythonDevice):
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
         abs_thr = self.get("absThreshold")
-        thr = self.get("threshold")
+        rel_thr = self.get("relThreshold")
 
         h = Hash()  # Empty hash
         # default is no success in processing
@@ -439,9 +439,9 @@ class SimpleImageProcessor(PythonDevice):
                 imageSetThreshold(img, min(abs_thr, img.max()),
                                   copy=True)
 
-        elif thr > 0.0:
+        elif rel_thr > 0.0:
             img2 = image_processing. \
-                imageSetThreshold(img, thr * img.max(), copy=True)
+                imageSetThreshold(img, rel_thr * img.max(), copy=True)
 
         else:
             img2 = img
