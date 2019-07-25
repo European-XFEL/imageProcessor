@@ -139,12 +139,21 @@ class SimpleImageProcessor(PythonDevice):
                 .init()
                 .commit(),
 
+            STRING_ELEMENT(expected).key("thresholdType")
+                .displayedName("Threshold type")
+                .description("Defines whether an absolute or relative "
+                             "thresholding is used in the calculations.")
+                .assignmentOptional().defaultValue("None")
+                .options("None Absolute Relative")
+                .reconfigurable()
+                .commit(),
+
             FLOAT_ELEMENT(expected).key("absThreshold")
                 .displayedName("Pixel Absolute threshold")
                 .description("Pixels below this threshold will not be "
                              "used for the centre-of-mass calculation. "
-                             "If greater than 0, the relative threshold "
-                             "will not be used.")
+                             "It will be applied if threshold type is set to "
+                             "Absolute.")
                 .assignmentOptional().defaultValue(0.0)
                 .minInc(0.0)
                 .reconfigurable()
@@ -155,9 +164,9 @@ class SimpleImageProcessor(PythonDevice):
                 .description("Pixels below this relative threshold "
                              "(fraction of the highest value) will not be "
                              "used for the centre-of-mass calculation. "
-                             "It will only be applied if no absolute "
-                             "threshold is set.")
-                .assignmentOptional().defaultValue(0.0)
+                             "It will be applied if threshold type is set to "
+                             "Relative.")
+                .assignmentOptional().defaultValue(0.1)
                 .minInc(0.0).maxInc(1.0)
                 .reconfigurable()
                 .commit(),
@@ -343,6 +352,7 @@ class SimpleImageProcessor(PythonDevice):
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
+        thr_type = self.get("thresholdType")
         abs_thr = self.get("absThreshold")
         rel_thr = self.get("relThreshold")
 
@@ -434,12 +444,12 @@ class SimpleImageProcessor(PythonDevice):
         # ---------------------
         # Remove Noise
 
-        if abs_thr > 0.0:
+        if thr_type == "Absolute":
             img2 = image_processing. \
                 imageSetThreshold(img, min(abs_thr, img.max()),
                                   copy=True)
 
-        elif rel_thr > 0.0:
+        elif thr_type == "Relative":
             img2 = image_processing. \
                 imageSetThreshold(img, rel_thr * img.max(), copy=True)
 
