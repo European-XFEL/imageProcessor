@@ -446,12 +446,11 @@ class SimpleImageProcessor(PythonDevice):
 
         if thr_type == "Absolute":
             img2 = image_processing. \
-                imageSetThreshold(img, min(abs_thr, img.max()),
-                                  copy=True)
+                imageSetThreshold(img, min(abs_thr, img.max()))
 
         elif thr_type == "Relative":
             img2 = image_processing. \
-                imageSetThreshold(img, rel_thr * img.max(), copy=True)
+                imageSetThreshold(img, rel_thr * img.max())
 
         else:
             img2 = img
