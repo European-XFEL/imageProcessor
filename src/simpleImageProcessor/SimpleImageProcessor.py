@@ -9,7 +9,8 @@ import time
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Unit,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Unit,
     VECTOR_STRING_ELEMENT
 )
 
