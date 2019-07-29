@@ -140,7 +140,7 @@ class SimpleImageProcessor(PythonDevice):
                 .commit(),
 
             STRING_ELEMENT(expected).key("thresholdType")
-                .displayedName("Threshold type")
+                .displayedName("Pixel threshold type")
                 .description("Defines whether an absolute or relative "
                              "thresholding is used in the calculations.")
                 .assignmentOptional().defaultValue("None")
@@ -148,26 +148,16 @@ class SimpleImageProcessor(PythonDevice):
                 .reconfigurable()
                 .commit(),
 
-            FLOAT_ELEMENT(expected).key("absThreshold")
-                .displayedName("Pixel Absolute threshold")
-                .description("Pixels below this threshold will not be "
-                             "used for the centre-of-mass calculation. "
-                             "It will be applied if threshold type is set to "
-                             "Absolute.")
-                .assignmentOptional().defaultValue(0.0)
-                .minInc(0.0)
-                .reconfigurable()
-                .commit(),
-
-            FLOAT_ELEMENT(expected).key("relThreshold")
-                .displayedName("Pixel Relative threshold")
-                .description("Pixels below this relative threshold "
-                             "(fraction of the highest value) will not be "
-                             "used for the centre-of-mass calculation. "
-                             "It will be applied if threshold type is set to "
-                             "Relative.")
+            FLOAT_ELEMENT(expected).key("pixelThreshold")
+                .displayedName("Pixel threshold")
+                .description("If Pixel threshold type is set to absolute, "
+                             "pixels below this threshold will be set to 0 in "
+                             "the processing of images. If it is set to "
+                             "relative, pixels below this fraction of the "
+                             "maximum pixel value will be set to zero (and "
+                             "this property should be between 0 and 1). If "
+                             "it is set to None, no thresholding will occur.")
                 .assignmentOptional().defaultValue(0.1)
-                .minInc(0.0).maxInc(1.0)
                 .reconfigurable()
                 .commit(),
 
@@ -286,6 +276,31 @@ class SimpleImageProcessor(PythonDevice):
         """ This method will be called after the constructor. """
         self.reset()
 
+    def preReconfigure(self, incomingReconfiguration):
+        if incomingReconfiguration.has("pixelThreshold") and \
+                incomingReconfiguration.has("thresholdType"):
+            if incomingReconfiguration["thresholdType"] == "Relative" and \
+                    incomingReconfiguration["pixelThreshold"] >= 1:
+                del incomingReconfiguration["thresholdType"]
+                del incomingReconfiguration["pixelThreshold"]
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.WARN(msg)
+                self["status"] = msg
+        elif incomingReconfiguration.has("thresholdType"):
+            if self.get("pixelThreshold") >= 1 and \
+                    incomingReconfiguration["thresholdType"] == "Relative":
+                del incomingReconfiguration["thresholdType"]
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.WARN(msg)
+                self["status"] = msg
+        elif incomingReconfiguration.has("pixelThreshold"):
+            if self.get("thresholdType") == "Relative" and \
+                    incomingReconfiguration["pixelThreshold"] >= 1:
+                del incomingReconfiguration["pixelThreshold"]
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.WARN(msg)
+                self["status"] = msg
+
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(SimpleImageProcessor, self).__init__(configuration)
@@ -353,8 +368,7 @@ class SimpleImageProcessor(PythonDevice):
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
         thr_type = self.get("thresholdType")
-        abs_thr = self.get("absThreshold")
-        rel_thr = self.get("relThreshold")
+        pix_thr = self.get("pixelThreshold")
 
         h = Hash()  # Empty hash
         # default is no success in processing
@@ -445,12 +459,18 @@ class SimpleImageProcessor(PythonDevice):
         # Remove Noise
 
         if thr_type == "Absolute":
+            if img.max() < pix_thr:
+                self.log.DEBUG("Max pixel value below threshold: image "
+                               "discarded!")
+                # set the hash for no success!
+                self.set(h)
+                return
             img2 = image_processing. \
-                imageSetThreshold(img, min(abs_thr, img.max()))
+                imageSetThreshold(img, min(pix_thr, img.max()))
 
         elif thr_type == "Relative":
             img2 = image_processing. \
-                imageSetThreshold(img, rel_thr * img.max())
+                imageSetThreshold(img, pix_thr * img.max())
 
         else:
             img2 = img
