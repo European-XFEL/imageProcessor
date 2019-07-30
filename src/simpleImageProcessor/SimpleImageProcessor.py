@@ -281,25 +281,24 @@ class SimpleImageProcessor(PythonDevice):
                 incomingReconfiguration.has("thresholdType"):
             if incomingReconfiguration["thresholdType"] == "Relative" and \
                     incomingReconfiguration["pixelThreshold"] >= 1:
-                del incomingReconfiguration["thresholdType"]
-                del incomingReconfiguration["pixelThreshold"]
                 msg = f"Cannot set a relative threshold greater than 1."
-                self.log.WARN(msg)
+                self.log.ERROR(msg)
                 self["status"] = msg
+                raise ValueError(msg)
         elif incomingReconfiguration.has("thresholdType"):
             if self.get("pixelThreshold") >= 1 and \
                     incomingReconfiguration["thresholdType"] == "Relative":
-                del incomingReconfiguration["thresholdType"]
                 msg = f"Cannot set a relative threshold greater than 1."
-                self.log.WARN(msg)
+                self.log.ERROR(msg)
                 self["status"] = msg
+                raise ValueError(msg)
         elif incomingReconfiguration.has("pixelThreshold"):
             if self.get("thresholdType") == "Relative" and \
                     incomingReconfiguration["pixelThreshold"] >= 1:
-                del incomingReconfiguration["pixelThreshold"]
                 msg = f"Cannot set a relative threshold greater than 1."
-                self.log.WARN(msg)
+                self.log.ERROR(msg)
                 self["status"] = msg
+                raise ValueError(msg)
 
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -326,6 +325,14 @@ class SimpleImageProcessor(PythonDevice):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
+
+        self.registerInitialFunction(self.initialization)
+
+        if self["pixelThreshold"] >= 1 and self["thresholdType"] == "Relative":
+            msg = f"Cannot initialize a device with a relative threshold " \
+                  f"greater than 1."
+            self.log.ERROR(msg)
+            raise ValueError(msg)
 
     def reset(self):
         h = Hash()
