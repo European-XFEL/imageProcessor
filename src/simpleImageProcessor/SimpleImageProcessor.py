@@ -9,8 +9,8 @@ import time
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State, Unit,
-    VECTOR_STRING_ELEMENT
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Unit, VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -139,6 +139,28 @@ class SimpleImageProcessor(PythonDevice):
                 .init()
                 .commit(),
 
+            STRING_ELEMENT(expected).key("thresholdType")
+                .displayedName("Pixel threshold type")
+                .description("Defines whether an absolute or relative "
+                             "thresholding is used in the calculations.")
+                .assignmentOptional().defaultValue("None")
+                .options("None Absolute Relative")
+                .reconfigurable()
+                .commit(),
+
+            FLOAT_ELEMENT(expected).key("pixelThreshold")
+                .displayedName("Pixel threshold")
+                .description("If Pixel threshold type is set to absolute, "
+                             "pixels below this threshold will be set to 0 in "
+                             "the processing of images. If it is set to "
+                             "relative, pixels below this fraction of the "
+                             "maximum pixel value will be set to zero (and "
+                             "this property should be between 0 and 1). If "
+                             "it is set to None, no thresholding will occur.")
+                .assignmentOptional().defaultValue(0.1)
+                .reconfigurable()
+                .commit(),
+
             # Image processing outputs
 
             BOOL_ELEMENT(expected).key("success")
@@ -254,6 +276,30 @@ class SimpleImageProcessor(PythonDevice):
         """ This method will be called after the constructor. """
         self.reset()
 
+    def preReconfigure(self, incomingReconfiguration):
+        if incomingReconfiguration.has("pixelThreshold") and \
+                incomingReconfiguration.has("thresholdType"):
+            if incomingReconfiguration["thresholdType"] == "Relative" and \
+                    incomingReconfiguration["pixelThreshold"] >= 1:
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.ERROR(msg)
+                self["status"] = msg
+                raise ValueError(msg)
+        elif incomingReconfiguration.has("thresholdType"):
+            if self.get("pixelThreshold") >= 1 and \
+                    incomingReconfiguration["thresholdType"] == "Relative":
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.ERROR(msg)
+                self["status"] = msg
+                raise ValueError(msg)
+        elif incomingReconfiguration.has("pixelThreshold"):
+            if self.get("thresholdType") == "Relative" and \
+                    incomingReconfiguration["pixelThreshold"] >= 1:
+                msg = f"Cannot set a relative threshold greater than 1."
+                self.log.ERROR(msg)
+                self["status"] = msg
+                raise ValueError(msg)
+
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(SimpleImageProcessor, self).__init__(configuration)
@@ -279,6 +325,14 @@ class SimpleImageProcessor(PythonDevice):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
+
+        self.registerInitialFunction(self.initialization)
+
+        if self["pixelThreshold"] >= 1 and self["thresholdType"] == "Relative":
+            msg = f"Cannot initialize a device with a relative threshold " \
+                  f"greater than 1."
+            self.log.ERROR(msg)
+            raise ValueError(msg)
 
     def reset(self):
         h = Hash()
@@ -320,6 +374,8 @@ class SimpleImageProcessor(PythonDevice):
 
     def processImage(self, imageData):
         img_threshold = self.get("imageThreshold")
+        thr_type = self.get("thresholdType")
+        pix_thr = self.get("pixelThreshold")
 
         h = Hash()  # Empty hash
         # default is no success in processing
@@ -406,12 +462,32 @@ class SimpleImageProcessor(PythonDevice):
 
             self.log.DEBUG("Image pedestal subtraction: done!")
 
+        # ---------------------
+        # Remove Noise
+
+        if thr_type == "Absolute":
+            if img.max() < pix_thr:
+                self.log.DEBUG("Max pixel value below threshold: image "
+                               "discarded!")
+                # set the hash for no success!
+                self.set(h)
+                return
+            img2 = image_processing. \
+                imageSetThreshold(img, min(pix_thr, img.max()))
+
+        elif thr_type == "Relative":
+            img2 = image_processing. \
+                imageSetThreshold(img, pix_thr * img.max())
+
+        else:
+            img2 = img
+
         # ------------------------------------------------
         # 1-D Gaussian Fits
 
         # ------------------------------------------------
         # X Fitting
-        imgX = image_processing.imageSumAlongY(img)
+        imgX = image_processing.imageSumAlongY(img2)
 
         # Initial parameters
         p0 = image_processing.peakParametersEval(imgX)
@@ -429,7 +505,7 @@ class SimpleImageProcessor(PythonDevice):
 
         # ------------------------------------------------
         # Y Fitting
-        imgY = image_processing.imageSumAlongX(img)
+        imgY = image_processing.imageSumAlongX(img2)
 
         # Initial parameters
         p0 = image_processing.peakParametersEval(imgY)
