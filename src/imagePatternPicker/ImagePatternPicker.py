@@ -136,17 +136,8 @@ class ImagePatternPicker(PythonDevice):
         self.frame_rate_in = []
         self.frame_rate_out = []
         self.connections = {}
-        for idx in range(NR_OF_CHANNELS):
-            chan = "chan_{}".format(idx)
-            # Register call-backs
-            self.KARABO_ON_DATA("{}.input".format(chan), self.onData)
-            self.KARABO_ON_EOS("{}.input".format(chan), self.onEndOfStream)
-
-            # Variables for frames per second computation
-            self.frame_rate_in.append(RateCalculator(refresh_interval=1.0))
-            self.frame_rate_out.append(RateCalculator(refresh_interval=1.0))
-
         self.device_client.getDevices()  # Somehow needed to connect
+
         for idx in range(NR_OF_CHANNELS):
             chan = "chan_{}".format(idx)
             input_chan = '{}.input.connectedOutputChannels'.format(chan)
@@ -154,12 +145,28 @@ class ImagePatternPicker(PythonDevice):
             try:
                 inputs = self[input_chan]
                 if inputs:
+
+                    # Register call-backs
+                    self.KARABO_ON_DATA("{}.input".format(chan),
+                                        self.onData)
+                    self.KARABO_ON_EOS("{}.input".format(chan),
+                                       self.onEndOfStream)
+
+                    # Variables for frames per second computation
+                    self.frame_rate_in.append(
+                        RateCalculator(refresh_interval=1.0))
+                    self.frame_rate_out.append(
+                        RateCalculator(refresh_interval=1.0))
+                    
                     connected_chan = inputs[0]
                     device_id = connected_chan.split(":")[0]
                     self.connections[device_id] = {}
                     connected_pipe = connected_chan.split(":")[1]
-                    self.connections[device_id]["input_pipeline"] = connected_pipe
+                    self.connections[device_id]["input_pipeline"] = \
+                        connected_pipe
+                    # the corresponding output image
                     self.connections[device_id]["output_image"] = output_image
+                    # the channel node a device belongs to
                     self.connections[device_id]["channel_node"] = chan
                     if device_id:
                         self.device_client.registerSchemaUpdatedMonitor(
@@ -171,6 +178,8 @@ class ImagePatternPicker(PythonDevice):
             #    pass
 
     def onData(self, data, metaData):
+        if not self.connections:
+            return
         # find channel
         dev = metaData["source"].split(":")[0]
         channel = [self.connections[key]["channel_node"]
@@ -193,7 +202,9 @@ class ImagePatternPicker(PythonDevice):
             self.refresh_frame_rate_out(channel_idx)
 
     def onEndOfStream(self, inputChannel):
-        dev = list(inputChannel.getConnectedOutputChannels().keys())[0].split(":")[0]
+        connected_devices = inputChannel.getConnectedOutputChannels().keys()
+        connected_devices = list(input_devices)[0]
+        dev = connected_devices.split(":")[0]
         channel = [self.connections[key]["channel_node"]
                    for key in self.connections.keys() if
                    dev == key][0]
@@ -225,7 +236,6 @@ class ImagePatternPicker(PythonDevice):
     def on_camera_schema_update(self, deviceId, schema):
         # Look for 'image' in camera's schema
         channel = self.connections[deviceId]["channel_node"]
-        output = self.connections[deviceId]["input_pipeline"]
         path = self.connections[deviceId]["output_image"]
         if schema.has(path):
             sub = schema.subSchema(path)
@@ -279,5 +289,6 @@ class ImagePatternPicker(PythonDevice):
 
         if outputHostname:
             # Restore configuration
-            self.log.DEBUG("{}.output.hostname: {}".format(channel, outputHostname))
+            self.log.DEBUG("{}.output.hostname: {}".
+                           format(channel, outputHostname))
             self.set("{}.output.hostname".format(channel), outputHostname)
