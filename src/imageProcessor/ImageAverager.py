@@ -145,6 +145,14 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             .description('Reset averaged image.')
             .commit(),
 
+            STRING_ELEMENT(expected).key("imagePath")
+            .displayedName("Image Path")
+            .description("Input image path.")
+            .assignmentOptional().defaultValue("data.image")
+            .expertAccess()
+            .init()
+            .commit(),
+
             UINT32_ELEMENT(expected).key('nImages')
             .displayedName('Number of Images')
             .description('Number of images to be averaged.')
@@ -183,6 +191,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageAverager, self).__init__(configuration)
+        self.is_image_data = False
 
         # Get an instance of the mean calculator
         self.image_running_mean = ImageRunningMean()
@@ -217,12 +226,9 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.refresh_frame_rate_in()
 
         try:
-            if data.has('data.image'):
-                image_data = data['data.image']
-            elif data.has('image'):
-                # To ensure backward compatibility
-                # with older versions of cameras
-                image_data = data['image']
+            image_path = self['imagePath']
+            if data.has(image_path):
+                image_data = data[image_path]
             else:
                 raise RuntimeError("data does not contain any image")
 
@@ -231,9 +237,14 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
             if first_image:
                 # Update schema
+                if isinstance(image_data, ImageData):
+                    self.is_image_data = True
                 self.updateOutputSchema(image_data)
 
-            self.process_image(image_data, ts)  # Process image
+            if self.is_image_data:
+                self.process_image(image_data, ts)
+            else:
+                self.process_ndarray(np.array(image_data), ts)
 
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
@@ -261,7 +272,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             pixels = input_image.getData()
             bpp = input_image.getBitsPerPixel()
             encoding = input_image.getEncoding()
-
             d_type = str(pixels.dtype)
 
             # Compute average
@@ -305,6 +315,34 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
+            self.update_alarm(error=True, msg=msg)
+
+    def process_ndarray(self, array, ts):
+        n_images = self['nImages']
+        running_average = self['runningAverage']
+        dtype = array.dtype
+        try:
+            if n_images == 1:
+                pass  # No averaging needed
+            elif running_average:
+                if self['runningAvgMethod'] == 'ExactRunningAverage':
+                    self.image_running_mean.append(array, n_images)
+                    array = self.image_running_mean.runningMean.astype(dtype)
+                else:  # ExponentialRunningAverage
+                    self.image_exp_running_mean.append(array, n_images)
+                    array = self.image_exp_running_mean.mean.astype(dtype)
+            else:
+                self.image_standard_mean.append(array)
+                if self.image_standard_mean.size >= n_images:
+                    array = self.image_standard_mean.mean.astype(dtype)
+                    self.image_standard_mean.clear()
+
+            self.writeNDArrayToOutputs(array, ts)
+            self.refresh_frame_rate_out()
+            self.update_alarm()  # Success
+
+        except Exception as e:
+            msg = "Exception caught in process_ndarray: {}".format(e)
             self.update_alarm(error=True, msg=msg)
 
     ##############################################
