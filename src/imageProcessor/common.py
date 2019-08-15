@@ -1,8 +1,9 @@
 from queue import Queue
+import numpy as np
 
 from karabo.bound import (
-    DaqDataType, Hash, ImageData, IMAGEDATA_ELEMENT, NODE_ELEMENT, NoFsm,
-    OUTPUT_CHANNEL, Schema, Types
+    DaqDataType, Hash, ImageData, IMAGEDATA_ELEMENT, NDARRAY_ELEMENT,
+    NODE_ELEMENT, NoFsm, OUTPUT_CHANNEL, Schema, Types,
 )
 
 from karabo.middlelayer import (
@@ -133,10 +134,21 @@ class ImageProcOutputInterface(NoFsm):
 
     def updateOutputSchema(self, imageData):
         """Updates the schema of all the output channels"""
+        if isinstance(imageData, list):
+            # Internally, we deal with ndarrays.
+            # Lists, coming from VECTOR_*_ELEMENTs, are therefore cast
+            imageData = np.array(imageData)
+
         if isinstance(imageData, ImageData):
             pixels = imageData.getData()  # np.ndarray
             shape = pixels.shape
             kType = imageData.getType()
+            updateSchemaHelper = self.updateImageSchemaHelper
+        elif isinstance(imageData, np.ndarray):
+            pixels = imageData
+            shape = imageData.shape
+            kType = Types.NUMPY
+            updateSchemaHelper = self.updateNDArraySchemaHelper
         else:
             raise RuntimeError("Trying to update schema with invalid "
                                "imageData")
@@ -164,11 +176,10 @@ class ImageProcOutputInterface(NoFsm):
         newSchema = Schema()
 
         # update output Channel
-        self.updateSchemaHelper(newSchema, "ppOutput", "Output", self.shape)
+        updateSchemaHelper(newSchema, "ppOutput", "Output", self.shape)
 
         # update DAQ output Channel
-        self.updateSchemaHelper(newSchema, "daqOutput", "DAQ Output",
-                                self.daqShape)
+        updateSchemaHelper(newSchema, "daqOutput", "DAQ Output", self.daqShape)
 
         # update schema
         self.updateSchema(newSchema)
@@ -181,7 +192,8 @@ class ImageProcOutputInterface(NoFsm):
             self.log.DEBUG("daqOutput.hostname: {}".format(daqOutputHostname))
             self.set("daqOutput.hostname", daqOutputHostname)
 
-    def updateSchemaHelper(self, schema, outputNodeKey, outputNodeName, shape):
+    def updateImageSchemaHelper(self, schema, outputNodeKey,
+                                outputNodeName, shape):
         """Helper function - do not call it"""
         outputData = Schema()
         (
@@ -202,12 +214,31 @@ class ImageProcOutputInterface(NoFsm):
             .commit(),
         )
 
+    def updateNDArraySchemaHelper(self, schema, outputNodeKey,
+                                  outputNodeName, shape):
+        """Helper function - do not call it"""
+        outputData = Schema()
+        (
+            NDARRAY_ELEMENT(outputData).key("data")
+            .displayedName("Data")
+            .commit(),
+
+            NDARRAY_ELEMENT(outputData).key("data.image")
+            .displayedName("Image")
+            .shape(list(shape))
+            .commit(),
+
+            OUTPUT_CHANNEL(schema).key(outputNodeKey)
+            .displayedName(outputNodeName)
+            .dataSchema(outputData)
+            .commit(),
+        )
+
     def writeImageToOutputs(self, img, timestamp=None):
         """Writes the image to all the output channels"""
         if not isinstance(img, ImageData):
             raise RuntimeError(
-                "Trying to feed writeImageToOutputs with invalid "
-                "imageData")
+                "Trying to feed writeImageToOutputs with invalid imageData")
 
         # write data to output channel
         self.writeChannel('ppOutput', Hash("data.image", img), timestamp)
@@ -217,6 +248,15 @@ class ImageProcOutputInterface(NoFsm):
 
         # send data to DAQ output channel
         self.writeChannel('daqOutput', Hash("data.image", daqImg), timestamp)
+
+    def writeNDArrayToOutputs(self, array, timestamp=None):
+        """Write the array to all the output channels"""
+        if not isinstance(array, np.ndarray):
+            raise RuntimeError(
+                "Trying to feed writeNDArrayToOutputs with invalid "
+                "NDArray data")
+        self.writeChannel('ppOutput', Hash("data.image", array), timestamp)
+        self.writeChannel('daqOutput', Hash("data.image", array), timestamp)
 
     def signalEndOfStreams(self):
         """Signals end-of-stream to all the output channels"""
