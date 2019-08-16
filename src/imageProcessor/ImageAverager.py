@@ -147,7 +147,8 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
             STRING_ELEMENT(expected).key("imagePath")
             .displayedName("Image Path")
-            .description("Input image path.")
+            .description("The path within the channel, where the data is, such"
+                         " as data.image, digitizer.channel_1_A.raw.samples")
             .assignmentOptional().defaultValue("data.image")
             .expertAccess()
             .init()
@@ -237,8 +238,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
             if first_image:
                 # Update schema
-                if isinstance(image_data, ImageData):
-                    self.is_image_data = True
+                self.is_image_data = isinstance(image_data, ImageData)
                 self.updateOutputSchema(image_data)
 
             if self.is_image_data:
@@ -324,26 +324,27 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         try:
             if n_images == 1:
                 pass  # No averaging needed
+
             elif running_average:
                 if self['runningAvgMethod'] == 'ExactRunningAverage':
                     self.image_running_mean.append(array, n_images)
                     array = self.image_running_mean.runningMean.astype(dtype)
-                else:  # ExponentialRunningAverage
+                elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                     self.image_exp_running_mean.append(array, n_images)
                     array = self.image_exp_running_mean.mean.astype(dtype)
+
             else:
                 self.image_standard_mean.append(array)
                 if self.image_standard_mean.size >= n_images:
                     array = self.image_standard_mean.mean.astype(dtype)
                     self.image_standard_mean.clear()
-
-            self.writeNDArrayToOutputs(array, ts)
-            self.refresh_frame_rate_out()
-            self.update_alarm()  # Success
-
         except Exception as e:
             msg = "Exception caught in process_ndarray: {}".format(e)
             self.update_alarm(error=True, msg=msg)
+        else:
+            self.writeNDArrayToOutputs(array, ts)
+            self.refresh_frame_rate_out()
+            self.update_alarm()  # Success
 
     ##############################################
     #   Implementation of Slots                  #
