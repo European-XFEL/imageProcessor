@@ -219,8 +219,9 @@ class ImageProcOutputInterface(NoFsm):
         """Helper function - do not call it"""
         outputData = Schema()
         (
-            NDARRAY_ELEMENT(outputData).key("data")
+            NODE_ELEMENT(outputData).key("data")
             .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
             .commit(),
 
             NDARRAY_ELEMENT(outputData).key("data.image")
@@ -256,6 +257,7 @@ class ImageProcOutputInterface(NoFsm):
                 "Trying to feed writeNDArrayToOutputs with invalid "
                 "NDArray data")
         self.writeChannel('ppOutput', Hash("data.image", array), timestamp)
+        daqArray = array.reshape(self.daqShape)
         self.writeChannel('daqOutput', Hash("data.image", array), timestamp)
 
     def signalEndOfStreams(self):
