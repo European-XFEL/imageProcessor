@@ -277,14 +277,15 @@ class SimpleImageProcessor(PythonDevice):
         self.reset()
 
     def preReconfigure(self, incomingReconfiguration):
-        if incomingReconfiguration.has("pixelThreshold") or \
-                incomingReconfiguration.has("thresholdType"):
+        if incomingReconfiguration.has("thresholdType") or \
+                incomingReconfiguration.has("pixelThreshold"):
             t_type = self.get("thresholdType")
             threshold = self.get("pixelThreshold")
-            if incomingReconfiguration.has("pixelThreshold"):
-                threshold = incomingReconfiguration["pixelThreshold"]
             if incomingReconfiguration.has("thresholdType"):
                 t_type = incomingReconfiguration["thresholdType"]
+            if incomingReconfiguration.has("pixelThreshold"):
+                threshold = incomingReconfiguration["pixelThreshold"]
+
             self._is_threshold_valid(t_type, threshold)
 
     def __init__(self, configuration):
