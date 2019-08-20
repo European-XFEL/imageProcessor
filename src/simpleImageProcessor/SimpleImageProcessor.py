@@ -277,28 +277,16 @@ class SimpleImageProcessor(PythonDevice):
         self.reset()
 
     def preReconfigure(self, incomingReconfiguration):
-        if incomingReconfiguration.has("pixelThreshold") and \
-                incomingReconfiguration.has("thresholdType"):
-            if incomingReconfiguration["thresholdType"] == "Relative" and \
-                    incomingReconfiguration["pixelThreshold"] >= 1:
-                msg = f"Cannot set a relative threshold greater than 1."
-                self.log.ERROR(msg)
-                self["status"] = msg
-                raise ValueError(msg)
-        elif incomingReconfiguration.has("thresholdType"):
-            if self.get("pixelThreshold") >= 1 and \
-                    incomingReconfiguration["thresholdType"] == "Relative":
-                msg = f"Cannot set a relative threshold greater than 1."
-                self.log.ERROR(msg)
-                self["status"] = msg
-                raise ValueError(msg)
-        elif incomingReconfiguration.has("pixelThreshold"):
-            if self.get("thresholdType") == "Relative" and \
-                    incomingReconfiguration["pixelThreshold"] >= 1:
-                msg = f"Cannot set a relative threshold greater than 1."
-                self.log.ERROR(msg)
-                self["status"] = msg
-                raise ValueError(msg)
+        if incomingReconfiguration.has("thresholdType") or \
+                incomingReconfiguration.has("pixelThreshold"):
+            t_type = self.get("thresholdType")
+            threshold = self.get("pixelThreshold")
+            if incomingReconfiguration.has("thresholdType"):
+                t_type = incomingReconfiguration["thresholdType"]
+            if incomingReconfiguration.has("pixelThreshold"):
+                threshold = incomingReconfiguration["pixelThreshold"]
+
+            self._is_threshold_valid(t_type, threshold)
 
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -563,3 +551,10 @@ class SimpleImageProcessor(PythonDevice):
 
         # Update device parameters (all at once)
         self.set(h)
+
+    def _is_threshold_valid(self, t_type, threshold):
+        if t_type == "Relative" and threshold > 1:
+            msg = f"Cannot set a relative threshold greater than 1."
+            self.log.ERROR(msg)
+            self["status"] = msg
+            raise ValueError(msg)
