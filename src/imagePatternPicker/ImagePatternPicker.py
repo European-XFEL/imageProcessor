@@ -269,15 +269,8 @@ class ImagePatternPicker(PythonDevice):
             # needed by DAQ
             NDARRAY_ELEMENT(dataSchema).key("data.image.pixels")
             .shape(list(shape))
-            .dtype(Types.values[k_type])
+            .setType(Types.values[k_type])
             .commit(),
-
-            # Set "maxSize" for vector properties - needed by DAQ
-            dataSchema.setMaxSize("data.image.dims", len(shape)),
-            dataSchema.setMaxSize("data.image.dimTypes", len(shape)),
-            dataSchema.setMaxSize("data.image.roiOffsets", len(shape)),
-            dataSchema.setMaxSize("data.image.binning", len(shape)),
-            dataSchema.setMaxSize("data.image.pixels.shape", len(shape)),
 
             OUTPUT_CHANNEL(newSchema)
             .key("{}.output".format(channel))
