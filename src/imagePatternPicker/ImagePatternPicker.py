@@ -141,7 +141,7 @@ class ImagePatternPicker(PythonDevice):
         for idx in range(NR_OF_CHANNELS):
             chan = "chan_{}".format(idx)
             input_chan = '{}.input.connectedOutputChannels'.format(chan)
-            output_image = '{}.output.schema.data.image'.format(chan)
+            output_image = 'output.schema.data.image'
             try:
                 inputs = self[input_chan]
                 if inputs:
