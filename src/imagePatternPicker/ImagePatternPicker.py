@@ -6,9 +6,9 @@
 
 from karabo.bound import (
     DaqDataType, DeviceClient, DOUBLE_ELEMENT, INPUT_CHANNEL,
-    KARABO_CLASSINFO, IMAGEDATA_ELEMENT, NDARRAY_ELEMENT, NODE_ELEMENT,
-    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
-    Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
+    KARABO_CLASSINFO, IMAGEDATA_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp, Types,
+    UINT32_ELEMENT, UINT64_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -16,14 +16,11 @@ from processing_utils.rate_calculator import RateCalculator
 NR_OF_CHANNELS = 2
 
 
-@KARABO_CLASSINFO("ImagePatternPicker", "2.0")
+@KARABO_CLASSINFO("ImagePatternPicker", "2.5")
 class ImagePatternPicker(PythonDevice):
 
     @staticmethod
     def expectedParameters(expected):
-        data_in = []
-        data_out = []
-
         (
             OVERWRITE_ELEMENT(expected).key('state')
             .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
@@ -32,110 +29,24 @@ class ImagePatternPicker(PythonDevice):
         )
 
         for idx in range(NR_OF_CHANNELS):
+            channel = f"chan_{idx}"
+            ImagePatternPicker.create_channel_node(expected, channel)
 
-            data_in.append(Schema())
-            data_out.append(Schema())
-
-            (
-                NODE_ELEMENT(expected)
-                .key('chan_{}'.format(idx))
-                .displayedName("Channel {}".format(idx))
-                .setDaqDataType(DaqDataType.TRAIN)
-                .commit(),
-
-                UINT32_ELEMENT(expected)
-                .key("chan_{}.nBunchPatterns".format(idx))
-                .displayedName("# Bunch Patterns")
-                .description("Number of bunch patterns.")
-                .assignmentOptional().defaultValue(2)
-                .minInc(1)
-                .reconfigurable()
-                .commit(),
-
-                UINT32_ELEMENT(expected)
-                .key("chan_{}.patternOffset".format(idx))
-                .displayedName("Pattern Offset")
-                .description("Image will be forwarded to the output if its "
-                             "trainId satisfies the following relation: "
-                             "(trainId%nBunchPatterns) ==  patternOffset.")
-                .assignmentOptional().defaultValue(1)
-                .reconfigurable()
-                .commit(),
-
-                DOUBLE_ELEMENT(expected)
-                .key('chan_{}.inFrameRate'.format(idx))
-                .displayedName('Input Frame Rate')
-                .description('The input frame rate.')
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
-
-                DOUBLE_ELEMENT(expected)
-                .key('chan_{}.outFrameRate'.format(idx))
-                .displayedName('Output Frame Rate')
-                .description('The output frame rate.')
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
-
-                NODE_ELEMENT(data_in[-1])
-                .key("data")
-                .displayedName("Data")
-                .setDaqDataType(DaqDataType.TRAIN)
-                .commit(),
-
-                IMAGEDATA_ELEMENT(data_in[-1])
-                .key("data.image")
-                .commit(),
-
-                INPUT_CHANNEL(expected)
-                .key("chan_{}.input".format(idx))
-                .displayedName("Input")
-                .dataSchema(data_in[-1])
-                .commit(),
-
-                # Images should be dropped if processor is too slow
-                OVERWRITE_ELEMENT(expected)
-                .key('chan_{}.input.onSlowness'.format(idx))
-                .setNewDefaultValue("drop")
-                .commit(),
-
-                NODE_ELEMENT(data_out[-1])
-                .key('data')
-                .displayedName("Data")
-                .commit(),
-
-                IMAGEDATA_ELEMENT(data_out[-1])
-                .key('data.image')
-                .commit(),
-
-                UINT64_ELEMENT(data_out[-1])
-                .key('data.trainId')
-                .displayedName('Train ID')
-                .readOnly()
-                .commit(),
-
-                OUTPUT_CHANNEL(expected)
-                .key("chan_{}.output".format(idx))
-                .displayedName("Output")
-                .dataSchema(data_out[-1])
-                .commit(),
-            )
-        
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
         super(ImagePatternPicker, self).__init__(configuration)
 
         self.device_client = DeviceClient()
 
+        self.frame_rate_in = []
+        self.frame_rate_out = []
+        self.connections = {}
+
         # Define the first function to be called after the constructor has
         # finished
         self.registerInitialFunction(self.initialization)
 
     def initialization(self):
-        self.frame_rate_in = []
-        self.frame_rate_out = []
-        self.connections = {}
         self.device_client.getDevices()  # Somehow needed to connect
 
         for idx in range(NR_OF_CHANNELS):
@@ -157,7 +68,7 @@ class ImagePatternPicker(PythonDevice):
                         RateCalculator(refresh_interval=1.0))
                     self.frame_rate_out.append(
                         RateCalculator(refresh_interval=1.0))
-                    
+
                     connected_chan = inputs[0]
                     device_id = connected_chan.split(":")[0]
                     self.connections[device_id] = {}
@@ -174,7 +85,7 @@ class ImagePatternPicker(PythonDevice):
                         self.device_client.getDeviceSchemaNoWait(device_id)
             except Exception as e:
                 print("ERROR EXCEPTION: ", e)
-            #(KeyError, RuntimeError):
+            # (KeyError, RuntimeError):
             #    pass
 
     def onData(self, data, metaData):
@@ -196,15 +107,14 @@ class ImagePatternPicker(PythonDevice):
             metaData.getAttributes('timestamp'))
         train_id = ts.getTrainId()
         if ((train_id % self['{}.nBunchPatterns'.format(channel)]) ==
-            self['{}.patternOffset'.format(channel)]):
+                self['{}.patternOffset'.format(channel)]):
             data['{}.data.trainId'.format(channel)] = train_id
             self.writeChannel('{}.output'.format(channel), data, ts)
             self.refresh_frame_rate_out(channel_idx)
 
     def onEndOfStream(self, inputChannel):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
-        connected_devices = list(input_devices)[0]
-        dev = connected_devices.split(":")[0]
+        dev = [*connected_devices][0].split(":")[0]
         channel = [self.connections[key]["channel_node"]
                    for key in self.connections.keys() if
                    dev == key][0]
@@ -243,6 +153,101 @@ class ImagePatternPicker(PythonDevice):
             k_type = sub.getDefaultValue('pixels.type')
             self.update_output_schema(channel, shape, k_type)
 
+    @staticmethod
+    def create_channel_node(schema, channel, shape=(), k_type=Types.NONE):
+        data_in = Schema()
+        data_out = Schema()
+        idx = channel.replace("chan_", "")
+
+        (
+            NODE_ELEMENT(schema)
+            .key(channel)
+            .displayedName(f"Channel {idx}")
+            .commit(),
+
+            UINT32_ELEMENT(schema)
+            .key(f"{channel}.nBunchPatterns")
+            .displayedName("# Bunch Patterns")
+            .description("Number of bunch patterns.")
+            .assignmentOptional().defaultValue(2)
+            .minInc(1)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(schema)
+            .key(f"{channel}.patternOffset")
+            .displayedName("Pattern Offset")
+            .description("Image will be forwarded to the output if its "
+                         "trainId satisfies the following relation: "
+                         "(trainId%nBunchPatterns) ==  patternOffset.")
+            .assignmentOptional().defaultValue(1)
+            .reconfigurable()
+            .commit(),
+
+            DOUBLE_ELEMENT(schema)
+            .key(f"{channel}.inFrameRate")
+            .displayedName('Input Frame Rate')
+            .description('The input frame rate.')
+            .unit(Unit.HERTZ)
+            .readOnly()
+            .commit(),
+
+            DOUBLE_ELEMENT(schema)
+            .key(f"{channel}.outFrameRate")
+            .displayedName('Output Frame Rate')
+            .description('The output frame rate.')
+            .unit(Unit.HERTZ)
+            .readOnly()
+            .commit(),
+
+            NODE_ELEMENT(data_in)
+            .key("data")
+            .displayedName("Data")
+            .commit(),
+
+            IMAGEDATA_ELEMENT(data_in)
+            .key("data.image")
+            .displayedName("Image")
+            .commit(),
+
+            INPUT_CHANNEL(schema)
+            .key(f"{channel}.input")
+            .displayedName("Input")
+            .dataSchema(data_in)
+            .commit(),
+
+            # Images should be dropped if processor is too slow
+            OVERWRITE_ELEMENT(schema)
+            .key(f"{channel}.input.onSlowness")
+            .setNewDefaultValue("drop")
+            .commit(),
+
+            NODE_ELEMENT(data_out)
+            .key('data')
+            .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
+            .commit(),
+
+            IMAGEDATA_ELEMENT(data_out)
+            .key('data.image')
+            .displayedName("Image")
+            .setDimensions(list(shape))
+            .setType(Types.values[k_type])
+            .commit(),
+
+            UINT64_ELEMENT(data_out)
+            .key('data.trainId')
+            .displayedName('Train ID')
+            .readOnly()
+            .commit(),
+
+            OUTPUT_CHANNEL(schema)
+            .key(f"{channel}.output")
+            .displayedName("Output")
+            .dataSchema(data_out)
+            .commit(),
+        )
+
     def update_output_schema(self, channel, shape, k_type):
         # Get device configuration before schema update
         try:
@@ -252,32 +257,9 @@ class ImagePatternPicker(PythonDevice):
             outputHostname = None
 
         newSchema = Schema()
-        dataSchema = Schema()
+        ImagePatternPicker.create_channel_node(newSchema, channel, shape,
+                                               k_type)
 
-        (
-            NODE_ELEMENT(dataSchema).key("data")
-            .displayedName("Data")
-            .setDaqDataType(DaqDataType.TRAIN)
-            .commit(),
-
-            IMAGEDATA_ELEMENT(dataSchema).key("data.image")
-            .displayedName("Image")
-            .setDimensions(str(shape).strip("()"))
-            .commit(),
-
-            # Set (overwrite) shape and dtype for internal NDArray element -
-            # needed by DAQ
-            NDARRAY_ELEMENT(dataSchema).key("data.image.pixels")
-            .shape(list(shape))
-            .setType(Types.values[k_type])
-            .commit(),
-
-            OUTPUT_CHANNEL(newSchema)
-            .key("{}.output".format(channel))
-            .displayedName("Output")
-            .dataSchema(dataSchema)
-            .commit(),
-        )
         self.updateSchema(newSchema)
 
         if outputHostname:
