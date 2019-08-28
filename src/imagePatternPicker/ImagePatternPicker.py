@@ -69,17 +69,16 @@ class ImagePatternPicker(PythonDevice):
                     self.frame_rate_out.append(
                         RateCalculator(refresh_interval=1.0))
 
-                    connected_chan = inputs[0]
-                    device_id = connected_chan.split(":")[0]
-                    self.connections[device_id] = {}
-                    connected_pipe = connected_chan.split(":")[1]
-                    self.connections[device_id]["input_pipeline"] = \
-                        connected_pipe
-                    # the corresponding output image
-                    self.connections[device_id]["output_image"] = output_image
-                    # the channel node a device belongs to
-                    self.connections[device_id]["channel_node"] = chan
+                    device_id, connected_pipe = inputs[0].split(':')
                     if device_id:
+                        self.connections[device_id] = {
+                            "input_pipeline": connected_pipe,
+                            # the corresponding output image
+                            "output_image": output_image,
+                            # the channel node a device belongs to
+                            "channel_node": chan
+                        }
+
                         self.device_client.registerSchemaUpdatedMonitor(
                             self.on_camera_schema_update)
                         self.device_client.getDeviceSchemaNoWait(device_id)
@@ -92,10 +91,8 @@ class ImagePatternPicker(PythonDevice):
         if not self.connections:
             return
         # find channel
-        dev = metaData["source"].split(":")[0]
-        channel = [self.connections[key]["channel_node"]
-                   for key in self.connections.keys() if
-                   dev == key][0]
+        dev, _ = metaData["source"].split(":")
+        channel = self.connections[dev]["channel_node"]
         channel_idx = int(channel.split("_")[1])
         if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
@@ -114,10 +111,8 @@ class ImagePatternPicker(PythonDevice):
 
     def onEndOfStream(self, inputChannel):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
-        dev = [*connected_devices][0].split(":")[0]
-        channel = [self.connections[key]["channel_node"]
-                   for key in self.connections.keys() if
-                   dev == key][0]
+        dev, _ = [*connected_devices][0].split(":")
+        channel = self.connections[dev]["channel_node"]
         self.log.INFO("onEndOfStream called")
         self['{}.inFrameRate'.format(channel)] = 0.
         self['{}.outFrameRate'.format(channel)] = 0.
