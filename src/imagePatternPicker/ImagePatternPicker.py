@@ -69,6 +69,7 @@ class ImagePatternPicker(PythonDevice):
                     self.frame_rate_out.append(
                         RateCalculator(refresh_interval=1.0))
 
+                    # TODO how to treat the case len(inputs) > 1?
                     device_id, connected_pipe = inputs[0].split(':')
                     if device_id:
                         self.connections[device_id] = {
