@@ -258,7 +258,7 @@ class ImageProcOutputInterface(NoFsm):
                 "NDArray data")
         self.writeChannel('ppOutput', Hash("data.image", array), timestamp)
         daqArray = array.reshape(self.daqShape)
-        self.writeChannel('daqOutput', Hash("data.image", array), timestamp)
+        self.writeChannel('daqOutput', Hash("data.image", daqArray), timestamp)
 
     def signalEndOfStreams(self):
         """Signals end-of-stream to all the output channels"""
