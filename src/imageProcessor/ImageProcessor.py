@@ -171,6 +171,15 @@ class ImageProcessor(ImageProcessorBase):
             .reconfigurable()
             .commit(),
 
+            BOOL_ELEMENT(expected).key("clipValues")
+            .displayedName("Clip Integral input")
+            .description("Removes values outside of Integration Threshold "
+                         "Range from the calculation of the integral and "
+                         "region mean.")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
             # Options for Centre-of-Mass
 
             STRING_ELEMENT(expected).key("comRange")
@@ -284,6 +293,16 @@ class ImageProcessor(ImageProcessorBase):
                          " specified as [lowX, highX, lowY, highY]")
             .assignmentOptional().defaultValue([0, 400, 0, 400])
             .minSize(4).maxSize(4)
+            .reconfigurable()
+            .commit(),
+
+            VECTOR_INT32_ELEMENT(expected).key("thresholdRange")
+            .displayedName("Integration Threshold Range")
+            .description("Range of values to be considered in the "
+                         "calculation of Region Integral and Region Mean. "
+                         "Values outside of this range will be set to zero.")
+            .assignmentOptional().defaultValue([0, 65535])
+            .minSize(2).maxSize(2)
             .reconfigurable()
             .commit(),
 
@@ -1596,9 +1615,18 @@ class ImageProcessor(ImageProcessorBase):
                 else:
                     data = img[x_min:x_max]
 
+                if self.get("clipValues"):
+                    thresholdRange = self.get("thresholdRange")
+                    mask = thresholdRange[0] <= data
+                    mask *= data <= thresholdRange[1]
+                    data_size = np.float64(np.sum(mask))
+                    data = data*mask
+                else:
+                    data_size = data.size
+
                 integral = np.float64(np.sum(data))
                 h.set("regionIntegral", integral)
-                region_mean = integral / data.size if data.size > 0 else 0.0
+                region_mean = integral / data_size if data_size > 0 else 0.0
                 h.set("regionMean", region_mean)
                 t1 = time.time()
                 self.averagers["integrationTime"].append(t1 - t0)
