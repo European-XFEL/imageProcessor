@@ -301,7 +301,7 @@ class ImageProcessor(ImageProcessorBase):
             .description("Range of values to be considered in the "
                          "calculation of Region Integral and Region Mean. "
                          "Values outside of this range will be set to zero.")
-            .assignmentOptional().defaultValue([0, 65536])
+            .assignmentOptional().defaultValue([0, 65535])
             .minSize(2).maxSize(2)
             .reconfigurable()
             .commit(),
