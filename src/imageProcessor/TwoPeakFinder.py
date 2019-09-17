@@ -188,7 +188,8 @@ class TwoPeakFinder(ImageProcessorBase):
             h.set('peak2Value', peaks[3])
             h.set('peak2Position', low_x + peaks[4])
             h.set('peak2Fwhm', peaks[5])
-            h.set('peakRatio', peaks[0]/peaks[3])
+            if peaks[3] > 0.0:
+                h.set('peakRatio', peaks[0]/peaks[3])
             self.set(h, ts)
 
             self.update_alarm()  # Success
