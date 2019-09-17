@@ -111,6 +111,14 @@ class TwoPeakFinder(ImageProcessorBase):
             .unit(Unit.PIXEL)
             .readOnly()
             .commit(),
+
+            DOUBLE_ELEMENT(expected).key('peakRatio')
+            .displayedName("Peak Ratio")
+            .description("Amplitude of the 1st peak divided by amplitude of "
+                         "the second peak.")
+            .unit(Unit.NUMBER)
+            .readOnly()
+            .commit(),
         )
 
     ##############################################
@@ -180,6 +188,7 @@ class TwoPeakFinder(ImageProcessorBase):
             h.set('peak2Value', peaks[3])
             h.set('peak2Position', low_x + peaks[4])
             h.set('peak2Fwhm', peaks[5])
+            h.set('peakRatio', peaks[0]/peaks[3])
             self.set(h, ts)
 
             self.update_alarm()  # Success
