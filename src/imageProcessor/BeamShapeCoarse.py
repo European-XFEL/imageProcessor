@@ -105,16 +105,16 @@ class BeamShapeCoarse(Device):
             self.fwhmX = QuantityValue(fwhm_x, timestamp=ts)
             self.fwhmY = QuantityValue(fwhm_y, timestamp=ts)
 
-            self.errorCounter.update_alarm()  # success
+            self.errorCounter.update_warn()  # success
             if self.status != "PROCESSING":
                 self.status = "PROCESSING"
         except Exception as e:
-            if self.errorCounter.alarmCondition == 0:
+            if self.errorCounter.warnCondition == 0:
                 msg = "Exception while processing input image: {}".format(e)
-                # Only update if not yet in ALARM
+                # Only update if not yet in WARN
                 self.status = msg
                 self.log.ERROR(msg)
-            self.errorCounter.update_alarm(True)
+            self.errorCounter.update_warn(True)
 
     @input.endOfStream
     def input(self, name):

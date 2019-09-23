@@ -147,7 +147,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
             return
 
         self.updateOutputSchema(image_data)
@@ -160,7 +160,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
             if self['isDisabled']:
                 self.writeImageToOutputs(image_data, ts)
-                self.update_alarm()  # Success
+                self.update_warn()  # Success
                 self.refresh_frame_rate_out()
                 return
             else:
@@ -174,7 +174,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
 
     def onDataTrainId(self, data, metaData):
         if self.tid_buffer is None:
@@ -224,7 +224,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
-                        self.update_alarm()  # Success
+                        self.update_warn()  # Success
                         self.refresh_frame_rate_out()
                         return
                     elif img_tid > tid + offset:
@@ -238,7 +238,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
-                        self.update_alarm()  # Success
+                        self.update_warn()  # Success
                         self.refresh_frame_rate_out()
                         return
                     elif img_tid < tid + offset:
