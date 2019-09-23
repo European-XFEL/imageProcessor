@@ -85,7 +85,7 @@ class ImageProcessorBase(PythonDevice):
             DOUBLE_ELEMENT(expected).key('errorCounter.threshold')
             .displayedName("Threshold")
             .description("Threshold on the ratio errors/total counts, "
-                         "for setting the alarmState.")
+                         "for setting the warn condition.")
             .unit(Unit.NUMBER)
             .assignmentOptional().defaultValue(0.1)
             .minInc(0.001).maxInc(1.)
@@ -94,7 +94,7 @@ class ImageProcessorBase(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key('errorCounter.epsilon')
             .displayedName("Epsilon")
-            .description("The device will enter the alarm condition when "
+            .description("The device will enter the warn condition when "
                          "'fraction' exceeds threshold + epsilon, and will "
                          "leave it when fraction goes below threshold -"
                          " epsilon.")
@@ -111,12 +111,12 @@ class ImageProcessorBase(PythonDevice):
             .readOnly().initialValue(0.)
             .commit(),
 
-            UINT32_ELEMENT(expected).key('errorCounter.alarmCondition')
-            .displayedName("Alarm Condition")
+            UINT32_ELEMENT(expected).key('errorCounter.warnCondition')
+            .displayedName("Warn Condition")
             .description("True if the fraction of errors exceeds the "
                          "threshold.")
             .readOnly().initialValue(0)
-            .alarmHigh(0).info("Error fraction above threshold.")
+            .warnHigh(0).info("Error fraction above threshold.")
             .needsAcknowledging(False)
             .commit(),
 
@@ -164,7 +164,7 @@ class ImageProcessorBase(PythonDevice):
         self.error_counter.clear()
         self.updateState(State.ON)
 
-    def update_alarm(self, error=False, msg=""):
+    def update_warn(self, error=False, msg=""):
         self.error_counter.append(error)
         h = Hash()
 
@@ -179,14 +179,14 @@ class ImageProcessorBase(PythonDevice):
         if not error:
             if self['status'] != "PROCESSING":
                 h['status'] = "PROCESSING"
-        elif not self['errorCounter.alarmCondition'] and msg:
-            # Only update if not yet in ALARM
+        elif not self['errorCounter.warnCondition'] and msg:
+            # Only update if not yet in WARN
             h['status'] = msg
             self.log.ERROR(msg)
 
-        if self['errorCounter.alarmCondition'] != self.error_counter.alarm:
+        if self['errorCounter.warnCondition'] != self.error_counter.warn:
             # Update in device only if changed
-            h['errorCounter.alarmCondition'] = self.error_counter.alarm
+            h['errorCounter.warnCondition'] = self.error_counter.warn
 
         if not h.empty():
             self.set(h)

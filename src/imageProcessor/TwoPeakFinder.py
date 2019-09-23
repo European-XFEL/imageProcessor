@@ -146,7 +146,7 @@ class TwoPeakFinder(ImageProcessorBase):
 
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
@@ -192,8 +192,8 @@ class TwoPeakFinder(ImageProcessorBase):
                 h.set('peakRatio', peaks[0]/peaks[3])
             self.set(h, ts)
 
-            self.update_alarm()  # Success
+            self.update_warn()  # Success
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)

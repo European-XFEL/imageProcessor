@@ -931,7 +931,7 @@ class ImageProcessor(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
@@ -1018,7 +1018,7 @@ class ImageProcessor(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception when opening image: {e}"
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
             return
 
         # Filter by Threshold
@@ -1037,7 +1037,7 @@ class ImageProcessor(ImageProcessorBase):
                 img_mean = img.mean()
             except Exception as e:
                 msg = f"Exception caught whilst calculating min/max/mean: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1061,7 +1061,7 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.DEBUG("Pixel values distribution: done!")
             except Exception as e:
                 msg = f"Exception caught whilst counting value frequency: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1092,7 +1092,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during background subtraction: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1114,7 +1114,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during pedestal subtraction: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1138,7 +1138,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during x/y integration: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             if img_x is None or img_y is None:
@@ -1214,10 +1214,9 @@ class ImageProcessor(ImageProcessorBase):
                     x_min, x_max, y_min, y_max = self.auto_fit_range(
                         x0, y0, sx, sy, sigmas, image_width, image_height)
 
-
             except Exception as e:
                 msg = f"Exception caught whilst calculating CoM: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1290,7 +1289,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during gaussian fit [x]: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1340,7 +1339,7 @@ class ImageProcessor(ImageProcessorBase):
 
                 except Exception as e:
                     msg = f"Exception caught during gaussian fit [y]: {e}"
-                    self.update_alarm(error=True, msg=msg)
+                    self.update_warn(error=True, msg=msg)
                     return
 
                 t2 = time.time()
@@ -1383,7 +1382,7 @@ class ImageProcessor(ImageProcessorBase):
 
                 except Exception as e:
                     msg = f"Exception caught during gaussian fit [x]: {e}"
-                    self.update_alarm(error=True, msg=msg)
+                    self.update_warn(error=True, msg=msg)
                     return
 
             if is_2d_image:
@@ -1426,7 +1425,7 @@ class ImageProcessor(ImageProcessorBase):
 
                     except Exception as e:
                         msg = f"Exception caught during gaussian fit [y]: {e}"
-                        self.update_alarm(error=True, msg=msg)
+                        self.update_warn(error=True, msg=msg)
                         return
 
                 if success_x in (1, 2, 3, 4) and success_y in (1, 2, 3, 4):
@@ -1522,7 +1521,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during 2D gaussian fit: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
             t1 = time.time()
@@ -1634,7 +1633,7 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.DEBUG("Region integration: done!")
             except Exception as e:
                 msg = f"Exception caught during region integration: {e}"
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
                 return
 
         if not integration_done:
@@ -1653,7 +1652,7 @@ class ImageProcessor(ImageProcessorBase):
         # Update device parameters (all at once)
         self.set(h, ts)
         self.writeChannel("output", out_hash, ts)
-        self.update_alarm()  # Success
+        self.update_warn()  # Success
 
     def eval_starting_point(self, data):
         fit_ampl, peak_pixel, fwhm = image_processing.peakParametersEval(data)
@@ -1791,5 +1790,3 @@ class ImageProcessor(ImageProcessorBase):
         y_min, y_max = increase_range(y_min, y_max, image_height, min_range)
 
         return x_min, x_max, y_min, y_max
-
-
