@@ -72,7 +72,8 @@ class ImagePatternPicker(PythonDevice):
                     # TODO how to treat the case len(inputs) > 1?
                     device_id, connected_pipe = inputs[0].split(':')
                     if device_id:
-                        self.connections[device_id] = {
+                        dev =f"{idx}_{device_id}_{connected_pipe}"
+                        self.connections[dev] = {
                             "input_pipeline": connected_pipe,
                             # the corresponding output image
                             "output_image": output_image,
@@ -84,42 +85,47 @@ class ImagePatternPicker(PythonDevice):
                             self.on_camera_schema_update)
                         self.device_client.getDeviceSchemaNoWait(device_id)
             except Exception as e:
-                print("ERROR EXCEPTION: ", e)
-            # (KeyError, RuntimeError):
-            #    pass
+               self.log.ERROR(f"Error Exception: {e}")
 
     def onData(self, data, metaData):
         if not self.connections:
             return
-        # find channel
-        dev, _ = metaData["source"].split(":")
-        channel = self.connections[dev]["channel_node"]
-        channel_idx = int(channel.split("_")[1])
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
+        # find which node the updating device belongs to
+        dev = metaData["source"].replace(":", "_")
+        for idx in range(NR_OF_CHANNELS):
+            channel = self.connections.get(f"{idx}_{dev}")
+            if channel:
+                node = f"chan_{idx}"
+                if self['state'] == State.ON:
+                    self.log.INFO("Start of Stream")
+                    self.updateState(State.PROCESSING)
 
-        self.refresh_frame_rate_in(channel_idx)
+                self.refresh_frame_rate_in(idx)
 
-        ts = Timestamp.fromHashAttributes(
-            metaData.getAttributes('timestamp'))
-        train_id = ts.getTrainId()
-        if ((train_id % self['{}.nBunchPatterns'.format(channel)]) ==
-                self['{}.patternOffset'.format(channel)]):
-            data['data.trainId'.format(channel)] = train_id
-            self.writeChannel('{}.output'.format(channel), data, ts)
-            self.refresh_frame_rate_out(channel_idx)
-
+                ts = Timestamp.fromHashAttributes(
+                    metaData.getAttributes('timestamp'))
+                train_id = ts.getTrainId()
+                if ((train_id % self[f'{node}.nBunchPatterns']) ==
+                    self[f'{node}.patternOffset']):
+                    data['data.trainId'.format(node)] = train_id
+                    self.writeChannel(f"{node}.output", data, ts)
+                    self.refresh_frame_rate_out(idx)
+    
     def onEndOfStream(self, inputChannel):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
-        dev, _ = [*connected_devices][0].split(":")
-        channel = self.connections[dev]["channel_node"]
-        self.log.INFO("onEndOfStream called")
-        self['{}.inFrameRate'.format(channel)] = 0.
-        self['{}.outFrameRate'.format(channel)] = 0.
-        # Signals end of stream
-        self.signalEndOfStream("{}.output".format(channel))
-        self.updateState(State.ON)
+        dev = [*connected_devices][0]
+        # find which node the updating device belongs to
+        for idx in range(NR_OF_CHANNELS):
+            channel = self.connections.get(f"{idx}_{dev}")
+            if channel:
+               node = f"chan_{idx}"
+               self.log.INFO("onEndOfStream called")
+               self[f"{node}.inFrameRate"] = 0.
+               self[f"{node}.outFrameRate"] = 0.
+               # Signals end of stream
+               self.signalEndOfStream(f"{node}.output".format(node))
+               # state should be ON if no camera is acquiring
+               self.updateState(State.ON)
 
     def refresh_frame_rate_in(self, channel_idx):
         frame_rate = self.frame_rate_in[channel_idx]
@@ -140,14 +146,25 @@ class ImagePatternPicker(PythonDevice):
                            format(channel_idx, fps_out))
 
     def on_camera_schema_update(self, deviceId, schema):
-        # Look for 'image' in camera's schema
-        channel = self.connections[deviceId]["channel_node"]
-        path = self.connections[deviceId]["output_image"]
-        if schema.has(path):
-            sub = schema.subSchema(path)
-            shape = sub.getDefaultValue('dims')
-            k_type = sub.getDefaultValue('pixels.type')
-            self.update_output_schema(channel, shape, k_type)
+        # find all inputs connected to this updating device
+        channels = [conn for conn in list(self.connections.keys())
+                   if f"{deviceId}_output" in conn]
+        daqChannel = [conn for conn in list(self.connections.keys())
+                      if f"{deviceId}_daqOutput" in conn]
+        channels.extend(daqChannel)
+        self.log.INFO(f"channels: {channels}")
+        # loop over connected inputs
+        for channel in channels:
+            idx = channel.split("_")[0]
+            node = f"chan_{idx}"
+            #channel = self.connections[channels[0]]["channel_node"]
+            # Look for 'image' in camera's schema
+            path = self.connections[channel]["output_image"]
+            if schema.has(path):
+                sub = schema.subSchema(path)
+                shape = sub.getDefaultValue('dims')
+                k_type = sub.getDefaultValue('pixels.type')
+                self.update_output_schema(node, shape, k_type)
 
     @staticmethod
     def create_channel_node(schema, channel, shape=(), k_type=Types.NONE):
