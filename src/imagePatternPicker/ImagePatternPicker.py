@@ -118,6 +118,7 @@ class ImagePatternPicker(PythonDevice):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
         dev = [*connected_devices][0]
         # find which node the updating device belongs to
+        stopped_nodes = 0
         for idx in range(NR_OF_CHANNELS):
             channel = self.connections.get(f"{idx}_{dev}")
             if channel:
@@ -127,8 +128,11 @@ class ImagePatternPicker(PythonDevice):
                 self[f"{node}.outFrameRate"] = 0.
                 # Signals end of stream
                 self.signalEndOfStream(f"{node}.output".format(node))
-                # state should be ON if no camera is acquiring
-                self.updateState(State.ON)
+                stopped_nodes += stopped_nodes
+
+        # state should be ON if both cameras are not acquiring
+        if stopped_nodes == 2:
+            self.updateState(State.ON)
 
     def refresh_frame_rate_in(self, channel_idx):
         frame_rate = self.frame_rate_in[channel_idx]
