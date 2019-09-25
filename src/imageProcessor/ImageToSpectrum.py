@@ -8,12 +8,12 @@ from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
+    AccessMode, Assignment, Bool, Configurable, DaqDataType, DaqPolicy, Device,
     Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
     Slot, State, Type, Unit, VectorDouble, VectorInt32, VectorString
 )
 
-from image_processing.image_processing import imageSumAlongY
+from image_processing.image_processing import imageSumAlongX, imageSumAlongY
 
 from processing_utils.rate_calculator import RateCalculator
 
@@ -39,6 +39,10 @@ class ImageToSpectrum(Device):
     def __init__(self, configuration):
         super(ImageToSpectrum, self).__init__(configuration)
         self.output.noInputShared = "drop"
+        if self.xIntegral:
+            self.calculate_spectrum = imageSumAlongX
+        else:
+            self.calculate_spectrum = imageSumAlongY
 
     # TODO base class for MDL: interfaces, frameRate, errorCounter, input
 
@@ -100,7 +104,7 @@ class ImageToSpectrum(Device):
                 cropped_image = image[low_y:high_y, low_x:high_x]
 
             # Calculate spectrum
-            spectrum = imageSumAlongY(cropped_image)
+            spectrum = self.calculate_spectrum(cropped_image)
 
             # Calculate integral
             self.spectrumIntegral = QuantityValue(spectrum.sum(),
@@ -155,6 +159,14 @@ class ImageToSpectrum(Device):
     output = OutputChannel(
         ChannelNode,
         displayedName="Output"
+    )
+
+    xIntegral = Bool(
+        displayedName="Integrate in X",
+        description="Integrate the image in X direction. By default integral "
+                    "is done over Y.",
+        accessMode=AccessMode.INITONLY,
+        defaultValue=False
     )
 
     spectrumIntegral = Double(
