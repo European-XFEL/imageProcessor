@@ -92,12 +92,12 @@ class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
                 self.updateOutputSchema(thumb_img)
 
             self.writeImageToOutputs(thumb_img, ts)
-            self.update_alarm()  # Success
+            self.update_warn()  # Success
             return
 
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
             return
 
     def onEndOfStream(self, inputChannel):

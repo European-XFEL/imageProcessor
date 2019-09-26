@@ -112,7 +112,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -165,17 +165,17 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                                        encoding=encoding)
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Image sent to output channel")
-                self.update_alarm()  # Success
+                self.update_warn()  # Success
 
             else:
                 msg = ("Cannot subtract background image... shapes are "
                        "different: {} != {}"
                        .format(self.bkg_image.shape, img.shape))
-                self.update_alarm(error=True, msg=msg)
+                self.update_warn(error=True, msg=msg)
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_alarm(error=True, msg=msg)
+            self.update_warn(error=True, msg=msg)
 
     ##############################################
     #   Implementation of Slots                  #
