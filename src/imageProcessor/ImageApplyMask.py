@@ -25,7 +25,7 @@ except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
-@KARABO_CLASSINFO("ImageApplyMask", "2.5")
+@KARABO_CLASSINFO("ImageApplyMask", "2.6")
 class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

@@ -160,19 +160,6 @@ class ImageProcOutputInterface(NoFsm):
         self.kType = kType
         self.daqShape = tuple(reversed(shape))
 
-        # Get device configuration before schema update
-        try:
-            outputHostname = self["ppOutput.hostname"]
-        except AttributeError as e:
-            # Configuration does not contain "ppOutput.hostname"
-            outputHostname = None
-
-        try:
-            daqOutputHostname = self["daqOutput.hostname"]
-        except AttributeError as e:
-            # Configuration does not contain "daqOutput.hostname"
-            daqOutputHostname = None
-
         newSchema = Schema()
 
         # update output Channel
@@ -182,15 +169,7 @@ class ImageProcOutputInterface(NoFsm):
         updateSchemaHelper(newSchema, "daqOutput", "DAQ Output", self.daqShape)
 
         # update schema
-        self.updateSchema(newSchema)
-
-        # Restore configuration
-        if outputHostname:
-            self.log.DEBUG("ppOutput.hostname: {}".format(outputHostname))
-            self.set("ppOutput.hostname", outputHostname)
-        if daqOutputHostname:
-            self.log.DEBUG("daqOutput.hostname: {}".format(daqOutputHostname))
-            self.set("daqOutput.hostname", daqOutputHostname)
+        self.appendSchema(newSchema)
 
     def updateImageSchemaHelper(self, schema, outputNodeKey,
                                 outputNodeName, shape):
