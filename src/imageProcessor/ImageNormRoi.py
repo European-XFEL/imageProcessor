@@ -101,18 +101,18 @@ class ImageNormRoi(Device):
             self.spectrumIntegral = QuantityValue(spectrum.sum(),
                                                   timestamp=ts)
 
-            self.errorCounter.update_alarm()  # success
+            self.errorCounter.update_warn()  # success
             if self.status != "PROCESSING":
                 self.status = "PROCESSING"
         except Exception as e:
             spectrum = np.full((1,), np.nan)
             self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
-            if self.errorCounter.alarmCondition == 0:
-                # Only update if not yet in ALARM
+            if self.errorCounter.warnCondition == 0:
+                # Only update if not yet in WARN
                 msg = f"Exception while processing input image: {e}"
                 self.status = msg
                 self.log.ERROR(msg)
-            self.errorCounter.update_alarm(True)
+            self.errorCounter.update_warn(True)
 
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.tolist()

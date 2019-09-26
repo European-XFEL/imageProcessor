@@ -33,7 +33,7 @@ class ErrorNode(Configurable):
     @Double(
         displayedName="Threshold",
         description="Threshold on the ratio errors/total counts, "
-                    "for setting the alarmState.",
+                    "for setting the warn condition.",
         unitSymbol=Unit.NUMBER,
         accessMode=AccessMode.RECONFIGURABLE,
         defaultValue=0.1,
@@ -47,7 +47,7 @@ class ErrorNode(Configurable):
 
     @Double(
         displayedName="Epsilon",
-        description="The device will enter the alarm condition when "
+        description="The device will enter the warn condition when "
                     "'fraction' exceeds threshold + epsilon, and will "
                     "leave it when fraction goes below threshold -"
                     " epsilon.",
@@ -70,14 +70,14 @@ class ErrorNode(Configurable):
         defaultValue=0
     )
 
-    alarmCondition = UInt32(
-        displayedName="Alarm Condition",
+    warnCondition = UInt32(
+        displayedName="Warn Condition",
         description="True if the fraction of errors exceeds the "
                     "threshold.",
         accessMode=AccessMode.READONLY,
         defaultValue=0,
-        alarmHigh=0,
-        alarmNeedsAck_alarmHigh=False
+        warnHigh=0,
+        alarmNeedsAck_warnHigh=False
     )
 
     def __init__(self, configuration):
@@ -89,7 +89,7 @@ class ErrorNode(Configurable):
             threshold=float(self.threshold),
             epsilon=float(self.epsilon))
 
-    def update_alarm(self, error=False):
+    def update_warn(self, error=False):
         self.error_counter.append(error)
 
         if self.count != self.error_counter.count_error:
@@ -100,9 +100,9 @@ class ErrorNode(Configurable):
             # Update in device only if changed
             self.fraction = self.error_counter.fraction
 
-        if self.alarmCondition != self.error_counter.alarm:
+        if self.warnCondition != self.error_counter.warn:
             # Update in device only if changed
-            self.alarmCondition = self.error_counter.alarm
+            self.warnCondition = self.error_counter.warn
 
 
 class ImageProcOutputInterface(NoFsm):
@@ -270,7 +270,7 @@ class ErrorCounter:
     def __init__(self, window_size=100, threshold=0.1, epsilon=0.01):
         self.queue = Queue(maxsize=window_size)
         self.count_error = 0
-        self.last_alarm_condition = False
+        self.last_warn_condition = False
         self.threshold = threshold
         self.epsilon = epsilon
 
@@ -290,7 +290,7 @@ class ErrorCounter:
             # pop all elements
             self.queue.get(block=False)
         self.count_error = 0
-        self.last_alarm_condition = False
+        self.last_warn_condition = False
 
     @property
     def size(self):
@@ -304,13 +304,13 @@ class ErrorCounter:
             return self.count_error / self.size
 
     @property
-    def alarm(self):
-        if self.last_alarm_condition:
-            # Go out of alarm when fraction <= threshold - epsilon
-            new_alarm = self.fraction > self.threshold - self.epsilon
+    def warn(self):
+        if self.last_warn_condition:
+            # Go out of warn when fraction <= threshold - epsilon
+            new_warn = self.fraction > self.threshold - self.epsilon
         else:
-            # Enter alarm when fraction >= threshold + epsilon
-            new_alarm = self.fraction >= self.threshold + self.epsilon
+            # Enter warn when fraction >= threshold + epsilon
+            new_warn = self.fraction >= self.threshold + self.epsilon
 
-        self.last_alarm_condition = new_alarm
-        return new_alarm
+        self.last_warn_condition = new_warn
+        return new_warn
