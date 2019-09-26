@@ -42,7 +42,7 @@ class Average():
         return self.counter
 
 
-@KARABO_CLASSINFO("ImageProcessor", "2.5")
+@KARABO_CLASSINFO("ImageProcessor", "2.6")
 class ImageProcessor(ImageProcessorBase):
     # Numerical factor to convert gaussian standard deviation to beam size
     std_dev_2_beam_size = 4.0
@@ -1712,16 +1712,9 @@ class ImageProcessor(ImageProcessorBase):
             needs_update = True
 
         if needs_update:
-            self.updateSchema(new_schema)
+            self.appendSchema(new_schema)
 
     def update_output_schema(self, width, height, bpp):
-        # Get device configuration before schema update
-        try:
-            output_hostname = self["output.hostname"]
-        except AttributeError as e:
-            # Configuration does not contain "output.hostname"
-            output_hostname = None
-
         new_schema = Schema()
         output_data = Schema()
         (
@@ -1758,12 +1751,7 @@ class ImageProcessor(ImageProcessorBase):
             .commit(),
         )
 
-        self.updateSchema(new_schema)
-
-        if output_hostname:
-            # Restore configuration
-            self.log.DEBUG(f"output.hostname: {output_hostname}")
-            self.set("output.hostname", output_hostname)
+        self.appendSchema(new_schema)
 
     @staticmethod
     def auto_fit_range(x0, y0, sx, sy, sigmas, image_width, image_height,
