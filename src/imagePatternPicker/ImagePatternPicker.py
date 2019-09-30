@@ -75,10 +75,8 @@ class ImagePatternPicker(PythonDevice):
                     # TODO how to treat the case len(inputs) > 1?
                     device_id, connected_pipe = inputs[0].split(':')
                     # in case we have an input device, let us put
-                    # as a key in the dictionary. Save device with
-                    # same output channel can be in both nodes,
-                    # thus we need a key which embeds also output
-                    # channel and the node idx
+                    # its features in the dictionary. The key will be
+                    # an increasing integer
                     if device_id:
                         self.connections[dic_key] = {
                             # the device in input
@@ -126,12 +124,12 @@ class ImagePatternPicker(PythonDevice):
                 node = f"chan_{node_idx}"
                 if self['state'] == State.ON:
                     self.updateState(State.PROCESSING)
-                
+
                 self.refresh_frame_rate_in(node_idx)
 
                 train_id = ts.getTrainId()
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
-                    self[f'{node}.patternOffset']):
+                   self[f'{node}.patternOffset']):
                     data['data.trainId'.format(node_idx)] = train_id
                     self.writeChannel(f"{node}.output", data, ts)
                     self.refresh_frame_rate_out(node_idx)
@@ -173,30 +171,25 @@ class ImagePatternPicker(PythonDevice):
             self['chan_{}.outFrameRate'.format(channel_idx)] = fps_out
             self.log.DEBUG("Channel {}: Output rate {} Hz".
                            format(channel_idx, fps_out))
-    
+
     def on_camera_schema_update(self, deviceId, schema):
-        pass
-        """
+        print("deviceId: ", deviceId)
         # find all inputs connected to this updating schema device
-        channels = [conn for key in list(self.connections.keys())
-                    if f"{deviceId}_output" in connections[key]["device_id"]]
-        daqChannel = [conn for conn in list(self.connections.keys())
-                      if f"{deviceId}_daqOutput" in conn]
-        channels.extend(daqChannel)
-        self.log.INFO(f"channels: {channels}")
-        
+        channels_key = [key for key in list(self.connections.keys())
+                        if f"{deviceId}"
+                        in self.connections[key]["device_id"]]
+
         # loop over connected inputs
-        for channel in channels:
-            idx = channel.split("_")[0]
+        for key in channels_key:
+            idx = self.connections[key]["node_idx"]
             node = f"chan_{idx}"
             # Look for 'image' in camera's schema
-            path = self.connections[channel]["output_image"]
+            path = self.connections[key]["output_image"]
             if schema.has(path):
                 sub = schema.subSchema(path)
                 shape = sub.getDefaultValue('dims')
                 k_type = sub.getDefaultValue('pixels.type')
                 self.update_output_schema(node, shape, k_type)
-        """
 
     @staticmethod
     def create_channel_node(schema, channel, shape=(), k_type=Types.NONE):
