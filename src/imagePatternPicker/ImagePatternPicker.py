@@ -173,7 +173,6 @@ class ImagePatternPicker(PythonDevice):
                            format(channel_idx, fps_out))
 
     def on_camera_schema_update(self, deviceId, schema):
-        print("deviceId: ", deviceId)
         # find all inputs connected to this updating schema device
         channels_key = [key for key in list(self.connections.keys())
                         if f"{deviceId}"
