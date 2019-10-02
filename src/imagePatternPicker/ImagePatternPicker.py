@@ -78,15 +78,13 @@ class ImagePatternPicker(PythonDevice):
                     # its features in the dictionary. The key will be
                     # an increasing integer
                     if device_id:
-                        self.connections[dic_key] = {
+                        self.connections[idx] = {
                             # the device in input
                             "device_id": device_id,
                             # the used output of device
                             "input_pipeline": connected_pipe,
                             # the corresponding output image
                             "output_image": output_image,
-                            # device node
-                            "node_idx": idx
                         }
                         dic_key += 1
                         self.device_client.registerSchemaUpdatedMonitor(
@@ -120,29 +118,31 @@ class ImagePatternPicker(PythonDevice):
 
             # updating device is in this block; proceed
             if update_dev == device_id and update_pipe == dev_pipe:
-                node_idx = input_dev_block["node_idx"]
-                node = f"chan_{node_idx}"
+                node = f"chan_{key}"
                 if self['state'] == State.ON:
                     self.updateState(State.PROCESSING)
 
-                self.refresh_frame_rate_in(node_idx)
+                self.refresh_frame_rate_in(key)
 
                 train_id = ts.getTrainId()
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
-                    data['data.trainId'.format(node_idx)] = train_id
+                    data['data.trainId'.format(key)] = train_id
                     self.writeChannel(f"{node}.output", data, ts)
-                    self.refresh_frame_rate_out(node_idx)
+                    self.refresh_frame_rate_out(key)
 
     def onEndOfStream(self, inputChannel):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
         dev = [*connected_devices][0]
+
         # find which node the updating device belongs to
         stopped_nodes = 0
-        for idx in range(NR_OF_CHANNELS):
-            channel = self.connections.get(f"{idx}_{dev}")
-            if channel:
-                node = f"chan_{idx}"
+        for key in list(self.connections.keys()):
+            input_dev_block = self.connections[key]
+            device_id = input_dev_block["device_id"]
+
+            if f"{device_id}" == dev.split(":")[0]:
+                node = f"chan_{key}"
                 self.log.INFO("onEndOfStream called")
                 self[f"{node}.inFrameRate"] = 0.
                 self[f"{node}.outFrameRate"] = 0.
@@ -180,8 +180,7 @@ class ImagePatternPicker(PythonDevice):
 
         # loop over connected inputs
         for key in channels_key:
-            idx = self.connections[key]["node_idx"]
-            node = f"chan_{idx}"
+            node = f"chan_{key}"
             # Look for 'image' in camera's schema
             path = self.connections[key]["output_image"]
             if schema.has(path):
