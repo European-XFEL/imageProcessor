@@ -179,8 +179,8 @@ class ImagePatternPicker(PythonDevice):
                         in self.connections[key]["device_id"]]
 
         # loop over connected inputs
-        for key in channels_key:
-            node = f"chan_{key}"
+        for idx in channels_key:
+            node = f"chan_{idx}"
             # Look for 'image' in camera's schema
             path = self.connections[key]["output_image"]
             if schema.has(path):
