@@ -125,7 +125,7 @@ class ImagePatternPicker(PythonDevice):
                 train_id = ts.getTrainId()
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
-                    data['data.trainId'.format(key)] = train_id
+                    data['data.trainId'] = train_id
                     self.writeChannel(f"{node}.output", data, ts)
                     self.refresh_frame_rate_out(key)
 
@@ -174,11 +174,11 @@ class ImagePatternPicker(PythonDevice):
         # find all inputs connected to this updating schema device
         channels_key = [key for key in list(self.connections.keys())
                         if deviceId ==
-                         self.connections[key]["device_id"]]
+                        self.connections[key]["device_id"]]
 
         # loop over connected inputs
-        for idx in channels_key:
-            node = f"chan_{idx}"
+        for key in channels_key:
+            node = f"chan_{key}"
             # Look for 'image' in camera's schema
             path = self.connections[key]["output_image"]
             if schema.has(path):
