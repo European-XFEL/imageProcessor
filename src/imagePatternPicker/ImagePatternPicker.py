@@ -51,7 +51,6 @@ class ImagePatternPicker(PythonDevice):
     def initialization(self):
         self.device_client.getDevices()  # Somehow needed to connect
 
-        dic_key = 0
         for idx in range(NR_OF_CHANNELS):
             chan = "chan_{}".format(idx)
             input_chan = '{}.input.connectedOutputChannels'.format(chan)
@@ -86,7 +85,6 @@ class ImagePatternPicker(PythonDevice):
                             # the corresponding output image
                             "output_image": output_image,
                         }
-                        dic_key += 1
                         self.device_client.registerSchemaUpdatedMonitor(
                             self.on_camera_schema_update)
                         self.device_client.getDeviceSchemaNoWait(device_id)
