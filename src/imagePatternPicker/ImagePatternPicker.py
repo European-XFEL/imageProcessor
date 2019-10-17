@@ -139,7 +139,7 @@ class ImagePatternPicker(PythonDevice):
             input_dev_block = self.connections[key]
             device_id = input_dev_block["device_id"]
 
-            if f"{device_id}" == dev.split(":")[0]:
+            if device_id == dev.split(":")[0]:
                 node = f"chan_{key}"
                 self.log.INFO("onEndOfStream called")
                 self[f"{node}.inFrameRate"] = 0.
