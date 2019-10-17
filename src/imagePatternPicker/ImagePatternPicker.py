@@ -151,7 +151,7 @@ class ImagePatternPicker(PythonDevice):
                 stopped_nodes += 1
 
         # state should be ON if all cameras are not acquiring
-        if stopped_nodes == NR_OF_CHANNELS:
+        if stopped_nodes == len(self.connections):
             self.updateState(State.ON)
 
     def refresh_frame_rate_in(self, channel_idx):
