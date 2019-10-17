@@ -148,7 +148,7 @@ class ImagePatternPicker(PythonDevice):
                 self[f"{node}.outFrameRate"] = 0.
                 # Signals end of stream
                 self.signalEndOfStream(f"{node}.output".format(node))
-                stopped_nodes += stopped_nodes
+                stopped_nodes += 1
 
         # state should be ON if all cameras are not acquiring
         if stopped_nodes == NR_OF_CHANNELS:
