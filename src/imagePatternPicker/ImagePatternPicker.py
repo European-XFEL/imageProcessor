@@ -54,7 +54,6 @@ class ImagePatternPicker(PythonDevice):
         for idx in range(NR_OF_CHANNELS):
             chan = "chan_{}".format(idx)
             input_chan = '{}.input.connectedOutputChannels'.format(chan)
-            output_image = 'output.schema.data.image'
             try:
                 inputs = self[input_chan]
                 if inputs:
@@ -77,6 +76,8 @@ class ImagePatternPicker(PythonDevice):
                     # its features in the dictionary. The key will be
                     # an increasing integer
                     if device_id:
+                        output_image = \
+                            f"{connected_pipe}.schema.data.image"
                         self.connections[idx] = {
                             # the device in input
                             "device_id": device_id,
