@@ -214,37 +214,39 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         - there may be more images with same trainid (e.g. frameRate > 10Hz)
         - on train ID channel no trainid is received more than once
         """
+        match_found = False
         offset = self['trainIdOffset']
-        if isinstance(item, Timestamp):
+        if isinstance(item, Timestamp):  # item is a train id:
+                                         # look for matches with image_buffer
             tid = item.getTrainId()
             with self.buffer_lock:
                 for img in self.image_buffer:
                     img_tid = img['ts'].getTrainId()
                     if img_tid == tid + offset:
+                        match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.update_warn()  # Success
                         self.refresh_frame_rate_out()
-                        return True
                     elif img_tid > tid + offset:
                         break
                 self.cleanup_image_queue(tid)
-        else:
+        else:  # item is an image: look for matches with tids in tid_buffer
             try:
                 img = item
                 img_tid = img['ts'].getTrainId()
                 for tid in self.tid_buffer:
                     if img_tid == tid + offset:
+                        match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.update_warn()  # Success
                         self.refresh_frame_rate_out()
-                        return True
                     elif img_tid < tid + offset:
                         break
             except Exception as e:
                 raise RuntimeError("searchForMatch() got unexpected "
                                    "exception: {}".format(e))
 
-        return False
+        return match_found
 
     def refresh_frame_rate_out(self):
         self.frame_rate_out.update()
