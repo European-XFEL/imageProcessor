@@ -214,7 +214,6 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         - there may be more images with same trainid (e.g. frameRate > 10Hz)
         - on train ID channel no trainid is received more than once
         """
-        match_found = False
         offset = self['trainIdOffset']
         if isinstance(item, Timestamp):
             tid = item.getTrainId()
@@ -222,11 +221,10 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                 for img in self.image_buffer:
                     img_tid = img['ts'].getTrainId()
                     if img_tid == tid + offset:
-                        match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.update_warn()  # Success
                         self.refresh_frame_rate_out()
-                        return
+                        return True
                     elif img_tid > tid + offset:
                         break
                 self.cleanup_image_queue(tid)
@@ -236,18 +234,17 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                 img_tid = img['ts'].getTrainId()
                 for tid in self.tid_buffer:
                     if img_tid == tid + offset:
-                        match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
                         self.update_warn()  # Success
                         self.refresh_frame_rate_out()
-                        return
+                        return True
                     elif img_tid < tid + offset:
                         break
             except Exception as e:
                 raise RuntimeError("searchForMatch() got unexpected "
                                    "exception: {}".format(e))
 
-        return match_found
+        return False
 
     def refresh_frame_rate_out(self):
         self.frame_rate_out.update()
