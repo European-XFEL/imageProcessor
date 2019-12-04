@@ -1,4 +1,4 @@
-.. _image-masking-user:
+.. _image-roi-user:
 
 *********
 Image ROI
