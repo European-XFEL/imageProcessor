@@ -14,18 +14,21 @@ from karabo.bound import (
     KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
     DOUBLE_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
     SLOT_ELEMENT, STRING_ELEMENT, Hash, MetricPrefix, Schema,
-    State, Unit
+    State, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT
 )
 
 from image_processing import image_processing
+
+GAUSSIAN_FIT = "Gaussian Beam"
+HYP_SEC_FIT = "Sech^2 Beam"
 
 
 @KARABO_CLASSINFO("AutoCorrelator", "2.1")
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     # AKA shape-factor
-    deconvolutionFactor = {'Gaussian Beam': 1/math.sqrt(2),
-                           'Sech^2 Beam': 1/1.543}
+    deconvolutionFactor = {GAUSSIAN_FIT: 1/math.sqrt(2),
+                           HYP_SEC_FIT: 1/1.543}
 
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -133,6 +136,21 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .reconfigurable()
                 .commit(),
 
+            VECTOR_DOUBLE_ELEMENT(expected)
+                .key("profileX")
+                .displayedName("Image X Profile")
+                .description("Profile along x-axis of second harmonic beam.")
+                .readOnly()
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(expected)
+                .key("profileXFit")
+                .displayedName("X Profile Fit")
+                .description("Fit Profile along x-axis of second "
+                             "harmonic beam.")
+                .readOnly()
+                .commit(),
+
             STRING_ELEMENT(expected)
                 .key("beamShape")
                 .displayedName("Beam Shape")
@@ -144,6 +162,13 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .allowedStates(State.NORMAL)
                 .commit(),
 
+            UINT32_ELEMENT(expected)
+                .key("fitError")
+                .displayedName("Fit Error")
+                .description("Error of fit procedure: .")
+                .readOnly()
+                .commit(),
+
             DOUBLE_ELEMENT(expected)
                 .key("xPeak3")
                 .displayedName("Input Image Peak (x)")
@@ -153,21 +178,30 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xFWHM3")
-                .displayedName("Input Image FWHM (x)")
-                .description("x-FWHM in the input image.")
+                .key("xSigma3")
+                .displayedName("Input Image Sigma (x)")
+                .description("x-Sigma in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xWidth3")
-                .displayedName("Input Image Peak Width")
-                .description("x-Width of the input image.")
+                .key("pulseWidth")
+                .displayedName("Pulse Duration")
+                .description("Duration of the pulse.")
                 .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
                 .readOnly()
                 .commit(),
 
+            DOUBLE_ELEMENT(expected)
+                .key("ePulseWidth")
+                .displayedName("Pulse Duration Error")
+                .description("Uncertainty of the pulse duration arising from fit "
+                             "procedure.")
+                .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
+                .readOnly()
+                .commit(),
+            
         )
 
     ##############################################
@@ -200,7 +234,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         if recalculateWidth is True and self.currentFwhm is not None:
             sF = self.deconvolutionFactor[beamShape]
             w3 = self.currentFwhm * sF * calibrationFactor
-            self.set("xWidth3", w3)
+            ew3 = self.currentEFwhm * sF * calibrationFactor
+            self.set("pulseWidth", w3)
+            self.set("ePulseWidth", ew3)
             self.log.DEBUG("Image re-processed!!!")
 
     def calibrate(self):
@@ -251,18 +287,29 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Cut away y-side-bands and sum along Y
         img2 = image[y1:y2, :]
         imgX = image_processing.imageSumAlongY(img2)
+        self.set("profileX", imgX.tolist())
 
-        # Find centre-of-gravity and witdh
-        (x0, sx) = image_processing.imageCentreOfMass(imgX)
+        # perform the fit
+        beamShape = self["beamShape"]
+        if beamShape == GAUSSIAN_FIT:
+            pars, cov, err = image_processing.fitGauss(imgX)
+            # height = par[0], x0 = pars[1], sx = pars[2]
+            fit_func = image_processing.gauss1d(numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                                                 pars[0],  pars[1],  pars[2])
+        elif beamShape == HYP_SEC_FIT:
+            pars, cov, err = image_processing.fitSech2(imgX)
+            # height = par[0], x0 = pars[1], sx = pars[2]
+            fit_func = image_processing.sqsech1d(numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                                                 pars[0], pars[1], pars[2])
+        else:
+            msg = f"Error: Unknown beam shape {beamShape} provided"
+            self.log.ERROR(msg)
+            raise ValueError(msg)
+        self.set("profileXFit", fit_func.tolist())
+        self.set("fitError", err)
 
-        # Threshold level: 50%
-        thr = imgX.max() / 2.
-
-        # Find FWHM
-        nz = numpy.flatnonzero(imgX > thr)
-        sx = float(nz[-1] - nz[0])
-
-        return (x0, sx)
+        # return the fit mean, sigma, and the error on the mean
+        return (pars[1], pars[2], cov[1, 1])
 
     def useAsCalibrationImage1(self):
         '''Use current image as calibration image 1'''
@@ -306,16 +353,19 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             sF = self.deconvolutionFactor[self.get("beamShape")]
 
             imageArray = imageData.getData()
-            (x3, s3) = self.findPeakFWHM(imageArray)
+            (x3, s3, es3) = self.findPeakFWHM(imageArray)
             self.currentPeak = x3
             self.currentFwhm = s3
+            self.currentEFwhm = es3
             w3 = s3 * sF * calibrationFactor
+            ew3 = es3 * sF * calibrationFactor
 
             h = Hash()
 
             h.set("xPeak3", x3)
-            h.set("xFWHM3", s3)
-            h.set("xWidth3", w3)
+            h.set("xSigma3", s3)
+            h.set("pulseWidth", w3)
+            h.set("ePulseWidth", ew3)
 
             # Set all properties at once
             self.set(h)
