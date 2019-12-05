@@ -261,7 +261,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 delay = self["delay"]
             elif delayUnit == "um":
                 # Must convert to time
-                delay = 1e+9 * self["delay"] / scipy.constants.c
+                # * 2 due to double pass through adjustable length
+                delay = 2 * 1e+6 * self["delay"] / scipy.constants.c
             else:
                 self.errorFound("Unknown delay unit #s" % delayUnit, "")
 
@@ -317,7 +318,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.log.ERROR(msg)
             raise ValueError(msg)
         self.set("fitError", err)
-
+        
         # fill output channel
         output_data = Hash('data.profileX', imgX.tolist(),
                            'data.profileXFit', fit_func.tolist())
