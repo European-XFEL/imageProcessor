@@ -29,7 +29,10 @@ Contents:
    user_docu_two_peak_finder
    :maxdepth: 2
 
+Expert Contact
+==============
 
+* Andrea Parenti <andrea.parenti@xfel.eu>
 
 Indices and tables
 ==================
