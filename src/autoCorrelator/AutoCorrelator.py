@@ -10,14 +10,17 @@ import math
 import numpy
 import scipy.constants
 
+from karabo.common.api import KARABO_SCHEMA_DISPLAY_TYPE_SCENES as DT_SCENES
+
 from karabo.bound import (
     KARABO_CLASSINFO, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
     NODE_ELEMENT, MetricPrefix, OkErrorFsm, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT
+    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
+from .overview import generate_scene
 
 GAUSSIAN_FIT = "Gaussian Beam"
 HYP_SEC_FIT = "Sech^2 Beam"
@@ -37,6 +40,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self._ss.registerSlot(self.useAsCalibrationImage1)
         self._ss.registerSlot(self.useAsCalibrationImage2)
         self._ss.registerSlot(self.calibrate)
+        self._ss.registerSlot(self.requestScene)
 
         self.currentPeak = None
         self.currentFwhm = None
@@ -44,12 +48,35 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     def __del__(self):
         super(AutoCorrelator, self).__del__()
 
+    def requestScene(self, params):
+        """Fulfill a scene request from another device.
+       
+        NOTE: Required by Scene Supply Protocol, which is defined in KEP 21.
+               The format of the reply is also specified there.
+
+        :param params: A `Hash` containing the method parameters
+        """
+        payload = Hash('success', False)
+
+        name = params.get('name', default='')
+        if name == 'scene':
+           payload.set('success', True)
+           payload.set('name', name)
+           payload.set('data', generate_scene(self.getInstanceId()))
+           self.reply(Hash('type', 'deviceScene', 'origin', self.getInstanceId(),
+                           'payload', payload))
+
     @staticmethod
     def expectedParameters(expected):
 
         data_in = Schema()
         data_out = Schema()
         (
+            VECTOR_STRING_ELEMENT(expected).key('availableScenes')
+                .setSpecialDisplayType(DT_SCENES)
+                .readOnly().initialValue(['scene'])
+                .commit(),
+
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
                 .dataSchema(data_in)
@@ -224,7 +251,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
-
+        
+        
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
 
