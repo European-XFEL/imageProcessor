@@ -318,6 +318,15 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.log.ERROR(msg)
             raise ValueError(msg)
         self.set("fitError", err)
+
+        # Threshold level
+        thr = threshold * fit_func.max()
+        # Find 1st and last point above threshold
+        nz = numpy.flatnonzero(imgY > thr)
+        # Find FWHM of fit values
+        sx = float(nz[-1] - nz[0])
+        # Find error of FWHM
+        esx = sx / pars[2] * cov[1, 1]
         
         # fill output channel
         output_data = Hash('data.profileX', imgX.tolist(),
@@ -325,7 +334,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
-        return (pars[1], pars[2], cov[1, 1])
+        return (pars[1], sx, esx)
 
     def useAsCalibrationImage1(self):
         '''Use current image as calibration image 1'''
