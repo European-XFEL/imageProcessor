@@ -62,7 +62,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         if name == 'scene':
            payload.set('success', True)
            payload.set('name', name)
-           payload.set('data', generate_scene(self.getInstanceId()))
+           payload.set('data', generate_scene(self))
            self.reply(Hash('type', 'deviceScene', 'origin', self.getInstanceId(),
                            'payload', payload))
 
@@ -89,7 +89,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xPeak1")
-                .displayedName("Image1 Peak (x)")
+                .displayedName("Calibration: Image1 Peak x-Pos")
                 .description("x-position of peak in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -97,7 +97,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xFWHM1")
-                .displayedName("Image1 FWHM (x)")
+                .displayedName("Calibration: Image1 Peak x-FWHM")
                 .description("x-FWHM in first calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -105,7 +105,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xPeak2")
-                .displayedName("Image2 Peak (x)")
+                .displayedName("Calibration: Image2 Peak x-Pos")
                 .description("x-position of peak in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -113,7 +113,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xFWHM2")
-                .displayedName("Image2 FWHM (x)")
+                .displayedName("Calibration: Image2 Peak x-FWHM")
                 .description("x-FWHM in second calibration image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -184,7 +184,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xPeak3")
-                .displayedName("Input Image Peak (x)")
+                .displayedName("Input Image Peak x-Pos")
                 .description("x-position of peak in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -192,7 +192,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             DOUBLE_ELEMENT(expected)
                 .key("xSigma3")
-                .displayedName("Input Image Sigma (x)")
+                .displayedName("Input Image Peak x-FWHM")
                 .description("x-Sigma in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -251,7 +251,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
-        
         
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
