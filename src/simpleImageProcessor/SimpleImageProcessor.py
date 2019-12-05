@@ -111,7 +111,8 @@ class SimpleImageProcessor(PythonDevice):
 
             FLOAT_ELEMENT(expected).key("pixelSize")
                 .displayedName("Pixel Size")
-                .description("The pixel size.")
+                .description("The pixel size, to be used for converting the "
+                             "fit's standard deviation to FWHM.")
                 .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
                 .assignmentOptional().defaultValue(0.0)
                 .minInc(0.0)
@@ -166,27 +167,27 @@ class SimpleImageProcessor(PythonDevice):
             BOOL_ELEMENT(expected).key("success")
                 .displayedName("Success")
                 .description("Success boolean whether the image processing "
-                             "was succesful or not")
+                             "was successful or not.")
                 .readOnly().initialValue(False)
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
                 .displayedName("Max Pixel Value")
-                .description("Maximun pixel value.")
+                .description("Maximum pixel value.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("amplitudeX")
                 .displayedName("Amplitude X")
-                .description("Amplitude X from Gaussian fitting.")
+                .description("Amplitude X from Gaussian fit.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("amplitudeY")
                 .displayedName("Amplitude Y")
-                .description("Amplitude Y from Gaussian fitting.")
+                .description("Amplitude Y from Gaussian fit.")
                 .unit(Unit.NUMBER)
                 .readOnly()
                 .commit(),
@@ -200,14 +201,14 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("positionY")
                 .displayedName("Position Y")
-                .description("Beam position Y from Gaussian fitting.")
+                .description("Beam position Y from Gaussian fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
 
             DOUBLE_ELEMENT(expected).key("sigmaX")
                 .displayedName("Sigma X")
-                .description("Standard deviation X from Gaussian fitting.")
+                .description("Standard deviation X from Gaussian fit.")
                 .unit(Unit.PIXEL)
                 .expertAccess()
                 .readOnly()
@@ -215,7 +216,7 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("sigmaY")
                 .displayedName("Sigma Y")
-                .description("Standard deviation Y from Gaussian fitting.")
+                .description("Standard deviation Y from Gaussian fit.")
                 .unit(Unit.PIXEL)
                 .expertAccess()
                 .readOnly()
@@ -237,8 +238,7 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("errPositionX")
                 .displayedName("Error Position X")
-                .description("Uncertainty on position X from Gaussian "
-                             "fitting.")
+                .description("Uncertainty on position X from Gaussian fit.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -246,8 +246,7 @@ class SimpleImageProcessor(PythonDevice):
 
             DOUBLE_ELEMENT(expected).key("errPositionY")
                 .displayedName("Error Position Y")
-                .description("Uncertainty on position Y from Gaussian "
-                             "fitting.")
+                .description("Uncertainty on position Y from Gaussian fit.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -256,7 +255,7 @@ class SimpleImageProcessor(PythonDevice):
             DOUBLE_ELEMENT(expected).key("errSigmaX")
                 .displayedName("Error Sigma X")
                 .description("Uncertainty of the standard deviation X from "
-                             "Gaussian fitting.")
+                             "Gaussian fit.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
@@ -265,7 +264,7 @@ class SimpleImageProcessor(PythonDevice):
             DOUBLE_ELEMENT(expected).key("errSigmaY")
                 .displayedName("Error Sigma Y")
                 .description("Uncertainty of the standard deviation Y from "
-                             "Gaussian fitting.")
+                             "Gaussian fit.")
                 .expertAccess()
                 .unit(Unit.PIXEL)
                 .readOnly()
