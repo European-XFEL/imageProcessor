@@ -11,10 +11,10 @@ import numpy
 import scipy.constants
 
 from karabo.bound import (
-    KARABO_CLASSINFO, PythonDevice, OkErrorFsm,
-    DOUBLE_ELEMENT, INPUT_CHANNEL, OVERWRITE_ELEMENT,
-    SLOT_ELEMENT, STRING_ELEMENT, Hash, MetricPrefix, Schema,
-    State, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT
+    KARABO_CLASSINFO, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
+    NODE_ELEMENT, MetricPrefix, OkErrorFsm, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT
 )
 
 from image_processing import image_processing
@@ -47,11 +47,12 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     @staticmethod
     def expectedParameters(expected):
 
-        data = Schema()
+        data_in = Schema()
+        data_out = Schema()
         (
             INPUT_CHANNEL(expected).key("input")
                 .displayedName("Input")
-                .dataSchema(data)
+                .dataSchema(data_in)
                 .commit(),
 
             # Images should be dropped if processor is too slow
@@ -136,21 +137,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .reconfigurable()
                 .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(expected)
-                .key("profileX")
-                .displayedName("Image X Profile")
-                .description("Profile along x-axis of second harmonic beam.")
-                .readOnly()
-                .commit(),
-
-            VECTOR_DOUBLE_ELEMENT(expected)
-                .key("profileXFit")
-                .displayedName("X Profile Fit")
-                .description("Fit Profile along x-axis of second "
-                             "harmonic beam.")
-                .readOnly()
-                .commit(),
-
             STRING_ELEMENT(expected)
                 .key("beamShape")
                 .displayedName("Beam Shape")
@@ -196,12 +182,37 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             DOUBLE_ELEMENT(expected)
                 .key("ePulseWidth")
                 .displayedName("Pulse Duration Error")
-                .description("Uncertainty of the pulse duration arising from fit "
-                             "procedure.")
+                .description("Uncertainty of the pulse duration arising "
+                             "from fit procedure.")
                 .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
                 .readOnly()
                 .commit(),
-            
+
+            NODE_ELEMENT(data_out).key("data")
+                .displayedName("Data")
+                .setDaqDataType(DaqDataType.TRAIN)
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(data_out)
+                .key("data.profileX")
+                .displayedName("Image X Profile")
+                .description("Profile along x-axis of second harmonic beam.")
+                .readOnly()
+                .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(data_out)
+                .key("data.profileXFit")
+                .displayedName("X Profile Fit")
+                .description("Fit Profile along x-axis of second "
+                             "harmonic beam.")
+                .readOnly()
+                .commit(),
+
+            OUTPUT_CHANNEL(expected)
+                .key("output")
+                .displayedName("Output")
+                .dataSchema(data_out)
+                .commit(),
         )
 
     ##############################################
@@ -287,26 +298,30 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Cut away y-side-bands and sum along Y
         img2 = image[y1:y2, :]
         imgX = image_processing.imageSumAlongY(img2)
-        self.set("profileX", imgX.tolist())
 
         # perform the fit
         beamShape = self["beamShape"]
         if beamShape == GAUSSIAN_FIT:
             pars, cov, err = image_processing.fitGauss(imgX)
             # height = par[0], x0 = pars[1], sx = pars[2]
-            fit_func = image_processing.gauss1d(numpy.linspace(0, len(imgX) - 1, len(imgX)),
-                                                 pars[0],  pars[1],  pars[2])
+            fit_func = image_processing.gauss1d(
+                numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                pars[0],  pars[1],  pars[2])
         elif beamShape == HYP_SEC_FIT:
             pars, cov, err = image_processing.fitSech2(imgX)
-            # height = par[0], x0 = pars[1], sx = pars[2]
-            fit_func = image_processing.sqsech1d(numpy.linspace(0, len(imgX) - 1, len(imgX)),
-                                                 pars[0], pars[1], pars[2])
+            fit_func = image_processing.sqsech1d(
+                numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                pars[0], pars[1], pars[2])
         else:
             msg = f"Error: Unknown beam shape {beamShape} provided"
             self.log.ERROR(msg)
             raise ValueError(msg)
-        self.set("profileXFit", fit_func.tolist())
         self.set("fitError", err)
+
+        # fill output channel
+        output_data = Hash('data.profileX', imgX.tolist(),
+                           'data.profileXFit', fit_func.tolist())
+        self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
         return (pars[1], pars[2], cov[1, 1])
