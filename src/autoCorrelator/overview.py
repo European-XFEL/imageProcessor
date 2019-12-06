@@ -23,10 +23,7 @@ def generate_scene(device):
 
     # camera device
     input_node = device["input"]
-    camera_id = input_node["connectedOutputChannels"]
-    if camera_id:
-        camera_id = camera_id[0].split(":")[0]
-    camera_label = f"Camera: {camera_id}"
+    camera_label = f"Camera Scene"
     cam_link = DeviceSceneLinkModel(
         keys=[f"{camera_id}.availableScenes"],
         target_window=SceneTargetWindow.Dialog,
@@ -175,33 +172,44 @@ def generate_scene(device):
     width2 = 100
     result_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=17.0, width=width1, x=x1, y=510,
+        height=17.0, width=width1, x=x1, y=460,
         parent_component='DisplayComponent', text='Pulse Duration')
     result = DisplayLabelModel(
-        height=23.0, width=width2, x=x2, y=510,
+        height=23.0, width=width2, x=x2, y=460,
         keys=[f'{device_id}.pulseWidth'],
         parent_component='DisplayComponent')
     result_error_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=17.0, width=width1, x=x1, y=550,
+        height=17.0, width=width1, x=x1, y=490,
         parent_component='DisplayComponent', text='Uncertainty')
     result_error = DisplayLabelModel(
-        height=23.0, width=width2, x=x2, y=550,
+        height=23.0, width=width2, x=x2, y=490,
         keys=[f'{device_id}.ePulseWidth'],
         parent_component='DisplayComponent')
     fit_status_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=17.0, width=width1, x=x1, y=590,
+        height=17.0, width=width1, x=x1, y=520,
         parent_component='DisplayComponent', text='Fit Status')
     fit_status = DisplayLabelModel(
-        height=23.0, width=width2, x=x2, y=590,
+        height=23.0, width=width2, x=x2, y=520,
         keys=[f'{device_id}.fitStatus'],
         parent_component='DisplayComponent')
+
+    status_label = LabelModel(
+        font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
+        height=38.0, width=45.0, x=x2   , y=540,
+        parent_component='DisplayComponent', text='Status')
+    status_log = DisplayTextLogModel(
+        height=230, width=320, x=x1, y=570,
+        keys=[f'{device_id}.status'],
+        parent_component='DisplayComponent')
+        
     result_scene = FixedLayoutModel(
          height=761.0, width=1342.0,
         children=[result_label, result,
                   result_error_label, result_error,
-                  fit_status_label, fit_status])
+                  fit_status_label, fit_status,
+                  status_label, status_log])
 
     op_scene = FixedLayoutModel(
          height=761.0, width=1342.0,
