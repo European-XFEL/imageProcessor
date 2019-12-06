@@ -23,13 +23,16 @@ def generate_scene(device):
 
     # camera device
     input_node = device["input"]
+    camera_id = input_node["connectedOutputChannels"]
+    if camera_id:
+        camera_id = camera_id[0].split(":")[0]
     camera_label = f"Camera Scene"
     cam_link = DeviceSceneLinkModel(
         keys=[f"{camera_id}.availableScenes"],
         target_window=SceneTargetWindow.Dialog,
         parent_component='DisplayComponent', target='scene',
         text=camera_label,
-        x=50, y=70, width=400, height=30)
+        x=50, y=70, width=150, height=30)
     img_scene = DisplayImageModel(
         x=10, y=100, height=320, width=650,
         keys=[f'{camera_id}.output.schema.data.image'],
@@ -200,7 +203,7 @@ def generate_scene(device):
         height=38.0, width=45.0, x=x2   , y=540,
         parent_component='DisplayComponent', text='Status')
     status_log = DisplayTextLogModel(
-        height=230, width=320, x=x1, y=570,
+        height=210, width=320, x=x1, y=565,
         keys=[f'{device_id}.status'],
         parent_component='DisplayComponent')
         

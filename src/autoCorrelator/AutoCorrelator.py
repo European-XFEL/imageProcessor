@@ -294,7 +294,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.set("pulseWidth", w3)
             self.set("ePulseWidth", ew3)
             self.log.DEBUG("Image re-processed!!!")
-
+            
     def calibrate(self):
         '''Calculate calibration constant'''
 
@@ -420,6 +420,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 self.processImage(data['image'])
             else:
                 self.log.WARN("data does not have any image")
+            if self['state'] != State.PROCESSING:
+                self.updateState(State.PROCESSING)
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
@@ -457,4 +459,13 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.log.DEBUG("Image processed!!!")
 
         except Exception as e:
-            self.log.ERROR("In processImage: %s" % str(e))
+            msg = f"In processImage: {e}"
+            if self["status"] != f"ERROR: {msg}":
+                self.log.ERROR(msg)
+                self.set("status", f"ERROR: {msg}")
+            h = Hash()
+            h.set("pulseWidth", 0)
+            h.set("ePulseWidth", 0)
+            h.set("fitStatus", 0)
+            self.set(h)
+
