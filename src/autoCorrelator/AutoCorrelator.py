@@ -456,8 +456,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             # Set all properties at once
             self.set(h)
 
-            self.log.DEBUG("Image processed!!!")
-
+            msg = "Image processing Ok"
+            if self["status"] != msg:
+                self.log.DEBUG(msg)
+                self.set("status", msg)
+                                                
         except Exception as e:
             msg = f"In processImage: {e}"
             if self["status"] != f"ERROR: {msg}":
