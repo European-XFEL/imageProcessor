@@ -16,7 +16,8 @@ from karabo.bound import (
     KARABO_CLASSINFO, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
     NODE_ELEMENT, MetricPrefix, OkErrorFsm, OUTPUT_CHANNEL,
     OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_STRING_ELEMENT
+    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -50,7 +51,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     def requestScene(self, params):
         """Fulfill a scene request from another device.
-       
+
         NOTE: Required by Scene Supply Protocol, which is defined in KEP 21.
                The format of the reply is also specified there.
 
@@ -60,11 +61,12 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         name = params.get('name', default='')
         if name == 'scene':
-           payload.set('success', True)
-           payload.set('name', name)
-           payload.set('data', generate_scene(self))
-           self.reply(Hash('type', 'deviceScene', 'origin', self.getInstanceId(),
-                           'payload', payload))
+            payload.set('success', True)
+            payload.set('name', name)
+            payload.set('data', generate_scene(self))
+            self.reply(Hash('type', 'deviceScene', 'origin',
+                            self.getInstanceId(),
+                            'payload', payload))
 
     @staticmethod
     def expectedParameters(expected):
@@ -170,14 +172,30 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .description("Time shape of the beam.")
                 .assignmentOptional().defaultValue("Gaussian Beam")
                 .options(','.join([k for k in AutoCorrelator.
-                                  deconvolutionFactor.keys()]), sep=",")
+                                   deconvolutionFactor.keys()]), sep=",")
                 .reconfigurable()
                 .allowedStates(State.NORMAL)
                 .commit(),
 
             UINT32_ELEMENT(expected)
-                .key("fitError")
-                .displayedName("Fit Error")
+                .key("xMinFit")
+                .displayedName("Fit Lower Limit [px]")
+                .description("Lower limit for the fit.")
+                .assignmentOptional().defaultValue(0)
+                .reconfigurable()
+                .commit(),
+
+            UINT32_ELEMENT(expected)
+                .key("xMaxFit")
+                .displayedName("Fit Upper Limit [px]")
+                .description("Upper limit for the fit.")
+                .assignmentOptional().defaultValue(10000)
+                .reconfigurable()
+                .commit(),
+
+            UINT32_ELEMENT(expected)
+                .key("fitStatus")
+                .displayedName("Fit Status")
                 .description("Error of fit procedure: .")
                 .readOnly()
                 .commit(),
@@ -251,7 +269,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
-        
+
     def preReconfigure(self, inputConfig):
         self.log.INFO("preReconfigure")
 
@@ -329,22 +347,32 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         # perform the fit
         beamShape = self["beamShape"]
+        x_min_fit = self["xMinFit"]
+        x_max_fit = self["xMaxFit"]
+        if x_max_fit > len(imgX):
+            x_max_fit = len(imgX) - 1
+            self.set("xMaxFit", x_max_fit)
+
         if beamShape == GAUSSIAN_FIT:
-            pars, cov, err = image_processing.fitGauss(imgX)
+            pars, cov, err = \
+                image_processing.fitGauss(imgX[x_min_fit:x_max_fit])
+            x0 = pars[1] + x_min_fit
             # height = par[0], x0 = pars[1], sx = pars[2]
             fit_func = image_processing.gauss1d(
                 numpy.linspace(0, len(imgX) - 1, len(imgX)),
-                pars[0],  pars[1],  pars[2])
+                pars[0],  x0,  pars[2])
         elif beamShape == HYP_SEC_FIT:
-            pars, cov, err = image_processing.fitSech2(imgX)
+            pars, cov, err = \
+                image_processing.fitSech2(imgX[x_min_fit:x_max_fit])
+            x0 = pars[1] + x_min_fit
             fit_func = image_processing.sqsech1d(
                 numpy.linspace(0, len(imgX) - 1, len(imgX)),
-                pars[0], pars[1], pars[2])
+                pars[0], x0, pars[2])
         else:
             msg = f"Error: Unknown beam shape {beamShape} provided"
             self.log.ERROR(msg)
             raise ValueError(msg)
-        self.set("fitError", err)
+        self.set("fitStatus", err)
 
         # Threshold level
         thr = threshold * fit_func.max()
@@ -354,14 +382,14 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         sx = float(nz[-1] - nz[0])
         # Find error of FWHM
         esx = sx / pars[2] * cov[1, 1]
-        
+
         # fill output channel
         output_data = Hash('data.profileX', imgX.tolist(),
                            'data.profileXFit', fit_func.tolist())
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
-        return (pars[1], sx, esx)
+        return (x0, sx, esx)
 
     def useAsCalibrationImage1(self):
         '''Use current image as calibration image 1'''
@@ -395,8 +423,12 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
-    def onEndOfStream(self):
-        self.log.INFO("onEndOfStream called")
+    def onEndOfStream(self, inputChannel):
+        connected_devices = inputChannel.getConnectedOutputChannels().keys()
+        dev = [*connected_devices][0]
+        self.log.INFO(f"onEndOfStream called: Channel {dev} "
+                      "stopped streaming.")
+        self.updateState(State.ON)
 
     def processImage(self, imageData):
 
