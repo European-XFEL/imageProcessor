@@ -179,17 +179,19 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
             UINT32_ELEMENT(expected)
                 .key("xMinFit")
-                .displayedName("Fit Lower Limit [px]")
+                .displayedName("Fit Lower Limit")
                 .description("Lower limit for the fit.")
                 .assignmentOptional().defaultValue(0)
+                .unit(Unit.PIXEL)
                 .reconfigurable()
                 .commit(),
 
             UINT32_ELEMENT(expected)
                 .key("xMaxFit")
-                .displayedName("Fit Upper Limit [px]")
+                .displayedName("Fit Upper Limit")
                 .description("Upper limit for the fit.")
                 .assignmentOptional().defaultValue(10000)
+                .unit(Unit.PIXEL)
                 .reconfigurable()
                 .commit(),
 
