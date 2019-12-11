@@ -211,9 +211,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xSigma3")
+                .key("xFWHM3")
                 .displayedName("Input Image Peak x-FWHM")
-                .description("x-Sigma in the input image.")
+                .description("x-FWHM in the input image.")
                 .unit(Unit.PIXEL)
                 .readOnly()
                 .commit(),
@@ -451,7 +451,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             h = Hash()
 
             h.set("xPeak3", x3)
-            h.set("xSigma3", s3)
+            h.set("xFWHM3", s3)
             h.set("pulseWidth", w3)
             h.set("ePulseWidth", ew3)
 
