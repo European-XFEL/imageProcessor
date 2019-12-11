@@ -174,7 +174,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .options(','.join([k for k in AutoCorrelator.
                                    deconvolutionFactor.keys()]), sep=",")
                 .reconfigurable()
-                .allowedStates(State.NORMAL)
+                .allowedStates(State.NORMAL, State.PROCESSING)
                 .commit(),
 
             UINT32_ELEMENT(expected)
