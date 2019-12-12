@@ -174,7 +174,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 .options(','.join([k for k in AutoCorrelator.
                                    deconvolutionFactor.keys()]), sep=",")
                 .reconfigurable()
-                .allowedStates(State.NORMAL, State.PROCESSING)
+                .allowedStates(State.NORMAL)
                 .commit(),
 
             UINT32_ELEMENT(expected)
@@ -422,8 +422,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 self.processImage(data['image'])
             else:
                 self.log.WARN("data does not have any image")
-            if self['state'] != State.PROCESSING:
-                self.updateState(State.PROCESSING)
         except Exception as e:
             self.log.ERROR("Exception caught in onData: %s" % str(e))
 
@@ -432,7 +430,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         dev = [*connected_devices][0]
         self.log.INFO(f"onEndOfStream called: Channel {dev} "
                       "stopped streaming.")
-        self.updateState(State.ON)
 
     def processImage(self, imageData):
 
