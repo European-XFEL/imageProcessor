@@ -309,7 +309,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             elif delayUnit == "um":
                 # Must convert to time
                 # * 2 due to double pass through adjustable length
-                delay = 2 * 1e+6 * self["delay"] / scipy.constants.c
+                delay = 2 * 1e+9 * self["delay"] / scipy.constants.c
             else:
                 self.errorFound("Unknown delay unit #s" % delayUnit, "")
 
