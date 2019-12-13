@@ -46,6 +46,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.currentPeak = None
         self.currentFwhm = None
 
+        # boolean for schema_update
+        self.is_schema_updated = False
+
     def __del__(self):
         super(AutoCorrelator, self).__del__()
 
@@ -296,7 +299,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.set("pulseWidth", w3)
             self.set("ePulseWidth", ew3)
             self.log.DEBUG("Image re-processed!!!")
-            
+
     def calibrate(self):
         '''Calculate calibration constant'''
 
@@ -414,6 +417,10 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
     def onData(self, data, metaData):
 
         try:
+            if not self.is_schema_updated:
+                self.update_output_schema(data)
+                self.is_schema_updated = True
+
             if data.has('data.image'):
                 self.processImage(data['data.image'])
             elif data.has('image'):
@@ -430,6 +437,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         dev = [*connected_devices][0]
         self.log.INFO(f"onEndOfStream called: Channel {dev} "
                       "stopped streaming.")
+
+        # schema should updated at next connection
+        self.is_schema_updated = False
 
     def processImage(self, imageData):
 
@@ -459,7 +469,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             if self["status"] != msg:
                 self.log.DEBUG(msg)
                 self.set("status", msg)
-                                                
+
         except Exception as e:
             msg = f"In processImage: {e}"
             if self["status"] != f"ERROR: {msg}":
@@ -471,3 +481,45 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             h.set("fitStatus", 0)
             self.set(h)
 
+    def update_output_schema(self, data):
+        # Get device configuration before schema update
+        if data.has('data.image'):
+            image = data['data.image']
+        elif data.has('image'):
+            image = data['image']
+        shape = image.getDimensions()
+        width = shape[0]
+
+        newSchema = Schema()
+        dataSchema = Schema()
+        (
+            NODE_ELEMENT(dataSchema).key("data")
+            .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
+            .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(dataSchema)
+            .key("data.profileX")
+            .displayedName("Image X Profile")
+            .description("Profile along x-axis of second harmonic beam.")
+            .readOnly()
+            .commit(),
+
+            VECTOR_DOUBLE_ELEMENT(dataSchema)
+            .key("data.profileXFit")
+            .displayedName("X Profile Fit")
+            .description("Fit Profile along x-axis of second "
+                         "harmonic beam.")
+            .readOnly()
+            .commit(),
+
+            dataSchema.setMaxSize("data.profileX", width),
+            dataSchema.setMaxSize("data.profileXFit", width),
+
+            OUTPUT_CHANNEL(newSchema).key("output")
+            .displayedName("Output")
+            .dataSchema(dataSchema)
+            .commit(),
+        )
+
+        self.updateSchema(newSchema)
