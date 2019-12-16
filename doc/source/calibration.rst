@@ -14,7 +14,7 @@ of the center of SH transverse distribution
       \Delta Z_0 = \frac{\Delta t \cdot u}{2 \cdot sin(\phi/2)}  
       :label: shift_eq
 	
-	      .. _fig-SH_profile:
+.. _fig-delay_line:
 
 .. figure:: _images/autocorrelator_setup.png
    :scale: 50 %
