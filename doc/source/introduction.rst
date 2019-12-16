@@ -34,7 +34,7 @@ found that the transverse profile :math:`D_z` of the second harmonic
 depends on the pulse duration :math:`\tau_p` of the fundamental beams,
 
 .. math::
-   \Delta Z_0 = \frac{\Delta t \cdot u}{2 \cdot sin(\phi/2)}
+   D_z = \frac{\tau_p \cdot u}{sin(\phi/2)}
 
 .. math::
    \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delta Z_0}
