@@ -41,16 +41,29 @@ depends on the pulse duration :math:`\tau_p` of the fundamental beams,
    
 where :math:`u = c/n` and :math:`\phi` are the speed of light and the
 intersection angle of input beams, respectively, in the crystal with
-refractive index :math:`n`. The angle :math:`\phi` cannot
-be measured with sufficient precision for a reliable extraction of pulse
-duration :math:`\tau_p` .
+refractive index :math:`n`.
 The transverse profile :math:`D_z` is determined from the data accumulated
 with the CCD camera available in the system.
-An example is presented in Fig. 14. The left panel of the
-figure shows clearly the deposited energy from the signal of the generated
+An example is presented in :numref:`Fig. %s <fig-SH_profile>`:
+
+.. _fig-SH_profile:
+
+.. figure:: _images/SH_profile.png
+   :scale: 50 %
+   :align: center
+
+   The fundamental beams and the second harmonic beam
+   are detected in the CCD camera located after the non-linear crystal.
+
+The figure shows clearly the deposited energy from the signal of the generated
 second harmonic beam (central and more intense peak) and of the two
 fundamental beams (low intensity side signals). The transverse profile
 :math:`D_z` is determined from a fit to the SH peak.
-The right panel of the figure presents the result of a
+
+The angle :math:`\phi` cannot
+be measured with sufficient precision for a reliable extraction of pulse
+duration :math:`\tau_p`. The way used in the device to determine the pulse
+duration from the measured transverse profile is presented the calibration
+section.
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
