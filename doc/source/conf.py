@@ -53,7 +53,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'pplPattern'
+project = 'autoCorrelator'
 copyright = '2019, CAS'
 author = 'CAS'
 
@@ -264,7 +264,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pplPattern.tex', 'pplPattern',
+    (master_doc, 'autoCorrelator.tex', 'autoCorrelator',
      'CAS', 'manual'),
 ]
 
@@ -306,7 +306,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pplPattern', 'pplPattern Documentation',
+    (master_doc, 'autoCorrelator', 'autoCorrelator Documentation',
      [author], 1)
 ]
 
@@ -321,8 +321,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pplPattern', 'pplPattern Documentation',
-     author, 'pplPattern', 'One line description of project.',
+    (master_doc, 'autoCorrelator', 'autoCorrelator Documentation',
+     author, 'autoCorrelator', 'One line description of project.',
      'Miscellaneous'),
 ]
 
