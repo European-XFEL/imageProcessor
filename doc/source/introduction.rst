@@ -1,31 +1,24 @@
-***********************
-pplPattern Introduction
-***********************
+***************************
+autoCorrelator Introduction
+***************************
 
-The pplPattern middlelayer device is designed to provide an easy interface
-to configure the pattern of the pulse probe laser (ppl).
+The autoCorrelator bound device is designed to provide an online
+determination of the pulse duration using a single-shot auto
+correlator [1]_.
 
-Due to a specific requirement by LAS group, each instrument must be
-able to modify only its relevant bit in the 32-bits pattern associated to
-each electron bunch running in the XFEL machine.
-This should reduce the possibility to modify by mistake a ppl pattern
-configured for a different instrument. 
-This feature is obtained at the moment by starting as private user
-the karabo server for a specific topic. Upon instantiation of the
-pplPattern device the permissions associated to that specific user will be
-inherited from the server, thus allowing to expose only the bits relevant
-to its topic.
+The measurement of the time profile of pulses is based on the following
+principle graphically displayed in :numref:`Fig. %s <fig-principle>`.
+The input beam is sent to a beam-splitter; the two identical originated
+beams propagate along two distinct optical paths until they intersect
+in a non-linear crystal. Here, due to the high-intensity of the beams,
+a second harmonic beam (SH) is created and its integrated energy is
+measured by a CCD camera located after the crystal.
+The pulse duration of laser pulses can be determined upon measuring
+the transverse distribution of the energy deposited in the CCD camera.
+From geometrical considerations in :numref:`Fig. %s <fig-principle>`,
+assuming for the incoming beams a rectangular time profile
+:math:\tau\p and uniform transverse intensity profile, it is
+found that the transverse profile :math:D_z of the second harmonic
+depends on the pulse duration :math:\tau\p of the fundamental beams,
 
-A sequence of up to four patterns can be saved per XFEL train, according
-to the needs of the experiment being run in the instruments. In addition,
-a *train configuration* can be executed multiple times, and two distinct
-train configurations can be set.
-
-The ppl pattern configuration is saved in the DOOCS server
-XFEL.UTIL/BUNCH_PATTERN/PATTERN_BUILDER, 
-and in order to perform modifications to the pattern the user should
-be included in the special group *exfel_lase*. If the user is
-not authorized yet the device initialization will fail; in this case
-a request should be made to LAS
-(e.g., to Tomasz Jezynski <tomasz.jezynski@xfel.eu>).
-
+.. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
