@@ -28,8 +28,8 @@ The pulse duration of laser pulses can be determined upon measuring
 the transverse distribution of the energy deposited in the CCD camera.
 From geometrical considerations in :numref:`Fig. %s <fig-principle>`,
 assuming for the incoming beams a rectangular time profile
-:math:`\tau\p` and uniform transverse intensity profile, it is
-found that the transverse profile :math: D_z of the second harmonic
-depends on the pulse duration :math: \tau\p of the fundamental beams,
+:math:`$\tau_p$` and uniform transverse intensity profile, it is
+found that the transverse profile :math:`D_z` of the second harmonic
+depends on the pulse duration :math:`\tau_p` of the fundamental beams,
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
