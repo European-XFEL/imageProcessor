@@ -1,6 +1,50 @@
 ***********
 Calibration
 ***********
+
+To overcome the difficulty in measuring the incident angle :math:`\phi`
+of the primary beams, the following methode is applied.
+
+By shifting the mirror stage in the optical delay line,
+:numref:`Fig. %s <fig-delay_line>`, a delay :math:`\Delta t` is added
+between the two input pulses, resulting in a shift :math:`\Delta Z_0`
+of the center of SH transverse distribution
+
+.. math::
+      \Delta Z_0 = \frac{\Delta t \cdot u}{2 \cdot sin(\phi/2)}  
+      :label: shift_eq
+	
+	      .. _fig-SH_profile:
+
+.. figure:: _images/autocorrelator_setup.png
+   :scale: 50 %
+   :align: center
+
+   Setup ([1]_) of an intensity autocorrelator. BS refers to the beam splitter.
+
+				     
+Combining equations :eq:`profile_eq` the dependence on the intersection
+angle :math:`\phi` is removed, and the pulse duration can be obtained as
+
+.. math::
+   \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delya Z_0}
+   :label: tau_calib_eq
+
+The ratio :math: K = ∆Z
+is a calibration factor which allows the convertion of the SH
+0
+transverse profile (measured in pixel unit) in the pulse time profile (measured
+in femtosecond unit). Its determination with sufficient accuracy is challenging.
+To overcome this difficulty the following procedure is applied. One of the two
+optical paths can be varied by pulling or pushing one mirror in the line in a
+controllable way using a micrometer. A change ∆l of the micrometer head
+position results in a pulse delay of ∆t = 2∆l/c and in the shift described by
+eq. (6). Thus, shifting the SH distribution, as measured in the CCD camera, in
+two extreme opposite positions of the sensitive area allows the measurements of
+calibration factor with larger relative uncertainty as
+
+
+
 Before instantiating the device no special action should be taken
 by the user. In the initialization phase the device will check the
 possible laser patterns allowed to the users, according to the groups they

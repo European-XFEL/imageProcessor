@@ -35,9 +35,11 @@ depends on the pulse duration :math:`\tau_p` of the fundamental beams,
 
 .. math::
    D_z = \frac{\tau_p \cdot u}{sin(\phi/2)}
-
+   :label: profile_eq
+	   
 .. math::
    \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delta Z_0}
+   :label: tau_eq
    
 where :math:`u = c/n` and :math:`\phi` are the speed of light and the
 intersection angle of input beams, respectively, in the crystal with
