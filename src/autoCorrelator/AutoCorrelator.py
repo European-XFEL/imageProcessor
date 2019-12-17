@@ -394,7 +394,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
-        return (x0, sx, esx)
+        return x0, sx, esx
 
     def useAsCalibrationImage1(self):
         '''Use current image as calibration image 1'''
