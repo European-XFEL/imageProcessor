@@ -488,7 +488,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         elif data.has('image'):
             image = data['image']
         shape = image.getDimensions()
-        width = shape[0]
+        width = shape[1]
 
         newSchema = Schema()
         dataSchema = Schema()
