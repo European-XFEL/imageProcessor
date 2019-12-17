@@ -44,7 +44,7 @@ intersection angle of input beams, respectively, in the crystal with
 refractive index :math:`n`.
 The transverse profile :math:`D_z` is determined from the data accumulated
 with the CCD camera available in the system.
-An example is presented in :numref:`Fig. %s <fig-SH_profile>`:
+An example of camera image is presented in :numref:`Fig. %s <fig-SH_profile>`:
 
 .. _fig-SH_profile:
 
