@@ -502,6 +502,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .key("data.profileX")
             .displayedName("Image X Profile")
             .description("Profile along x-axis of second harmonic beam.")
+            .maxSize(width)
             .readOnly()
             .commit(),
 
@@ -510,11 +511,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .displayedName("X Profile Fit")
             .description("Fit Profile along x-axis of second "
                          "harmonic beam.")
+            .maxSize(width)
             .readOnly()
             .commit(),
-
-            dataSchema.setMaxSize("data.profileX", width),
-            dataSchema.setMaxSize("data.profileXFit", width),
 
             OUTPUT_CHANNEL(newSchema).key("output")
             .displayedName("Output")
