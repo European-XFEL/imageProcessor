@@ -17,48 +17,16 @@ An example of scene is presented in :numref:`Fig. %s <fig-scene>`:
 
    The scene for auto-correlator device.
 
-In the graph three patterns are at the moment presented:
-
-- **User: Ppl Pattern**: The entire ppl pattern in the train selected by the user in the device;
-
-- **Doocs: Ppl SubPattern**: The entire ppl pattern store in DOOCS;
-
-- **XFEL Bunch Charge**: The charge pattern for bunches emitting x-rays, in the
-  selected SASE as described above.
-
-
-To deselect one of the patterns use the item list widget. If not yet
+All calibration parameters are available in the upper-right sub-panel.
+The image x-profile is shown superimposed to the fitting function.
+To deselect one of the graphs use the item list widget. If not yet
 visible, this widget can be activated from the drop up menu showing up
 by right-clicking on the graph.
 
-Note that the displayed grid of the charge bunch pattern reflects the
-fundamental Doocs repetition rate *9 MHz*, while the ppl pattern grid
-follows the grid in the relative DOOCS server (*4.5 MHz* in the shown
-example). This results in an artificial rescaling of the charge pattern
-w.r.t the ppl patterns.
-In the next releases this mismatch will be fixed, and the grid of bunch charge
-will be properly rescaled, to help the user to correctly compare the grid
-of the two types of patterns.
+A log of the device **status** is also provided.
+Note that only messages appeared after the opening of the scene will
+be displayed.
  
-A lookup table is provided by the laser group to help selecting
-the number of empty bunches between pulses, according to the
-allowed repetition rates of the laser. Trying to set a value
-not allowed will fail.
-
-
-For arbitrary pattern selection a dedicated scene exists, :numref:`Fig. %s <fig-arbitrary_scene>`:
-
-.. _fig-arbitrary_scene:
-
-.. figure:: _images/pplPattern_arbitrary_scene.png
-   :scale: 70 %
-   :align: center
-
-   :numref:`Fig. %s <fig-arbitrary_scene>`: Generic fancy sub-patterns
-   can be set using a dedicated scene.
-
-No check is done on the consistency of the patterns here written by the user.
-Any change done in one scene will be reflected in the other one because they
-both describe the same parameter configuration in DOOCS.
-Thus, for standard (no fancy) patterns users are advised to use the scene
-optimized for periodic subpatterns. 
+A link to its
+auto-generated scene is provided, allowing the user to configure the
+camera without having to navigate in the project.
