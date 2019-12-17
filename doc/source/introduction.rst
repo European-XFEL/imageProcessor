@@ -89,5 +89,4 @@ integer flag describing the fit status. If it is equal to 1, 2, 3 or 4,
 the solution was found, otherwise the solution was not found [2]_.
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
-
 .. [2] Scipy.org, https://github.com/scipy/scipy/blob/master/scipy/optimize/minpack.py

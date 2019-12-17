@@ -3,7 +3,7 @@ Calibration
 ***********
 
 To overcome the difficulty in measuring the incident angle :math:`\phi`
-of the primary beams, the following methode is applied.
+of the primary beams, the following method is applied.
 
 By shifting the mirror stage in the optical delay line,
 :numref:`Fig. %s <fig-delay_line>`, a delay :math:`\Delta t` is added
@@ -30,8 +30,8 @@ angle :math:`\phi` is removed, and the pulse duration can be obtained as
    \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delta Z_0}
 
 The ratio :math:`K = \frac{\Delta t}{\Delta Z}` is a calibration factor
-which allows the convertion of the SH transverse profile (measured in
-pixel unit) in the pulse time profile (measured in femtosecond unit).
+which allows the conversion of the SH transverse profile (measured in
+pixel unit) to the pulse time profile (measured in femtosecond unit).
 
 Its determination with sufficient accuracy is challenging.
 To overcome this difficulty the following procedure is applied. One of the two
@@ -52,7 +52,7 @@ here below:
 .. math::
    \Delta t_1 - \Delta t_2 = 2(\Delta l_1 - \Delta l_2) / c
 
-Considering the above espression of :math:`\tau_p`,
+Considering the above expression of :math:`\tau_p`,
 
 .. math::
    \Delta t_1 - \Delta t_2 = 2\cdot \tau_p/D_z (\Delta Z_1 - \Delta Z_2)
@@ -96,7 +96,7 @@ CCD camera (by properly translating the mirror stage in the
 optical delay line with the micrometer),
 by clicking on **Current Image as 1st Calibration** the current values of
 peak position and FWHM will be set as **Image1 Peak (x)** and
-**Image1 FWHM (x)**, respectively. Similarely, the second set of calibration
+**Image1 FWHM (x)**, respectively. Similarly, the second set of calibration
 parameters are obtained steering the SH profile in the other side of the
 camera and clicking on **Current Image as 2nd Calibration**.
 
@@ -106,8 +106,8 @@ Once the two calibration images are acquired, the calibration constant
 * **Delay Unit** to :math:`\mu m`;
 
 * **Delay** to the entire translation of the mirror stage, equivalent
-  to :math:`(\Delta l_1 - \Delta l_2)` (this measurement
-  should be taken by the user);
+  to :math:`(\Delta l_1 - \Delta l_2)`. This measurement
+  should be taken by the user;
     
 or, in case the optical delay between the two calibration images was
 provided already in femtosecond unit, after setting
@@ -117,10 +117,16 @@ provided already in femtosecond unit, after setting
 * **Delay** to the time delay.
 
 The extracted **Calibration constant** allows to calculate the pulse duration
+from the measured FWHM :math:`D_z`,  
 
 .. math::
 
    \tau_p = D_z \cdot \alpha \cdot K,
 
 :math:`\alpha` being the multiplication factor originating from the
-module assumed for the time-profie of the pulse.	 
+model assumed for the time-profile of the pulse.
+
+The uncertainty of the pulse duration is preliminary estimated via error
+propagation by the uncertainty on the fit FWHM, assuming negligible
+the uncertainty on the calibration constant and no correlation between the
+fit parameters.
