@@ -75,8 +75,7 @@ in :numref:`Fig. %s <fig-editor>`,
    :scale: 60 %	   
    :align: center
 	   
-   :numref:`Fig. %s <fig-editor>`: Configuration Editor of the
-   autocorrelator device.
+   Configuration Editor of the autocorrelator device.
 
 The camera device proding the image of th ebeam profile should be
 set in the key **input.connectedOutputChannels** of the autocorrelator
@@ -85,6 +84,6 @@ For each camera image the projection along the axis-x is calculated,
 a fit is performed according to a selectable model (**Beam Shape**)
 for the time-profile of the pulse, and the peak position and FWHM are
 determined from the fitting function (**Input Image Peak x-Pos** and
-**Input Image Peak x-Pos**).
+**Input Image Peak x-Pos**). The 
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
