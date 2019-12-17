@@ -68,7 +68,7 @@ resulting in
 
 This way, the calibration factor
 :math:`K = (\frac{2}{c} \cdot \frac{\Delta l_1 - \Delta l_2}{\Delta Z_1 - \Delta
-Z_2)} [\frac{fs}{pxl}]` can be calculated with a larger relative precision
+Z_2}) [\frac{fs}{pxl}]` can be calculated with a larger relative precision
 from a reproducible and controllable procedure.
 
 It should be noted that the multiplying factor 1/2 in the above equation
@@ -88,6 +88,5 @@ configuration editor. The user should take care to properly
 select the fitting region reducing the contribution from the fundamental beams.
 The fitting window can be optimized configuring the keys **Fit Lower Limit**
 and **Fit Upper Limit**.
-Also, 
-Attention should be taken in order not to cut the profile of the SH beam
+Also, attention should be taken in order not to cut the profile of the SH beam
 thus affecting the measurement of the FWHM.
