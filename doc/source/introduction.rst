@@ -86,7 +86,7 @@ for the time-profile of the pulse, and the peak position and FWHM are
 determined from the fitting function (**Input Image Peak x-Pos** and
 **Input Image Peak x-Pos**). The **Fit Error** parameter is an
 integer flag describing the fit status. If it is equal to 1, 2, 3 or 4,
-the solution was found, otherwise, the solution was not found [2]_.
+the solution was found, otherwise the solution was not found [2]_.
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
 

@@ -63,10 +63,11 @@ Considering the above espression of :math:`\tau_p`,
 resulting in 
 
 .. math::
-   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta Z_2})
+   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta l_1 -
+   \Delta l_2}{\Delta Z_1 - \Delta Z_2})
 
 This way, the calibration factor
-:math:`K = (\frac{2}{c} \codt \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta
+:math:`K = (\frac{2}{c} \cdot \frac{\Delta l_1 - \Delta l_2}{\Delta Z_1 - \Delta
 Z_2)} [\frac{fs}{pxl}]` can be calculated with a larger relative precision
 from a reproducible and controllable procedure.
 
@@ -82,15 +83,11 @@ extracted values, and the contribution from model uncertainty to the
 global systematical uncertainty can be estimated as half of the maximum
 deviation between the two calculated values.
 
-The above mentioned calibration steps can be handled by the device
-configuration editor, :numref:`Fig. %s <fig-editor>`,
-
-.. _fig-editor:
-
-.. figure:: _images/device_editor.png
-   :scale: 60 %
-   :align: center
-
-   :numref:`Fig. %s <fig-editor>`: Configuration Editor of the
-   autocorrelator device.
-
+The above mentioned calibration steps are handled by the device
+configuration editor. The user should take care to properly
+select the fitting region reducing the contribution from the fundamental beams.
+The fitting window can be optimized configuring the keys **Fit Lower Limit**
+and **Fit Upper Limit**.
+Also, 
+Attention should be taken in order not to cut the profile of the SH beam
+thus affecting the measurement of the FWHM.
