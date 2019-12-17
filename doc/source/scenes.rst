@@ -15,7 +15,7 @@ An example of scene is presented in :numref:`Fig. %s <fig-scene>`:
    :scale: 60 %
    :align: center
 
-   The scene for auto-correlator device.
+   The scene of the auto-correlator device.
 
 All calibration parameters are available in the upper-right sub-panel.
 The image x-profile is shown superimposed to the fitting function.
@@ -27,6 +27,6 @@ A log of the device **status** is also provided.
 Note that only messages appeared after the opening of the scene will
 be displayed.
  
-A link to its
-auto-generated scene is provided, allowing the user to configure the
+A link to the camera auto-generated scene is provided, allowing
+the user to configure the
 camera without having to navigate in the project.
