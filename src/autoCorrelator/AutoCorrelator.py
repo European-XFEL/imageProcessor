@@ -358,6 +358,10 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             x_max_fit = len(imgX) - 1
             self.set("xMaxFit", x_max_fit)
 
+        if x_max_fit - x_min_fit < 4:
+            msg = f"Fit window too narrow: [{x_min_fit}, {x_max_fit}]"
+            raise ValueError(msg)
+
         if beamShape == GAUSSIAN_FIT:
             pars, cov, err = \
                 image_processing.fitGauss(imgX[x_min_fit:x_max_fit])
