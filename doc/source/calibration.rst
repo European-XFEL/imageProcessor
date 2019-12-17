@@ -27,9 +27,9 @@ Combining equations on transverse profile :math:`D_z` with shift
 angle :math:`\phi` is removed, and the pulse duration can be obtained as
 
 .. math::
-   \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delya Z_0}
+   \tau_p = D_z \cdot \frac{1}{2} \cdot \frac{\Delta t}{\Delta Z_0}
 
-The ratio :math:`K = \frac{\Delta t}[\Delta Z}` is a calibration factor
+The ratio :math:`K = \frac{\Delta t}{\Delta Z}` is a calibration factor
 which allows the convertion of the SH transverse profile (measured in
 pixel unit) in the pulse time profile (measured in femtosecond unit).
 
