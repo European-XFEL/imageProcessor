@@ -58,12 +58,33 @@ An example is presented in :numref:`Fig. %s <fig-SH_profile>`:
 The figure shows clearly the deposited energy from the signal of the generated
 second harmonic beam (central and more intense peak) and of the two
 fundamental beams (low intensity side signals). The transverse profile
-:math:`D_z` is determined from a fit to the SH peak.
+:math:`D_z` is determined as FWHM from the fit to the SH peak.
 
 The angle :math:`\phi` cannot
 be measured with sufficient precision for a reliable extraction of pulse
 duration :math:`\tau_p`. The way used in the device to determine the pulse
 duration from the measured transverse profile is presented the calibration
 section.
+
+The device configuration editor is presented
+in :numref:`Fig. %s <fig-editor>`,
+
+.. _fig-editor:
+
+.. figure:: _images/device_editor.png
+   :scale: 60 %	   
+   :align: center
+	   
+   :numref:`Fig. %s <fig-editor>`: Configuration Editor of the
+   autocorrelator device.
+
+The camera device proding the image of th ebeam profile should be
+set in the key **input.connectedOutputChannels** of the autocorrelator
+device.
+For each camera image the projection along the axis-x is calculated,
+a fit is performed according to a selectable model (**Beam Shape**)
+for the time-profile of the pulse, and the peak position and FWHM are
+determined from the fitting function (**Input Image Peak x-Pos** and
+**Input Image Peak x-Pos**).
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
