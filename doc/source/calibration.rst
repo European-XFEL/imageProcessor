@@ -88,5 +88,14 @@ configuration editor. The user should take care to properly
 select the fitting region reducing the contribution from the fundamental beams.
 The fitting window can be optimized configuring the keys **Fit Lower Limit**
 and **Fit Upper Limit**.
-Also, attention should be taken in order not to cut the profile of the SH beam
-thus affecting the measurement of the FWHM.
+Also, attention should be taken in order not to cut the profile tail
+of the SH beam thus affecting the measurement of the FWHM.
+
+After moving the generated SH beam to one side of the sensitive area of the
+CCD camera (by properly shifting the optical delay line with the micrometer),
+by clicking on **Current Image as 1st Calibration** the current values of
+peak position and FWHM will be set as **Image1 Peak (x)** and
+**Image1 FWHM (x)**, respectively. Similarely, the second set of calibration
+parameters are obtained steering the SH profile in the other side of the
+camera and clicking on **Current Image as 2nd Calibration**
+
