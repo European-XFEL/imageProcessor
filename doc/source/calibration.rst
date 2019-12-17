@@ -82,26 +82,15 @@ extracted values, and the contribution from model uncertainty to the
 global systematical uncertainty can be estimated as half of the maximum
 deviation between the two calculated values.
 
+The above mentioned calibration steps can be handled by the device
+configuration editor, :numref:`Fig. %s <fig-editor>`,
+
 .. _fig-editor:
 
 .. figure:: _images/device_editor.png
    :scale: 60 %
    :align: center
 
-   :numref:`Fig. %s <fig-editor>`: After successful initialization
-   the users can visualize their credentials and the patterns
-   to work with.
-
-After initialization the users can cross-check their credentials:
-   
-The status of electron bunches in the XFEL machine is periodically
-retrieved. The interval to wait before polling for an update from DOOCS
-can be tuned by changing the value of the parameter
-**Charge Update Interval** (its default value is 2s).
-Each instrument will have visualized only the sequence of bunches emitting
-X-rays in their corresponding SASE tunnel. In case of LAS or Control
-user, at moment only SASE1 is displayed; in the next releases the possibility
-to choose at run time which tunnel to monitor will be given.
-The base frequency for the bunches (**XFEL Bunch Base Frequency**)
-is regularly updated by DOOCS.
+   :numref:`Fig. %s <fig-editor>`: Configuration Editor of the
+   autocorrelator device.
 
