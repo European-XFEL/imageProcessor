@@ -3,33 +3,19 @@ Troubleshooting
 ***************
 Some typical errors have been identified up to now:
 
-- Device initialization failing with device state
-  *"Could not instantiate base class"*.
-  This is due either to the user not belonging to the allowed xfel groups
-  or not be allowed to access the relevant DOOCS server. After agreement
-  with LAS group permissions can be required to ITDM or DOOCS, accordingly;
+- In case the camera device is not instantiated or it is stopped
+  the peak position and FWHM should be null, and no calculation of the
+  pulse duration can be performed;
 
+- In case the uncertainty arising from the fit procedure is relative large,
+  likely the model used in the fit is not appropriate:
 
-- Start of the server failed because the user not able to log into
-  exflcon146. This problem can be fixed by asking ITDM for the proper
-  authorization to login to that machine.
+  -- try to use a different available model;
 
+  -- try to optimize the fitting region;
 
-- In case the configured ppl pattern appears to be not applied, one of
-  the following scenarios could have likely happened:
-
-  -- The slot *Write Pattern Sequence to Doocs* was pressed instead of *Write Patterns to Doocs*;
-
-
-  -- The pattern was configured for a train pattern, e.g. *B*, which has a null repetition factor (thus not being applied);
-
-     
-  -- Everything was done correctly, but the flag **Is Custom Pattern Enabled**
-  is false. In this case the machine is running in the so called *Legacy mode* which does not follow the user setting;
-
-- The number of wanted empty bunches cannot be set. This is typically
-  due to the resulting pulse frequency not being compliant with what
-  allowed by the laser. Look at the **Frequency Lookup Table** for the
-  possible values to be used.
+  -- verify that the tails of the second harmonic beam are well within
+     the fitting area;
   
-
+- In case no available model describes correctly the data, 
+  an optimization of the optical line setup could be attempted.
