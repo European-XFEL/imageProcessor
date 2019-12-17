@@ -1,10 +1,9 @@
 from karabo.common.scenemodel.api import (
-    BoxLayoutModel, ComboBoxModel, DisplayCommandModel,
-    DisplayLabelModel, DisplayImageModel, DeviceSceneLinkModel,
-    DisplayStateColorModel, DisplayPlotModel, DisplayTextLogModel, 
+    ComboBoxModel, DisplayCommandModel,
+    DisplayImageModel, DisplayLabelModel, DeviceSceneLinkModel,
+    DisplayPlotModel, DisplayTextLogModel,
     DoubleLineEditModel, FixedLayoutModel, IntLineEditModel, LabelModel,
-    LampModel, LineModel, RectangleModel, SceneLinkModel,
-    SceneModel, SceneTargetWindow,
+    RectangleModel, SceneModel, SceneTargetWindow,
     write_scene)
 
 
@@ -17,7 +16,7 @@ def generate_scene(device):
         stroke='#000000', stroke_linejoin='round', stroke_width=2.0)
 
     device_label = LabelModel(
-        font='Ubuntu,15,-1,5,75,0,0,0,0,0', foreground='#000000', 
+        font='Ubuntu,15,-1,5,75,0,0,0,0,0', foreground='#000000',
         height=30, width=500, x=350, y=20,
         text=f'DeviceID: {device_id}')
 
@@ -105,7 +104,7 @@ def generate_scene(device):
         height=27, width=width3, x=x3, y=260,
         keys=[f'{device_id}.delay'],
         parent_component='EditableApplyLaterComponent')
-    
+
     constant_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
         height=27.0, width=width1, x=x1, y=290,
@@ -159,7 +158,7 @@ def generate_scene(device):
         height=27, width=width3, x=x3, y=390,
         keys=[f'{device_id}.xMaxFit'],
         parent_component='EditableApplyLaterComponent')
-    
+
     calib_par_scene = FixedLayoutModel(
         children=[delay_unit_label, delay_unit_get, delay_unit_set,
                   delay_value_label, delay_value_get, delay_value_set,
@@ -200,15 +199,15 @@ def generate_scene(device):
 
     status_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=38.0, width=45.0, x=x2   , y=540,
+        height=38.0, width=45.0, x=x2, y=540,
         parent_component='DisplayComponent', text='Status')
     status_log = DisplayTextLogModel(
         height=210, width=320, x=x1, y=565,
         keys=[f'{device_id}.status'],
         parent_component='DisplayComponent')
-        
+
     result_scene = FixedLayoutModel(
-         height=761.0, width=1342.0,
+        height=761.0, width=1342.0,
         children=[result_label, result,
                   result_error_label, result_error,
                   fit_status_label, fit_status,
