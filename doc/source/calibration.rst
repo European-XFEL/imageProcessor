@@ -99,3 +99,9 @@ peak position and FWHM will be set as **Image1 Peak (x)** and
 parameters are obtained steering the SH profile in the other side of the
 camera and clicking on **Current Image as 2nd Calibration**
 
+Once the two calibration images are acquired, the calibration constant
+:math:`K` can be calculated by
+
+* setting the **Delay Unit** to :math:`\mu m`
+
+* pi
