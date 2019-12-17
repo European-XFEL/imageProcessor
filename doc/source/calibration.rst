@@ -63,8 +63,24 @@ Considering the above espression of :math:`\tau_p`,
 resulting in 
 
 .. math::
-   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta_1 - \Delta_2}{(\Delta Z_1 - \Delta Z_2)}
+   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta Z_2}
 
+This way, the calibration factor
+:math:`K = (\frac{2}{c} \codt \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta
+Z_2)} [\frac{fs}{pxl}]` can be calculated with a larger relative precision
+from a reproducible and controllable procedure.
+
+It should be noted that the multiplying factor 1/2 in the above equation
+results from the initial and not-realistic assumption of a rectangular time
+profile and uniform transverse intensity profile for the incoming beams.
+More realistic models for the unknown time shape of initial pulses should
+be considered. Assuming the Gaussian and hyperbolic secant shapes for
+the pulse time-profile results in the factors 1/2 and 1/1.54, respectively.
+
+The oscillator pulse duration is then calculated as the mean value of these
+extracted values, and the contribution from model uncertainty to the
+global systematical uncertainty can be estimated as half of the maximum
+deviation between the two calculated values.
 
 .. _fig-editor:
 
