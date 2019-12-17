@@ -63,7 +63,7 @@ Considering the above espression of :math:`\tau_p`,
 resulting in 
 
 .. math::
-   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta Z_2}
+   \tau_p = D_z \cdot \frac{1}{2} \cdot (\frac{2}{c} \cdot \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta Z_2})
 
 This way, the calibration factor
 :math:`K = (\frac{2}{c} \codt \frac{\Delta_1 - \Delta_2}{\Delta Z_1 - \Delta
