@@ -448,7 +448,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             sF = self.deconvolutionFactor[self.get("beamShape")]
 
             imageArray = imageData.getData()
-            (x3, s3, es3) = self.findPeakFWHM(imageArray)
+            x3, s3, es3 = self.findPeakFWHM(imageArray)
             self.currentPeak = x3
             self.currentFwhm = s3
             self.currentEFwhm = es3
