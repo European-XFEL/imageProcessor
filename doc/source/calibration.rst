@@ -92,16 +92,35 @@ Also, attention should be taken in order not to cut the profile tail
 of the SH beam thus affecting the measurement of the FWHM.
 
 After moving the generated SH beam to one side of the sensitive area of the
-CCD camera (by properly shifting the optical delay line with the micrometer),
+CCD camera (by properly translating the mirror stage in the
+optical delay line with the micrometer),
 by clicking on **Current Image as 1st Calibration** the current values of
 peak position and FWHM will be set as **Image1 Peak (x)** and
 **Image1 FWHM (x)**, respectively. Similarely, the second set of calibration
 parameters are obtained steering the SH profile in the other side of the
-camera and clicking on **Current Image as 2nd Calibration**
+camera and clicking on **Current Image as 2nd Calibration**.
 
 Once the two calibration images are acquired, the calibration constant
-:math:`K` can be calculated by
+:math:`K` can be calculated by clicking on **Calibrate** after setting
 
-* setting the **Delay Unit** to :math:`\mu m`
+* **Delay Unit** to :math:`\mu m`;
 
-* pi
+* **Delay** to the entire translation of the mirror stage, equivalent
+  to :math:`(\Delta l_1 - \Delta l_2)` (this measurement
+  should be taken by the user);
+    
+or, in case the optical delay between the two calibration images was
+provided already in femtosecond unit, after setting
+
+* **Delay Unit** to :math:`fs`;
+
+* **Delay** to the time delay.
+
+The extracted **Calibration constant** allows to calculate the pulse duration
+
+.. math::
+
+   \tau_p = D_z \cdot \alpha \cdot K,
+
+:math:`\alpha` being the multiplication factor originating from the
+module assumed for the time-profie of the pulse.	 
