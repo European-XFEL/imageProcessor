@@ -442,7 +442,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.log.INFO(f"onEndOfStream called: Channel {dev} "
                       "stopped streaming.")
 
-        # schema should updated at next connection
+        # schema should be updated at next connection
         self.is_schema_updated = False
 
     def processImage(self, imageData):
