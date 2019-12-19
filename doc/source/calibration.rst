@@ -44,7 +44,7 @@ Thus, shifting the SH distribution, as measured in the CCD camera, in
 two extreme opposite positions (1 & 2) of the sensitive area allows
 the measurements
 of calibration factor with a lower relative uncertainty as shown in the steps
-here below:
+below:
 
 .. math::
    \Delta t = 2\Delta l / c
