@@ -72,7 +72,7 @@ Z_2}) [\frac{fs}{pxl}]` can be calculated with a larger relative precision
 using a reproducible and controllable procedure.
 
 It should be noted that the multiplying factor 1/2 in the above equation
-results from the initial and not-realistic assumption of a rectangular time
+results from the initial and non-realistic assumption of a rectangular time
 profile and uniform transverse intensity profile for the incoming beams.
 More realistic models for the unknown time shape of initial pulses should
 be considered. Assuming the Gaussian and hyperbolic secant shapes for
