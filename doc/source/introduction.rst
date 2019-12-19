@@ -2,7 +2,7 @@
 Introduction
 ************
 
-The AutoCorrelator bound device is designed to provide an online
+The AutoCorrelator device is designed to provide an online
 determination of the pulse duration using a single-shot auto
 correlator [1]_.
 
