@@ -8,7 +8,7 @@ correlator [1]_.
 
 The measurement of the time profile of pulses is based on the following
 principle, graphically displayed in :numref:`Fig. %s <fig-principle>`.
-The input beam is sent to a beam-splitter; the two identical originated
+The input beam is sent to a beam-splitter; the two identical
 beams propagate along two distinct optical paths until they intersect
 in a non-linear crystal. Here, due to the high-intensity of the beams,
 a second harmonic beam (SH) is created and its integrated energy is
