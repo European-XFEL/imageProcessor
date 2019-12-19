@@ -127,6 +127,6 @@ from the measured FWHM :math:`D_z`,
 model assumed for the time-profile of the pulse.
 
 The uncertainty of the pulse duration is preliminary estimated via error
-propagation by the uncertainty on the fit FWHM, assuming negligible
-the uncertainty on the calibration constant and no correlation between the
-fit parameters.
+propagation by the uncertainty on the fit FWHM, assuming
+the uncertainty of the calibration constant is negligible
+and that no correlation between the fit parameters exists.
