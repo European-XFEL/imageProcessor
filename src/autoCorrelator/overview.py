@@ -42,8 +42,8 @@ def generate_scene(device):
 
     fit_scene = DisplayPlotModel(
         height=363.0, width=800, x=11.0, y=400,
-        keys=[f'{device_id}.output.schema.data.profileX',
-              f'{device_id}.output.schema.data.profileXFit'],
+        keys=[f'{device_id}.output.schema.data.integralX',
+              f'{device_id}.output.schema.data.integralXFit'],
         parent_component='DisplayComponent')
 
     # operator

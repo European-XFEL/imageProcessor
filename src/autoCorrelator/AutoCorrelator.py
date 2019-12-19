@@ -11,11 +11,10 @@ import scipy.constants
 from karabo.common.api import KARABO_SCHEMA_DISPLAY_TYPE_SCENES as DT_SCENES
 
 from karabo.bound import (
-    KARABO_CLASSINFO, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
-    NODE_ELEMENT, MetricPrefix, OkErrorFsm, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Unit, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT,
-    VECTOR_STRING_ELEMENT
+    DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL, KARABO_CLASSINFO,
+    MetricPrefix, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
+    PythonDevice, Schema, SLOT_ELEMENT, State, STRING_ELEMENT, UINT32_ELEMENT,
+    Unit, VECTOR_DOUBLE_ELEMENT, VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -26,49 +25,11 @@ HYP_SEC_FIT = "Sech^2 Beam"
 
 
 @KARABO_CLASSINFO("AutoCorrelator", "2.1")
-class AutoCorrelator(PythonDevice, OkErrorFsm):
+class AutoCorrelator(PythonDevice):
 
     # AKA shape-factor
     deconvolution_factor = {GAUSSIAN_FIT: 1 / math.sqrt(2),
                             HYP_SEC_FIT: 1 / 1.543}
-
-    def __init__(self, configuration):
-        # always call superclass constructor first!
-        super(AutoCorrelator, self).__init__(configuration)
-
-        self._ss.registerSlot(self.useAsCalibrationImage1)
-        self._ss.registerSlot(self.useAsCalibrationImage2)
-        self._ss.registerSlot(self.calibrate)
-        self._ss.registerSlot(self.requestScene)
-
-        self.current_peak = None
-        self.current_fwhm = None
-        self.current_e_fwhm = None
-
-        # boolean for schema_update
-        self.is_schema_updated = False
-
-    def __del__(self):
-        super(AutoCorrelator, self).__del__()
-
-    def requestScene(self, params):
-        """Fulfill a scene request from another device.
-
-        NOTE: Required by Scene Supply Protocol, which is defined in KEP 21.
-               The format of the reply is also specified there.
-
-        :param params: A `Hash` containing the method parameters
-        """
-        payload = Hash('success', False)
-
-        name = params.get('name', default='')
-        if name == 'scene':
-            payload.set('success', True)
-            payload.set('name', name)
-            payload.set('data', generate_scene(self))
-            self.reply(Hash('type', 'deviceScene', 'origin',
-                            self.getInstanceId(),
-                            'payload', payload))
 
     @staticmethod
     def expectedParameters(expected):
@@ -76,6 +37,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         data_in = Schema()
         data_out = Schema()
         (
+            OVERWRITE_ELEMENT(expected).key("state")
+            .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
+            .setNewDefaultValue(State.ON)
+            .commit(),
+
             VECTOR_STRING_ELEMENT(expected).key('availableScenes')
             .setSpecialDisplayType(DT_SCENES)
             .readOnly().initialValue(['scene'])
@@ -130,7 +96,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .assignmentOptional().defaultValue("fs")
             .options("fs um")
             .reconfigurable()
-            .allowedStates(State.NORMAL)
             .commit(),
 
             DOUBLE_ELEMENT(expected)
@@ -139,7 +104,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .description("Delay between calibration images.")
             .assignmentOptional().defaultValue(0)
             .reconfigurable()
-            .allowedStates(State.NORMAL)
             .commit(),
 
             SLOT_ELEMENT(expected).key("useAsCalibrationImage1")
@@ -156,7 +120,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .displayedName("Calibrate")
             .description("Calculate calibration constant from two input "
                          "images.")
-            .allowedStates(State.NORMAL)
+            .commit(),
+
+            SLOT_ELEMENT(expected).key("reset")
+            .displayedName("Reset Error")
+            .description("Acknowledge error.")
             .commit(),
 
             DOUBLE_ELEMENT(expected)
@@ -176,7 +144,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .options(','.join([k for k in AutoCorrelator.
                               deconvolution_factor.keys()]), sep=",")
             .reconfigurable()
-            .allowedStates(State.NORMAL)
             .commit(),
 
             UINT32_ELEMENT(expected)
@@ -243,16 +210,16 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_out)
-            .key("data.profileX")
-            .displayedName("Image X Profile")
-            .description("Profile along x-axis of second harmonic beam.")
+            .key("data.integralX")
+            .displayedName("Image X Integral")
+            .description("Integral along x-axis of second harmonic beam.")
             .readOnly()
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_out)
-            .key("data.profileXFit")
-            .displayedName("X Profile Fit")
-            .description("Fit Profile along x-axis of second "
+            .key("data.integralXFit")
+            .displayedName("X Integral Fit")
+            .description("Fit integral along x-axis of second "
                          "harmonic beam.")
             .readOnly()
             .commit(),
@@ -264,15 +231,46 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .commit(),
         )
 
-    ##############################################
-    #   Implementation of State Machine methods  #
-    ##############################################
+    def __init__(self, configuration):
+        # always call superclass constructor first!
+        super(AutoCorrelator, self).__init__(configuration)
 
-    def okStateOnEntry(self):
+        self.current_peak = None
+        self.current_fwhm = None
+        self.current_e_fwhm = None
+
+        # boolean for schema_update
+        self.is_schema_updated = False
+
+        # Register slots
+        self.KARABO_SLOT(self.useAsCalibrationImage1)
+        self.KARABO_SLOT(self.useAsCalibrationImage2)
+        self.KARABO_SLOT(self.calibrate)
+        self.KARABO_SLOT(self.reset)
+        self.KARABO_SLOT(self.requestScene)
 
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
+
+    def requestScene(self, params):
+        """Fulfill a scene request from another device.
+
+        NOTE: Required by Scene Supply Protocol, which is defined in KEP 21.
+               The format of the reply is also specified there.
+
+        :param params: A `Hash` containing the method parameters
+        """
+        payload = Hash('success', False)
+
+        name = params.get('name', default='')
+        if name == 'scene':
+            payload.set('success', True)
+            payload.set('name', name)
+            payload.set('data', generate_scene(self))
+            self.reply(Hash('type', 'deviceScene', 'origin',
+                            self.getInstanceId(),
+                            'payload', payload))
 
     def preReconfigure(self, input_config):
         self.log.INFO("preReconfigure")
@@ -304,26 +302,22 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         self.log.INFO("Calibrating auto-correlator...")
 
-        try:
-            delay_unit = self["delayUnit"]
-            if delay_unit == "fs":
-                delay = self["delay"]
-            elif delay_unit == "um":
-                # Must convert to time
-                # * 2 due to double pass through adjustable length
-                delay = 2 * 1e+9 * self["delay"] / scipy.constants.c
-            else:
-                self.errorFound("Unknown delay unit #s" % delay_unit, "")
+        delay_unit = self["delayUnit"]
+        if delay_unit == "fs":
+            delay = self["delay"]
+        elif delay_unit == "um":
+            # Must convert to time
+            # * 2 due to double pass through adjustable length
+            delay = 2 * 1e+9 * self["delay"] / scipy.constants.c
+        else:
+            raise RuntimeError("Unknown delay unit #s" % delay_unit)
 
-            d_x = self["xPeak1"] - self["xPeak2"]
-            if d_x == 0:
-                self.errorFound("Same peak position for the two images", "")
+        d_x = self["xPeak1"] - self["xPeak2"]
+        if d_x == 0:
+            raise RuntimeError("Same peak position for the two images")
 
-            calibration_factor = abs(delay / d_x)
-            self.set("calibrationFactor", calibration_factor)
-
-        except Exception:
-            self.errorFound("Cannot calculate calibration constant", "")
+        calibration_factor = abs(delay / d_x)
+        self.set("calibrationFactor", calibration_factor)
 
     def find_peak_fwhm(self, image, threshold=0.5):
         """Find x-position of peak in 2-d image, and FWHM along x direction"""
@@ -392,8 +386,8 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         esx = sx / pars[2] * cov[1, 1]
 
         # fill output channel
-        output_data = Hash('data.profileX', img_x.tolist(),
-                           'data.profileXFit', fit_func.tolist())
+        output_data = Hash('data.integralX', img_x.tolist(),
+                           'data.integralXFit', fit_func.tolist())
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
@@ -403,7 +397,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         """Use current image as calibration image 1"""
 
         if self.current_peak is None or self.current_fwhm is None:
-            self.errorFound("No image available", "")
+            self.log.ERROR("No image available")
+            self.updateState(State.ERROR)
+            return
 
         self.set("xPeak1", self.current_peak)
         self.set("xFWHM1", self.current_fwhm)
@@ -412,12 +408,21 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         """Use current image as calibration image 2"""
 
         if self.current_peak is None or self.current_fwhm is None:
-            self.errorFound("No image available", "")
+            self.log.ERROR("No image available")
+            self.updateState(State.ERROR)
+            return
 
         self.set("xPeak2", self.current_peak)
         self.set("xFWHM2", self.current_fwhm)
 
+    def reset(self):
+        if self['state'] == State.ERROR:
+            self.updateState(State.ON)
+
     def onData(self, data, metaData):
+
+        if self['state'] != State.PROCESSING:
+            self.updateState(State.PROCESSING)
 
         try:
             if not self.is_schema_updated:
@@ -443,6 +448,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         # schema should be updated at next connection
         self.is_schema_updated = False
+
+        if self['state'] == State.PROCESSING:
+            self.updateState(State.ON)
 
     def process_image(self, imageData):
 
@@ -485,7 +493,6 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             self.set(h)
 
     def update_output_schema(self, data):
-        # Get device configuration before schema update
         if data.has('data.image'):
             image = data['data.image']
         elif data.has('image'):
@@ -502,17 +509,17 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_schema)
-            .key("data.profileX")
-            .displayedName("Image X Profile")
-            .description("Profile along x-axis of second harmonic beam.")
+            .key("data.integralX")
+            .displayedName("Image X Integral")
+            .description("Integral along x-axis of second harmonic beam.")
             .maxSize(width)
             .readOnly()
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_schema)
-            .key("data.profileXFit")
-            .displayedName("X Profile Fit")
-            .description("Fit Profile along x-axis of second "
+            .key("data.integralXFit")
+            .displayedName("X Integral Fit")
+            .description("Fit integral along x-axis of second "
                          "harmonic beam.")
             .maxSize(width)
             .readOnly()
