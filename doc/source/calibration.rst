@@ -69,7 +69,7 @@ resulting in
 This way, the calibration factor
 :math:`K = (\frac{2}{c} \cdot \frac{\Delta l_1 - \Delta l_2}{\Delta Z_1 - \Delta
 Z_2}) [\frac{fs}{pxl}]` can be calculated with a larger relative precision
-from a reproducible and controllable procedure.
+using a reproducible and controllable procedure.
 
 It should be noted that the multiplying factor 1/2 in the above equation
 results from the initial and not-realistic assumption of a rectangular time
