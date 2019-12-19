@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #############################################################################
 # Author: <andrea.parenti@xfel.eu>
 # Created on May  9, 2014
@@ -31,8 +29,8 @@ HYP_SEC_FIT = "Sech^2 Beam"
 class AutoCorrelator(PythonDevice, OkErrorFsm):
 
     # AKA shape-factor
-    deconvolutionFactor = {GAUSSIAN_FIT: 1/math.sqrt(2),
-                           HYP_SEC_FIT: 1/1.543}
+    deconvolution_factor = {GAUSSIAN_FIT: 1 / math.sqrt(2),
+                            HYP_SEC_FIT: 1 / 1.543}
 
     def __init__(self, configuration):
         # always call superclass constructor first!
@@ -43,8 +41,9 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self._ss.registerSlot(self.calibrate)
         self._ss.registerSlot(self.requestScene)
 
-        self.currentPeak = None
-        self.currentFwhm = None
+        self.current_peak = None
+        self.current_fwhm = None
+        self.current_e_fwhm = None
 
         # boolean for schema_update
         self.is_schema_updated = False
@@ -78,191 +77,191 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         data_out = Schema()
         (
             VECTOR_STRING_ELEMENT(expected).key('availableScenes')
-                .setSpecialDisplayType(DT_SCENES)
-                .readOnly().initialValue(['scene'])
-                .commit(),
+            .setSpecialDisplayType(DT_SCENES)
+            .readOnly().initialValue(['scene'])
+            .commit(),
 
             INPUT_CHANNEL(expected).key("input")
-                .displayedName("Input")
-                .dataSchema(data_in)
-                .commit(),
+            .displayedName("Input")
+            .dataSchema(data_in)
+            .commit(),
 
             # Images should be dropped if processor is too slow
             OVERWRITE_ELEMENT(expected).key("input.onSlowness")
-                .setNewDefaultValue("drop")
-                .commit(),
+            .setNewDefaultValue("drop")
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xPeak1")
-                .displayedName("Calibration: Image1 Peak x-Pos")
-                .description("x-position of peak in first calibration image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xPeak1")
+            .displayedName("Calibration: Image1 Peak x-Pos")
+            .description("x-position of peak in first calibration image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xFWHM1")
-                .displayedName("Calibration: Image1 Peak x-FWHM")
-                .description("x-FWHM in first calibration image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xFWHM1")
+            .displayedName("Calibration: Image1 Peak x-FWHM")
+            .description("x-FWHM in first calibration image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xPeak2")
-                .displayedName("Calibration: Image2 Peak x-Pos")
-                .description("x-position of peak in second calibration image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xPeak2")
+            .displayedName("Calibration: Image2 Peak x-Pos")
+            .description("x-position of peak in second calibration image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xFWHM2")
-                .displayedName("Calibration: Image2 Peak x-FWHM")
-                .description("x-FWHM in second calibration image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xFWHM2")
+            .displayedName("Calibration: Image2 Peak x-FWHM")
+            .description("x-FWHM in second calibration image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             STRING_ELEMENT(expected)
-                .key("delayUnit")
-                .displayedName("Delay Unit")
-                .description("Unit of the delay between calibration images.")
-                .assignmentOptional().defaultValue("fs")
-                .options("fs um")
-                .reconfigurable()
-                .allowedStates(State.NORMAL)
-                .commit(),
+            .key("delayUnit")
+            .displayedName("Delay Unit")
+            .description("Unit of the delay between calibration images.")
+            .assignmentOptional().defaultValue("fs")
+            .options("fs um")
+            .reconfigurable()
+            .allowedStates(State.NORMAL)
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("delay")
-                .displayedName("Delay ([fs] or [um])")
-                .description("Delay between calibration images.")
-                .assignmentOptional().defaultValue(0)
-                .reconfigurable()
-                .allowedStates(State.NORMAL)
-                .commit(),
+            .key("delay")
+            .displayedName("Delay ([fs] or [um])")
+            .description("Delay between calibration images.")
+            .assignmentOptional().defaultValue(0)
+            .reconfigurable()
+            .allowedStates(State.NORMAL)
+            .commit(),
 
             SLOT_ELEMENT(expected).key("useAsCalibrationImage1")
-                .displayedName("Current Image as 1st Calibration")
-                .description("Use the current image as 1st calibration image.")
-                .commit(),
+            .displayedName("Current Image as 1st Calibration")
+            .description("Use the current image as 1st calibration image.")
+            .commit(),
 
             SLOT_ELEMENT(expected).key("useAsCalibrationImage2")
-                .displayedName("Current Image as 2nd Calibration")
-                .description("Use the current image as 2nd calibration image.")
-                .commit(),
+            .displayedName("Current Image as 2nd Calibration")
+            .description("Use the current image as 2nd calibration image.")
+            .commit(),
 
             SLOT_ELEMENT(expected).key("calibrate")
-                .displayedName("Calibrate")
-                .description("Calculate calibration constant from two input "
-                             "images.")
-                .allowedStates(State.NORMAL)
-                .commit(),
+            .displayedName("Calibrate")
+            .description("Calculate calibration constant from two input "
+                         "images.")
+            .allowedStates(State.NORMAL)
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("calibrationFactor")
-                .displayedName("Calibration constant [fs/px]")
-                .description("The calibration constant.")
-            #    .unit(Unit.???) # TODO Unit is fs/px
-                .assignmentOptional().defaultValue(0)
-                .reconfigurable()
-                .commit(),
+            .key("calibrationFactor")
+            .displayedName("Calibration constant [fs/px]")
+            .description("The calibration constant.")
+            # .unit(Unit.???) # TODO Unit is fs/px
+            .assignmentOptional().defaultValue(0)
+            .reconfigurable()
+            .commit(),
 
             STRING_ELEMENT(expected)
-                .key("beamShape")
-                .displayedName("Beam Shape")
-                .description("Time shape of the beam.")
-                .assignmentOptional().defaultValue("Gaussian Beam")
-                .options(','.join([k for k in AutoCorrelator.
-                                   deconvolutionFactor.keys()]), sep=",")
-                .reconfigurable()
-                .allowedStates(State.NORMAL)
-                .commit(),
+            .key("beamShape")
+            .displayedName("Beam Shape")
+            .description("Time shape of the beam.")
+            .assignmentOptional().defaultValue("Gaussian Beam")
+            .options(','.join([k for k in AutoCorrelator.
+                              deconvolution_factor.keys()]), sep=",")
+            .reconfigurable()
+            .allowedStates(State.NORMAL)
+            .commit(),
 
             UINT32_ELEMENT(expected)
-                .key("xMinFit")
-                .displayedName("Fit Lower Limit")
-                .description("Lower limit for the fit.")
-                .assignmentOptional().defaultValue(0)
-                .unit(Unit.PIXEL)
-                .reconfigurable()
-                .commit(),
+            .key("xMinFit")
+            .displayedName("Fit Lower Limit")
+            .description("Lower limit for the fit.")
+            .assignmentOptional().defaultValue(0)
+            .unit(Unit.PIXEL)
+            .reconfigurable()
+            .commit(),
 
             UINT32_ELEMENT(expected)
-                .key("xMaxFit")
-                .displayedName("Fit Upper Limit")
-                .description("Upper limit for the fit.")
-                .assignmentOptional().defaultValue(10000)
-                .unit(Unit.PIXEL)
-                .reconfigurable()
-                .commit(),
+            .key("xMaxFit")
+            .displayedName("Fit Upper Limit")
+            .description("Upper limit for the fit.")
+            .assignmentOptional().defaultValue(10000)
+            .unit(Unit.PIXEL)
+            .reconfigurable()
+            .commit(),
 
             UINT32_ELEMENT(expected)
-                .key("fitStatus")
-                .displayedName("Fit Status")
-                .description("Error of fit procedure: .")
-                .readOnly()
-                .commit(),
+            .key("fitStatus")
+            .displayedName("Fit Status")
+            .description("Error of fit procedure: .")
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xPeak3")
-                .displayedName("Input Image Peak x-Pos")
-                .description("x-position of peak in the input image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xPeak3")
+            .displayedName("Input Image Peak x-Pos")
+            .description("x-position of peak in the input image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("xFWHM3")
-                .displayedName("Input Image Peak x-FWHM")
-                .description("x-FWHM in the input image.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .key("xFWHM3")
+            .displayedName("Input Image Peak x-FWHM")
+            .description("x-FWHM in the input image.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("pulseWidth")
-                .displayedName("Pulse Duration")
-                .description("Duration of the pulse.")
-                .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
-                .readOnly()
-                .commit(),
+            .key("pulseWidth")
+            .displayedName("Pulse Duration")
+            .description("Duration of the pulse.")
+            .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected)
-                .key("ePulseWidth")
-                .displayedName("Pulse Duration Error")
-                .description("Uncertainty of the pulse duration arising "
-                             "from fit procedure.")
-                .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
-                .readOnly()
-                .commit(),
+            .key("ePulseWidth")
+            .displayedName("Pulse Duration Error")
+            .description("Uncertainty of the pulse duration arising "
+                         "from fit procedure.")
+            .unit(Unit.SECOND).metricPrefix(MetricPrefix.FEMTO)
+            .readOnly()
+            .commit(),
 
             NODE_ELEMENT(data_out).key("data")
-                .displayedName("Data")
-                .setDaqDataType(DaqDataType.TRAIN)
-                .commit(),
+            .displayedName("Data")
+            .setDaqDataType(DaqDataType.TRAIN)
+            .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_out)
-                .key("data.profileX")
-                .displayedName("Image X Profile")
-                .description("Profile along x-axis of second harmonic beam.")
-                .readOnly()
-                .commit(),
+            .key("data.profileX")
+            .displayedName("Image X Profile")
+            .description("Profile along x-axis of second harmonic beam.")
+            .readOnly()
+            .commit(),
 
             VECTOR_DOUBLE_ELEMENT(data_out)
-                .key("data.profileXFit")
-                .displayedName("X Profile Fit")
-                .description("Fit Profile along x-axis of second "
-                             "harmonic beam.")
-                .readOnly()
-                .commit(),
+            .key("data.profileXFit")
+            .displayedName("X Profile Fit")
+            .description("Fit Profile along x-axis of second "
+                         "harmonic beam.")
+            .readOnly()
+            .commit(),
 
             OUTPUT_CHANNEL(expected)
-                .key("output")
-                .displayedName("Output")
-                .dataSchema(data_out)
-                .commit(),
+            .key("output")
+            .displayedName("Output")
+            .dataSchema(data_out)
+            .commit(),
         )
 
     ##############################################
@@ -275,72 +274,72 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
-    def preReconfigure(self, inputConfig):
+    def preReconfigure(self, input_config):
         self.log.INFO("preReconfigure")
 
-        recalculateWidth = False
-        calibrationFactor = self.get("calibrationFactor")
-        beamShape = self.get("beamShape")
+        recalculate_width = False
+        calibration_factor = self.get("calibrationFactor")
+        beam_shape = self.get("beamShape")
 
-        if inputConfig.has("calibrationFactor"):
+        if input_config.has("calibrationFactor"):
             # Calibration factor has changed
-            calibrationFactor = inputConfig.get("calibrationFactor")
-            recalculateWidth = True
+            calibration_factor = input_config.get("calibrationFactor")
+            recalculate_width = True
 
-        if inputConfig.has("beamShape"):
+        if input_config.has("beamShape"):
             # Shape factor has changed
-            beamShape = inputConfig.get("beamShape")
-            recalculateWidth = True
+            beam_shape = input_config.get("beamShape")
+            recalculate_width = True
 
-        if recalculateWidth is True and self.currentFwhm is not None:
-            sF = self.deconvolutionFactor[beamShape]
-            w3 = self.currentFwhm * sF * calibrationFactor
-            ew3 = self.currentEFwhm * sF * calibrationFactor
+        if recalculate_width is True and self.current_fwhm is not None:
+            s_f = self.deconvolution_factor[beam_shape]
+            w3 = self.current_fwhm * s_f * calibration_factor
+            ew3 = self.current_e_fwhm * s_f * calibration_factor
             self.set("pulseWidth", w3)
             self.set("ePulseWidth", ew3)
             self.log.DEBUG("Image re-processed!!!")
 
     def calibrate(self):
-        '''Calculate calibration constant'''
+        """Calculate calibration constant"""
 
         self.log.INFO("Calibrating auto-correlator...")
 
         try:
-            delayUnit = self["delayUnit"]
-            if delayUnit == "fs":
+            delay_unit = self["delayUnit"]
+            if delay_unit == "fs":
                 delay = self["delay"]
-            elif delayUnit == "um":
+            elif delay_unit == "um":
                 # Must convert to time
                 # * 2 due to double pass through adjustable length
                 delay = 2 * 1e+9 * self["delay"] / scipy.constants.c
             else:
-                self.errorFound("Unknown delay unit #s" % delayUnit, "")
+                self.errorFound("Unknown delay unit #s" % delay_unit, "")
 
-            dX = self["xPeak1"] - self["xPeak2"]
-            if dX == 0:
+            d_x = self["xPeak1"] - self["xPeak2"]
+            if d_x == 0:
                 self.errorFound("Same peak position for the two images", "")
 
-            calibrationFactor = abs(delay / dX)
-            self.set("calibrationFactor", calibrationFactor)
+            calibration_factor = abs(delay / d_x)
+            self.set("calibrationFactor", calibration_factor)
 
-        except:
+        except Exception:
             self.errorFound("Cannot calculate calibration constant", "")
 
-    def findPeakFWHM(self, image, threshold=0.5):
-        '''Find x-position of peak in 2-d image, and FWHM along x direction'''
+    def find_peak_fwhm(self, image, threshold=0.5):
+        """Find x-position of peak in 2-d image, and FWHM along x direction"""
         if not isinstance(image, numpy.ndarray) or image.ndim != 2:
             return None
 
         # First work on y distribution #
 
         # sum along X
-        imgY = image_processing.imageSumAlongX(image)
+        img_y = image_processing.imageSumAlongX(image)
 
         # Threshold level
-        thr = threshold * imgY.max()
+        thr = threshold * img_y.max()
 
         # Find 1st and last point above threshold
-        nz = numpy.flatnonzero(imgY > thr)
+        nz = numpy.flatnonzero(img_y > thr)
         y1 = nz[0]
         y2 = nz[-1]
 
@@ -348,37 +347,37 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
 
         # Cut away y-side-bands and sum along Y
         img2 = image[y1:y2, :]
-        imgX = image_processing.imageSumAlongY(img2)
+        img_x = image_processing.imageSumAlongY(img2)
 
         # perform the fit
-        beamShape = self["beamShape"]
+        beam_shape = self["beamShape"]
         x_min_fit = self["xMinFit"]
         x_max_fit = self["xMaxFit"]
-        if x_max_fit > len(imgX):
-            x_max_fit = len(imgX) - 1
+        if x_max_fit > len(img_x):
+            x_max_fit = len(img_x) - 1
             self.set("xMaxFit", x_max_fit)
 
         if x_max_fit - x_min_fit < 4:
             msg = f"Fit window too narrow: [{x_min_fit}, {x_max_fit}]"
             raise ValueError(msg)
 
-        if beamShape == GAUSSIAN_FIT:
+        if beam_shape == GAUSSIAN_FIT:
             pars, cov, err = \
-                image_processing.fitGauss(imgX[x_min_fit:x_max_fit])
+                image_processing.fitGauss(img_x[x_min_fit:x_max_fit])
             x0 = pars[1] + x_min_fit
             # height = par[0], x0 = pars[1], sx = pars[2]
             fit_func = image_processing.gauss1d(
-                numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                numpy.linspace(0, len(img_x) - 1, len(img_x)),
                 pars[0],  x0,  pars[2])
-        elif beamShape == HYP_SEC_FIT:
+        elif beam_shape == HYP_SEC_FIT:
             pars, cov, err = \
-                image_processing.fitSech2(imgX[x_min_fit:x_max_fit])
+                image_processing.fitSech2(img_x[x_min_fit:x_max_fit])
             x0 = pars[1] + x_min_fit
             fit_func = image_processing.sqsech1d(
-                numpy.linspace(0, len(imgX) - 1, len(imgX)),
+                numpy.linspace(0, len(img_x) - 1, len(img_x)),
                 pars[0], x0, pars[2])
         else:
-            msg = f"Error: Unknown beam shape {beamShape} provided"
+            msg = f"Error: Unknown beam shape {beam_shape} provided"
             self.log.ERROR(msg)
             raise ValueError(msg)
         self.set("fitStatus", err)
@@ -386,14 +385,14 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # Threshold level
         thr = threshold * fit_func.max()
         # Find 1st and last point above threshold
-        nz = numpy.flatnonzero(imgY > thr)
+        nz = numpy.flatnonzero(img_y > thr)
         # Find FWHM of fit values
         sx = float(nz[-1] - nz[0])
         # Find error of FWHM
         esx = sx / pars[2] * cov[1, 1]
 
         # fill output channel
-        output_data = Hash('data.profileX', imgX.tolist(),
+        output_data = Hash('data.profileX', img_x.tolist(),
                            'data.profileXFit', fit_func.tolist())
         self.writeChannel('output', output_data)
 
@@ -401,22 +400,22 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         return x0, sx, esx
 
     def useAsCalibrationImage1(self):
-        '''Use current image as calibration image 1'''
+        """Use current image as calibration image 1"""
 
-        if self.currentPeak is None or self.currentFwhm is None:
+        if self.current_peak is None or self.current_fwhm is None:
             self.errorFound("No image available", "")
 
-        self.set("xPeak1", self.currentPeak)
-        self.set("xFWHM1", self.currentFwhm)
+        self.set("xPeak1", self.current_peak)
+        self.set("xFWHM1", self.current_fwhm)
 
     def useAsCalibrationImage2(self):
-        '''Use current image as calibration image 2'''
+        """Use current image as calibration image 2"""
 
-        if self.currentPeak is None or self.currentFwhm is None:
+        if self.current_peak is None or self.current_fwhm is None:
             self.errorFound("No image available", "")
 
-        self.set("xPeak2", self.currentPeak)
-        self.set("xFWHM2", self.currentFwhm)
+        self.set("xPeak2", self.current_peak)
+        self.set("xFWHM2", self.current_fwhm)
 
     def onData(self, data, metaData):
 
@@ -426,11 +425,11 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
                 self.is_schema_updated = True
 
             if data.has('data.image'):
-                self.processImage(data['data.image'])
+                self.process_image(data['data.image'])
             elif data.has('image'):
                 # To ensure backward compatibility
                 # with older versions of cameras
-                self.processImage(data['image'])
+                self.process_image(data['image'])
             else:
                 self.log.WARN("data does not have any image")
         except Exception as e:
@@ -445,19 +444,19 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         # schema should be updated at next connection
         self.is_schema_updated = False
 
-    def processImage(self, imageData):
+    def process_image(self, imageData):
 
         try:
-            calibrationFactor = self.get("calibrationFactor")
-            sF = self.deconvolutionFactor[self.get("beamShape")]
+            calibration_factor = self.get("calibrationFactor")
+            s_f = self.deconvolution_factor[self.get("beamShape")]
 
-            imageArray = imageData.getData()
-            x3, s3, es3 = self.findPeakFWHM(imageArray)
-            self.currentPeak = x3
-            self.currentFwhm = s3
-            self.currentEFwhm = es3
-            w3 = s3 * sF * calibrationFactor
-            ew3 = es3 * sF * calibrationFactor
+            image_array = imageData.getData()
+            x3, s3, es3 = self.find_peak_fwhm(image_array)
+            self.current_peak = x3
+            self.current_fwhm = s3
+            self.current_e_fwhm = es3
+            w3 = s3 * s_f * calibration_factor
+            ew3 = es3 * s_f * calibration_factor
 
             h = Hash()
 
@@ -494,15 +493,15 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
         shape = image.getDimensions()
         width = shape[1]
 
-        newSchema = Schema()
-        dataSchema = Schema()
+        new_schema = Schema()
+        data_schema = Schema()
         (
-            NODE_ELEMENT(dataSchema).key("data")
+            NODE_ELEMENT(data_schema).key("data")
             .displayedName("Data")
             .setDaqDataType(DaqDataType.TRAIN)
             .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(dataSchema)
+            VECTOR_DOUBLE_ELEMENT(data_schema)
             .key("data.profileX")
             .displayedName("Image X Profile")
             .description("Profile along x-axis of second harmonic beam.")
@@ -510,7 +509,7 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .readOnly()
             .commit(),
 
-            VECTOR_DOUBLE_ELEMENT(dataSchema)
+            VECTOR_DOUBLE_ELEMENT(data_schema)
             .key("data.profileXFit")
             .displayedName("X Profile Fit")
             .description("Fit Profile along x-axis of second "
@@ -519,10 +518,10 @@ class AutoCorrelator(PythonDevice, OkErrorFsm):
             .readOnly()
             .commit(),
 
-            OUTPUT_CHANNEL(newSchema).key("output")
+            OUTPUT_CHANNEL(new_schema).key("output")
             .displayedName("Output")
-            .dataSchema(dataSchema)
+            .dataSchema(data_schema)
             .commit(),
         )
 
-        self.updateSchema(newSchema)
+        self.updateSchema(new_schema)
