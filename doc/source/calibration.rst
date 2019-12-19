@@ -31,7 +31,7 @@ angle :math:`\phi` is removed, and the pulse duration can be obtained as
 
 The ratio :math:`K = \frac{\Delta t}{\Delta Z}` is a calibration factor
 which allows the conversion of the SH transverse profile (measured in
-pixel unit) to the pulse time profile (measured in femtosecond unit).
+pixel units) to the pulse time profile (measured in femtosecond units).
 
 Its determination with sufficient accuracy is challenging.
 To overcome this difficulty the following procedure is applied. One of the two
