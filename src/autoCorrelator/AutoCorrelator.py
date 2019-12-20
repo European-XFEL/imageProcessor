@@ -251,7 +251,7 @@ class AutoCorrelator(PythonDevice):
         # boolean for schema_update
         self.is_schema_updated = False
 
-        # ooutput data size
+        # output data size
         self.output_size = 0
 
         # Register slots
