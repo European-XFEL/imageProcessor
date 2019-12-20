@@ -87,6 +87,24 @@ determined from the fitting function (**Input Image Peak x-Pos** and
 **Input Image Peak x-Pos**). The **Fit Error** parameter is an
 integer flag describing the fit status. If it is equal to 1, 2, 3 or 4,
 the solution was found, otherwise the solution was not found [2]_.
+The possible fit status values are:
+
+* 0: Improper input parameters were entered,
+
+* 1: The solution converged,
+
+* 2: The number of calls to function has reached maxfev = %d." % maxfev,
+
+* 3: Default relative error is too small, no further improvement in the approximate solution is possible,
+
+* 4: The iteration is not making good progress, as measured by the improvement from the last five Jacobian evaluations,
+
+* 5: The iteration is not making good progress, as measured by the improvement from the last ten iterations,
+
+* 'unknown': "An error occurred.
+
+The result of pulse duration is presented only in case of a solution is found,
+and the fit status value is lower than four.
 
 .. [1] RP Photonics Encyclopedia, https://www.rp-photonics.com/autocorrelators.html
 .. [2] Scipy.org, https://github.com/scipy/scipy/blob/master/scipy/optimize/minpack.py
