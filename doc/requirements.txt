@@ -1,2 +1,4 @@
-git+https://git.xfel.eu/gitlab/Karabo/rtd-conf-py.git
+sphinx==1.4.5
+git+https://xfel.redmine:K9Sss5CmWtQ_nbx3gyt2@git.xfel.eu/gitlab/Karabo/rtd-conf-py.git
 slumber
+breathe
