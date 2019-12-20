@@ -1,5 +1,5 @@
 from karabo.common.scenemodel.api import (
-    ComboBoxModel, DisplayCommandModel,
+    CheckBoxModel, ComboBoxModel, DisplayCommandModel,
     DisplayImageModel, DisplayLabelModel, DeviceSceneLinkModel,
     DisplayPlotModel, DisplayTextLogModel,
     DoubleLineEditModel, FixedLayoutModel, IntLineEditModel, LabelModel,
@@ -53,20 +53,20 @@ def generate_scene(device):
 
     cmd_width = 510
     state = DisplayLabelModel(
-        height=30, width=cmd_width, x=675, y=100,
+        height=30, width=cmd_width, x=675, y=80,
         keys=[f'{device_id}.state'],
         parent_component='DisplayComponent')
 
     calib_acquire_01 = DisplayCommandModel(
-        height=24.0, width=cmd_width, x=675, y=130,
+        height=24.0, width=cmd_width, x=675, y=110,
         keys=[f'{device_id}.useAsCalibrationImage1'],
         parent_component='DisplayComponent')
     calib_acquire_02 = DisplayCommandModel(
-        height=24.0, width=cmd_width, x=675, y=160,
+        height=24.0, width=cmd_width, x=675, y=140,
         keys=[f'{device_id}.useAsCalibrationImage2'],
         parent_component='DisplayComponent')
     calib_do = DisplayCommandModel(
-         height=24.0, width=cmd_width, x=675, y=190,
+         height=24.0, width=cmd_width, x=675, y=170,
          keys=[f'{device_id}.calibrate'],
          parent_component='DisplayComponent')
     calib_scene = FixedLayoutModel(
@@ -80,84 +80,97 @@ def generate_scene(device):
     width3 = 140
     delay_unit_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=27, width=width1, x=x1, y=230,
+        height=27, width=width1, x=x1, y=210,
         parent_component='DisplayComponent', text='Delay Unit')
     delay_unit_get = DisplayLabelModel(
-        height=27, width=width2, x=x2, y=230,
+        height=27, width=width2, x=x2, y=210,
         keys=[f'{device_id}.delayUnit'],
         parent_component='DisplayComponent')
     delay_unit_set = ComboBoxModel(
-        height=27.0, width=width3, x=x3, y=230,
+        height=27.0, width=width3, x=x3, y=210,
         keys=[f'{device_id}.delayUnit'],
         klass='EditableComboBox',
         parent_component='EditableApplyLaterComponent')
 
     delay_value_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=27.0, width=width1, x=x1, y=260,
+        height=27.0, width=width1, x=x1, y=240,
         parent_component='DisplayComponent', text='Delay ([fs] or [um])')
     delay_value_get = DisplayLabelModel(
-        height=27.0, width=width2, x=x2, y=260,
+        height=27.0, width=width2, x=x2, y=240,
         keys=[f'{device_id}.delay'],
         parent_component='DisplayComponent')
     delay_value_set = DoubleLineEditModel(
-        height=27, width=width3, x=x3, y=260,
+        height=27, width=width3, x=x3, y=240,
         keys=[f'{device_id}.delay'],
         parent_component='EditableApplyLaterComponent')
 
     constant_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=27.0, width=width1, x=x1, y=290,
+        height=27.0, width=width1, x=x1, y=270,
         parent_component='DisplayComponent',
         text='Calibration constant [fs/px]')
     constant_get = DisplayLabelModel(
-        height=27.0, width=width2, x=x2, y=290,
+        height=27.0, width=width2, x=x2, y=270,
         keys=[f'{device_id}.calibrationFactor'],
         parent_component='DisplayComponent')
     constant_set = DoubleLineEditModel(
-        height=27, width=width3, x=x3, y=290,
+        height=27, width=width3, x=x3, y=270,
         keys=[f'{device_id}.calibrationFactor'],
         parent_component='EditableApplyLaterComponent')
 
     beam_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=17.0, width=width1, x=x1, y=330,
+        height=17.0, width=width1, x=x1, y=310,
         parent_component='DisplayComponent', text='Beam Shape')
     beam_get = DisplayLabelModel(
-        height=23.0, width=width2, x=x2, y=330,
+        height=23.0, width=width2, x=x2, y=310,
         keys=[f'{device_id}.beamShape'],
         parent_component='DisplayComponent')
     beam_set = ComboBoxModel(
-        height=27.0, width=width3, x=x3, y=330,
+        height=27.0, width=width3, x=x3, y=310,
         keys=[f'{device_id}.beamShape'],
         klass='EditableComboBox',
         parent_component='EditableApplyLaterComponent')
 
     xmin_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=27, width=width1, x=x1, y=360,
+        height=27, width=width1, x=x1, y=340,
         parent_component='DisplayComponent', text='Fit Lower Limit [px]')
     xmin_get = DisplayLabelModel(
-        height=27, width=width2, x=x2, y=360,
+        height=27, width=width2, x=x2, y=340,
         keys=[f'{device_id}.xMinFit'],
         parent_component='DisplayComponent')
     xmin_set = IntLineEditModel(
-        height=27, width=width3, x=x3, y=360,
+        height=27, width=width3, x=x3, y=340,
         keys=[f'{device_id}.xMinFit'],
         parent_component='EditableApplyLaterComponent')
 
     xmax_label = LabelModel(
         font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
-        height=27, width=width1, x=x1, y=390,
+        height=27, width=width1, x=x1, y=370,
         parent_component='DisplayComponent', text='Fit Upper Limit [px]')
     xmax_get = DisplayLabelModel(
-        height=27, width=width2, x=x2, y=390,
+        height=27, width=width2, x=x2, y=370,
         keys=[f'{device_id}.xMaxFit'],
         parent_component='DisplayComponent')
     xmax_set = IntLineEditModel(
-        height=27, width=width3, x=x3, y=390,
+        height=27, width=width3, x=x3, y=370,
         keys=[f'{device_id}.xMaxFit'],
         parent_component='EditableApplyLaterComponent')
+
+    ped_label = LabelModel(
+        font='Ubuntu,11,-1,5,50,0,0,0,0,0', foreground='#000000',
+        height=27, width=width1, x=x1, y=400,
+        parent_component='DisplayComponent', text='Subtract Pedestal')
+    ped_get = CheckBoxModel(
+        height=27, width=width2, x=x2, y=400,
+        keys=[f'{device_id}.subtractPedestal'],
+        parent_component='DisplayComponent')
+    ped_set = CheckBoxModel(
+        height=27, width=width3, x=x3, y=400,
+        keys=[f'{device_id}.subtractPedestal'],
+        klass='EditableCheckBox', parent_component='EditableApplyLaterComponent')
 
     calib_par_scene = FixedLayoutModel(
         children=[delay_unit_label, delay_unit_get, delay_unit_set,
@@ -165,7 +178,8 @@ def generate_scene(device):
                   constant_label, constant_get, constant_set,
                   beam_label, beam_get, beam_set,
                   xmin_label, xmin_get, xmin_set,
-                  xmax_label, xmax_get, xmax_set])
+                  xmax_label, xmax_get, xmax_set,
+                  ped_label, ped_get, ped_set])
 
     # result
     x1 = 850
