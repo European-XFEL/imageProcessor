@@ -487,7 +487,7 @@ class AutoCorrelator(PythonDevice):
 
             # save in case fit status < 4
             # from 4 on no improvement was measured 
-            if fit_status > 0 and fit_status < 4:
+            if 0 < fit_status < 4:
                 h.set("xPeak3", x3)
                 h.set("xFWHM3", s3)
                 h.set("pulseWidth", w3)
