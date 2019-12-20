@@ -80,7 +80,7 @@ in :numref:`Fig. %s <fig-editor>`,
 The camera device providing the image of the beam profile should be
 set in the key **input.connectedOutputChannels** of the autocorrelator
 device.
-For each camera image the projection along the axis-x is calculated,
+For each camera image the projection along the x-axis is calculated,
 a fit is performed according to a selectable model (**Beam Shape**)
 for the time-profile of the pulse, and the peak position and FWHM are
 determined from the fitting function (**Input Image Peak x-Pos** and
