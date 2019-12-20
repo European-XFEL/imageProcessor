@@ -168,7 +168,8 @@ class AutoCorrelator(PythonDevice):
             UINT32_ELEMENT(expected)
             .key("fitStatus")
             .displayedName("Fit Status")
-            .description("Error of fit procedure: See device documentation.")
+            .description("Error of fit procedure: 1-3 means good fit. "
+                         "See device documentation for further details.")
             .readOnly()
             .commit(),
 
