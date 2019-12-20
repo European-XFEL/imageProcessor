@@ -303,8 +303,8 @@ class AutoCorrelator(PythonDevice):
             s_f = self.deconvolution_factor[beam_shape]
             w3 = self.current_fwhm * s_f * calibration_factor
             ew3 = self.current_e_fwhm * s_f * calibration_factor
-            self.set("pulseWidth", w3)
-            self.set("ePulseWidth", ew3)
+            h = Hash("pulseWidth", w3, "ePulseWidth", ew3)
+            self.set(h)
             self.log.DEBUG("Image re-processed!!!")
 
     def calibrate(self):
@@ -413,8 +413,8 @@ class AutoCorrelator(PythonDevice):
             self.updateState(State.ERROR)
             return
 
-        self.set("xPeak1", self.current_peak)
-        self.set("xFWHM1", self.current_fwhm)
+        h = Hash("xPeak1", self.current_peak, "xFWHM1", self.current_fwhm)
+        self.set(h)
 
     def useAsCalibrationImage2(self):
         """Use current image as calibration image 2"""
@@ -424,8 +424,8 @@ class AutoCorrelator(PythonDevice):
             self.updateState(State.ERROR)
             return
 
-        self.set("xPeak2", self.current_peak)
-        self.set("xFWHM2", self.current_fwhm)
+        h = Hash("xPeak2", self.current_peak, "xFWHM2", self.current_fwhm)
+        self.set(h)
 
     def reset(self):
         if self['state'] == State.ERROR:
