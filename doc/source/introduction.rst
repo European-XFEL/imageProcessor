@@ -93,9 +93,9 @@ The possible fit status values are:
 
 * 1: The solution converged,
 
-* 2: The number of calls to function has reached maxfev = %d." % maxfev,
+* 2: The number of calls to function has reached default max number,
 
-* 3: Default relative error is too small, no further improvement in the approximate solution is possible,
+* 3: Max for relative error is too small, no further improvement in the approximate solution is possible,
 
 * 4: The iteration is not making good progress, as measured by the improvement from the last five Jacobian evaluations,
 
