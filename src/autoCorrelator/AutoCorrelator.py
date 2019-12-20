@@ -387,7 +387,6 @@ class AutoCorrelator(PythonDevice):
             msg = f"Error: Unknown beam shape {beam_shape} provided"
             self.log.ERROR(msg)
             raise ValueError(msg)
-        self.set("fitStatus", err)
 
         # Threshold level
         thr = threshold * fit_func.max()
@@ -480,6 +479,7 @@ class AutoCorrelator(PythonDevice):
             ew3 = es3 * s_f * calibration_factor
 
             h = Hash()
+            h.set("fitStatus", fit_status)
 
             # save in case fit status < 4
             # from 4 on no improvement was measured 
@@ -489,9 +489,6 @@ class AutoCorrelator(PythonDevice):
                 h.set("pulseWidth", w3)
                 h.set("ePulseWidth", ew3)
 
-                # Set all properties at once
-                self.set(h)
-
                 msg = "Image processing Ok"
                 if self["status"] != msg:
                     self.log.DEBUG(msg)
@@ -499,6 +496,9 @@ class AutoCorrelator(PythonDevice):
             else:
                 msg = f"Warning: Fit status is {fit_status}"
                 self.log.DEBUG(msg)
+
+            # Set all properties at once
+            self.set(h)
 
         except Exception as e:
             msg = f"In processImage: {e}"
