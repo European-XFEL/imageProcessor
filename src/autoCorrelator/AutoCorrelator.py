@@ -505,11 +505,6 @@ class AutoCorrelator(PythonDevice):
             if self["status"] != f"ERROR: {msg}":
                 self.log.ERROR(msg)
                 self.set("status", f"ERROR: {msg}")
-            h = Hash()
-            h.set("pulseWidth", 0)
-            h.set("ePulseWidth", 0)
-            h.set("fitStatus", 0)
-            self.set(h)
 
     def update_output_schema(self, data):
         if data.has('data.image'):
