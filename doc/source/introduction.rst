@@ -77,7 +77,7 @@ in :numref:`Fig. %s <fig-editor>`,
 	   
    Configuration Editor of the autocorrelator device.
 
-The camera device proding the image of th ebeam profile should be
+The camera device providing the image of the beam profile should be
 set in the key **input.connectedOutputChannels** of the autocorrelator
 device.
 For each camera image the projection along the axis-x is calculated,
