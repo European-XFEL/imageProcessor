@@ -408,7 +408,7 @@ class AutoCorrelator(PythonDevice):
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
-        return x0, sx, esx
+        return x0, sx, esx, err
 
     def useAsCalibrationImage1(self):
         """Use current image as calibration image 1"""
@@ -476,7 +476,7 @@ class AutoCorrelator(PythonDevice):
             s_f = self.deconvolution_factor[self.get("beamShape")]
 
             image_array = imageData.getData()
-            x3, s3, es3 = self.find_peak_fwhm(image_array)
+            x3, s3, es3, fit_status = self.find_peak_fwhm(image_array)
             self.current_peak = x3
             self.current_fwhm = s3
             self.current_e_fwhm = es3
@@ -485,18 +485,24 @@ class AutoCorrelator(PythonDevice):
 
             h = Hash()
 
-            h.set("xPeak3", x3)
-            h.set("xFWHM3", s3)
-            h.set("pulseWidth", w3)
-            h.set("ePulseWidth", ew3)
+            # save in case fit status < 4
+            # from 4 on no improvement was measured 
+            if fit_status > 0 and fit_status < 4:
+                h.set("xPeak3", x3)
+                h.set("xFWHM3", s3)
+                h.set("pulseWidth", w3)
+                h.set("ePulseWidth", ew3)
 
-            # Set all properties at once
-            self.set(h)
+                # Set all properties at once
+                self.set(h)
 
-            msg = "Image processing Ok"
-            if self["status"] != msg:
-                self.log.DEBUG(msg)
-                self.set("status", msg)
+                msg = "Image processing Ok"
+                if self["status"] != msg:
+                    self.log.DEBUG(msg)
+                    self.set("status", msg)
+            else:
+                msg = f"Warning: Fit status is {fit_status}"
+                self.log.DEBUG("Warning")
 
         except Exception as e:
             msg = f"In processImage: {e}"
