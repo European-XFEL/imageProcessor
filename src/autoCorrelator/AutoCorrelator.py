@@ -482,7 +482,7 @@ class AutoCorrelator(PythonDevice):
             h.set("fitStatus", fit_status)
 
             # save in case fit status < 4
-            # from 4 on no improvement was measured 
+            # from 4 on no improvement was measured
             if 0 < fit_status < 4:
                 h.set("xPeak3", x3)
                 h.set("xFWHM3", s3)
