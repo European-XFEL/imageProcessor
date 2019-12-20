@@ -492,7 +492,7 @@ class AutoCorrelator(PythonDevice):
                 msg = "Image processing Ok"
                 if self["status"] != msg:
                     self.log.DEBUG(msg)
-                    self.set("status", msg)
+                    h.set("status", msg)
             else:
                 msg = f"Warning: Fit status is {fit_status}"
                 self.log.DEBUG(msg)
