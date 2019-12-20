@@ -11,10 +11,11 @@ import scipy.constants
 from karabo.common.api import KARABO_SCHEMA_DISPLAY_TYPE_SCENES as DT_SCENES
 
 from karabo.bound import (
-    DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL, KARABO_CLASSINFO,
-    MetricPrefix, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
-    PythonDevice, Schema, SLOT_ELEMENT, State, STRING_ELEMENT, UINT32_ELEMENT,
-    Unit, VECTOR_DOUBLE_ELEMENT, VECTOR_STRING_ELEMENT
+    BOOL_ELEMENT, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
+    KARABO_CLASSINFO, MetricPrefix, NODE_ELEMENT, OUTPUT_CHANNEL,
+    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
+    STRING_ELEMENT, UINT32_ELEMENT, Unit, VECTOR_DOUBLE_ELEMENT,
+    VECTOR_STRING_ELEMENT
 )
 
 from image_processing import image_processing
@@ -167,8 +168,17 @@ class AutoCorrelator(PythonDevice):
             UINT32_ELEMENT(expected)
             .key("fitStatus")
             .displayedName("Fit Status")
-            .description("Error of fit procedure: .")
+            .description("Error of fit procedure: 1-3 means good fit. "
+                         "See device documentation for further details.")
             .readOnly()
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("subtractPedestal")
+            .displayedName("Subtract Pedestal")
+            .description("Subtract the pedestal, calculated from linear "
+                         "interpolation between first and last point.")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
             .commit(),
 
             DOUBLE_ELEMENT(expected)
@@ -293,8 +303,8 @@ class AutoCorrelator(PythonDevice):
             s_f = self.deconvolution_factor[beam_shape]
             w3 = self.current_fwhm * s_f * calibration_factor
             ew3 = self.current_e_fwhm * s_f * calibration_factor
-            self.set("pulseWidth", w3)
-            self.set("ePulseWidth", ew3)
+            h = Hash("pulseWidth", w3, "ePulseWidth", ew3)
+            self.set(h)
             self.log.DEBUG("Image re-processed!!!")
 
     def calibrate(self):
@@ -355,26 +365,28 @@ class AutoCorrelator(PythonDevice):
             msg = f"Fit window too narrow: [{x_min_fit}, {x_max_fit}]"
             raise ValueError(msg)
 
+        x_axis = numpy.linspace(0, len(img_x) - 1, len(img_x))
+        # get pedestal if required
+        if self["subtractPedestal"]:
+            alpha = (img_x[-1] - img_x[0]) / (x_axis[-1] - x_axis[0])
+            ped_func = alpha * x_axis + img_x[0]
+            img_x = numpy.subtract(img_x, ped_func)
+
         if beam_shape == GAUSSIAN_FIT:
             pars, cov, err = \
                 image_processing.fitGauss(img_x[x_min_fit:x_max_fit])
             x0 = pars[1] + x_min_fit
             # height = par[0], x0 = pars[1], sx = pars[2]
-            fit_func = image_processing.gauss1d(
-                numpy.linspace(0, len(img_x) - 1, len(img_x)),
-                pars[0],  x0,  pars[2])
+            fit_func = image_processing.gauss1d(x_axis, pars[0],  x0,  pars[2])
         elif beam_shape == HYP_SEC_FIT:
             pars, cov, err = \
                 image_processing.fitSech2(img_x[x_min_fit:x_max_fit])
             x0 = pars[1] + x_min_fit
-            fit_func = image_processing.sqsech1d(
-                numpy.linspace(0, len(img_x) - 1, len(img_x)),
-                pars[0], x0, pars[2])
+            fit_func = image_processing.sqsech1d(x_axis, pars[0], x0, pars[2])
         else:
             msg = f"Error: Unknown beam shape {beam_shape} provided"
             self.log.ERROR(msg)
             raise ValueError(msg)
-        self.set("fitStatus", err)
 
         # Threshold level
         thr = threshold * fit_func.max()
@@ -391,7 +403,7 @@ class AutoCorrelator(PythonDevice):
         self.writeChannel('output', output_data)
 
         # return the fit mean, sigma, and the error on the mean
-        return x0, sx, esx
+        return x0, sx, esx, err
 
     def useAsCalibrationImage1(self):
         """Use current image as calibration image 1"""
@@ -401,8 +413,8 @@ class AutoCorrelator(PythonDevice):
             self.updateState(State.ERROR)
             return
 
-        self.set("xPeak1", self.current_peak)
-        self.set("xFWHM1", self.current_fwhm)
+        h = Hash("xPeak1", self.current_peak, "xFWHM1", self.current_fwhm)
+        self.set(h)
 
     def useAsCalibrationImage2(self):
         """Use current image as calibration image 2"""
@@ -412,8 +424,8 @@ class AutoCorrelator(PythonDevice):
             self.updateState(State.ERROR)
             return
 
-        self.set("xPeak2", self.current_peak)
-        self.set("xFWHM2", self.current_fwhm)
+        h = Hash("xPeak2", self.current_peak, "xFWHM2", self.current_fwhm)
+        self.set(h)
 
     def reset(self):
         if self['state'] == State.ERROR:
@@ -459,7 +471,7 @@ class AutoCorrelator(PythonDevice):
             s_f = self.deconvolution_factor[self.get("beamShape")]
 
             image_array = imageData.getData()
-            x3, s3, es3 = self.find_peak_fwhm(image_array)
+            x3, s3, es3, fit_status = self.find_peak_fwhm(image_array)
             self.current_peak = x3
             self.current_fwhm = s3
             self.current_e_fwhm = es3
@@ -467,30 +479,32 @@ class AutoCorrelator(PythonDevice):
             ew3 = es3 * s_f * calibration_factor
 
             h = Hash()
+            h.set("fitStatus", fit_status)
 
-            h.set("xPeak3", x3)
-            h.set("xFWHM3", s3)
-            h.set("pulseWidth", w3)
-            h.set("ePulseWidth", ew3)
+            # save in case fit status < 4
+            # from 4 on no improvement was measured
+            if 0 < fit_status < 4:
+                h.set("xPeak3", x3)
+                h.set("xFWHM3", s3)
+                h.set("pulseWidth", w3)
+                h.set("ePulseWidth", ew3)
+
+                msg = "Image processing Ok"
+                if self["status"] != msg:
+                    self.log.DEBUG(msg)
+                    h.set("status", msg)
+            else:
+                msg = f"Warning: Fit status is {fit_status}"
+                self.log.DEBUG(msg)
 
             # Set all properties at once
             self.set(h)
-
-            msg = "Image processing Ok"
-            if self["status"] != msg:
-                self.log.DEBUG(msg)
-                self.set("status", msg)
 
         except Exception as e:
             msg = f"In processImage: {e}"
             if self["status"] != f"ERROR: {msg}":
                 self.log.ERROR(msg)
                 self.set("status", f"ERROR: {msg}")
-            h = Hash()
-            h.set("pulseWidth", 0)
-            h.set("ePulseWidth", 0)
-            h.set("fitStatus", 0)
-            self.set(h)
 
     def update_output_schema(self, data):
         if data.has('data.image'):
