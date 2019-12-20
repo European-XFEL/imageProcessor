@@ -379,7 +379,7 @@ class AutoCorrelator(PythonDevice):
         # Threshold level
         thr = threshold * fit_func.max()
         # Find 1st and last point above threshold
-        nz = numpy.flatnonzero(img_y > thr)
+        nz = numpy.flatnonzero(fit_func > thr)
         # Find FWHM of fit values
         sx = float(nz[-1] - nz[0])
         # Find error of FWHM
