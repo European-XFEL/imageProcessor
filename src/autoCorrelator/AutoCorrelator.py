@@ -251,9 +251,6 @@ class AutoCorrelator(PythonDevice):
         # boolean for schema_update
         self.is_schema_updated = False
 
-        # output data size
-        self.output_size = 0
-
         # Register slots
         self.KARABO_SLOT(self.useAsCalibrationImage1)
         self.KARABO_SLOT(self.useAsCalibrationImage2)
@@ -370,9 +367,7 @@ class AutoCorrelator(PythonDevice):
         x_axis = numpy.linspace(0, len(img_x) - 1, len(img_x))
         # get pedestal if required
         if self["subtractPedestal"]:
-            max_size = self.output_size
-            alpha = ((img_x[max_size - 1] - img_x[0]) /
-                     (x_axis[max_size - 1] - x_axis[0]))
+            alpha = (img_x[-1] - img_x[0]) / (x_axis[-1] - x_axis[0])
             ped_func = alpha * x_axis + img_x[0]
             img_x = numpy.subtract(img_x, ped_func)
 
@@ -502,7 +497,7 @@ class AutoCorrelator(PythonDevice):
                     self.set("status", msg)
             else:
                 msg = f"Warning: Fit status is {fit_status}"
-                self.log.DEBUG("Warning")
+                self.log.DEBUG(msg)
 
         except Exception as e:
             msg = f"In processImage: {e}"
@@ -522,8 +517,6 @@ class AutoCorrelator(PythonDevice):
             image = data['image']
         shape = image.getDimensions()
         width = shape[1]
-        # output data size
-        self.output_size = width
 
         new_schema = Schema()
         data_schema = Schema()
