@@ -100,12 +100,12 @@ class ImagePatternPicker(PythonDevice):
         update_dev, update_pipe = channel.split(":")
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
-        timestamp = ts.getSeconds()
+        train_id = ts.trainId()
         # if same dev_output in channels we have same timestamp
         # do not repeate the filling
-        if timestamp == self.last_update and channel == self.last_channel:
+        if train_id == self.last_update and channel == self.last_channel:
             return
-        self.last_update = timestamp
+        self.last_update = train_id
         self.last_channel = channel
 
         # find which node the updating device belongs to
@@ -123,7 +123,6 @@ class ImagePatternPicker(PythonDevice):
 
                 self.refresh_frame_rate_in(key)
 
-                train_id = ts.getTrainId()
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
                     data['data.trainId'] = train_id
