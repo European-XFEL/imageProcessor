@@ -41,7 +41,7 @@ class ImagePatternPicker(PythonDevice):
         self.frame_rate_in = []
         self.frame_rate_out = []
         self.connections = {}
-        self.last_update = 0
+        self.last_train_id = 0
         self.last_channel = None
 
         # Define the first function to be called after the constructor has
@@ -103,9 +103,9 @@ class ImagePatternPicker(PythonDevice):
         train_id = ts.trainId()
         # if same dev_output in channels we have same timestamp
         # do not repeate the filling
-        if train_id == self.last_update and channel == self.last_channel:
+        if train_id == self.last_train_id and channel == self.last_channel:
             return
-        self.last_update = train_id
+        self.last_train_id = train_id
         self.last_channel = channel
 
         # find which node the updating device belongs to
