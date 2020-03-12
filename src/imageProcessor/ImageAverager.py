@@ -211,6 +211,9 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.KARABO_SLOT(self.resetAverage)
 
     def preReconfigure(self, incomingReconfiguration):
+        # always call ImageProcessorBase preReconfigure first!
+        super(ImageAverager, self).preReconfigure(incomingReconfiguration)
+
         if incomingReconfiguration.has('runningAverage') or \
                 incomingReconfiguration.has('runningAvgMethod'):
             # Reset averages
@@ -248,7 +251,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
             return
 
     def onEndOfStream(self, inputChannel):
@@ -280,7 +283,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             if n_images == 1:
                 # No averaging needed
                 self.writeImageToOutputs(input_image, ts)
-                self.update_warn()  # Success
+                self.update_count()  # Success
                 self.refresh_frame_rate_out()
                 return
 
@@ -295,7 +298,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                                        encoding=encoding)
 
                 self.writeImageToOutputs(image_data, ts)
-                self.update_warn()  # Success
+                self.update_count()  # Success
                 self.refresh_frame_rate_out()
                 return
 
@@ -307,7 +310,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                                            encoding=encoding)
 
                     self.writeImageToOutputs(image_data, ts)
-                    self.update_warn()  # Success
+                    self.update_count()  # Success
                     self.refresh_frame_rate_out()
 
                     self.image_standard_mean.clear()
@@ -315,7 +318,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
 
     def process_ndarray(self, array, ts):
         n_images = self['nImages']
@@ -339,11 +342,11 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                     self.image_standard_mean.clear()
         except Exception as e:
             msg = "Exception caught in process_ndarray: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
         else:
             self.writeNDArrayToOutputs(array, ts)
             self.refresh_frame_rate_out()
-            self.update_warn()  # Success
+            self.update_count()  # Success
 
     ##############################################
     #   Implementation of Slots                  #
