@@ -216,8 +216,8 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         """
         match_found = False
         offset = self['trainIdOffset']
-        if isinstance(item, Timestamp):  # item is a train id:
-                                         # look for matches with image_buffer
+        if isinstance(item, Timestamp):
+            # item is a train id: look for matches with image_buffer
             tid = item.getTrainId()
             with self.buffer_lock:
                 for img in self.image_buffer:
