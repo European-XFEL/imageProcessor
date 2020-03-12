@@ -86,10 +86,6 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         self.KARABO_SLOT(self.load)
         self.KARABO_SLOT(self.useAsBackgroundImage)
 
-    def preReconfigure(self, configuration):
-        # always call ImageProcessorBase preReconfigure first!
-        super(ImageBackgroundSubtraction, self).preReconfigure(configuration)
-
     ##############################################
     #   Implementation of Callbacks              #
     ##############################################
@@ -112,7 +108,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -165,17 +161,17 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                                        encoding=encoding)
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Image sent to output channel")
-                self.update_warn()  # Success
+                self.update_count()  # Success
 
             else:
                 msg = ("Cannot subtract background image... shapes are "
                        "different: {} != {}"
                        .format(self.bkg_image.shape, img.shape))
-                self.update_warn(error=True, msg=msg)
+                self.update_count(error=True, msg=msg)
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
 
     ##############################################
     #   Implementation of Slots                  #

@@ -59,6 +59,9 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
             self.log.ERROR("Initial ROI is invalid -> disabled")
 
     def preReconfigure(self, incomingReconfiguration):
+        # always call ImageProcessorBase preReconfigure first!
+        super(ImageApplyRoi, self).preReconfigure(incomingReconfiguration)
+
         if incomingReconfiguration.has('roi'):
             roi = incomingReconfiguration['roi']
             valid = self.valid_roi(roi)
@@ -85,7 +88,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -112,7 +115,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
                 self.log.DEBUG("ROI disabled!")
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Original image copied to output channel")
-                self.update_warn()  # Success
+                self.update_count()  # Success
                 return
 
             low_x, high_x, low_y, high_y = self['roi']
@@ -128,12 +131,12 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
                 self.updateOutputSchema(cropped_image)
 
             self.writeImageToOutputs(cropped_image, ts)
-            self.update_warn()  # Success
+            self.update_count()  # Success
             return
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
 
     @staticmethod
     def valid_roi(roi):

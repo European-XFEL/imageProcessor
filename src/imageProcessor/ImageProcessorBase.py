@@ -151,30 +151,48 @@ class ImageProcessorBase(PythonDevice):
         self.KARABO_SLOT(self.resetError)
 
     def preReconfigure(self, configuration):
+        need_refresh = False
+
         if configuration.has('errorCounter.threshold'):
             self.error_counter.threshold = configuration[
                 'errorCounter.threshold']
+            need_refresh = True
 
         if configuration.has('errorCounter.epsilon'):
             self.error_counter.epsilon = configuration[
                 'errorCounter.epsilon']
+            need_refresh = True
+
+        if need_refresh:
+            # warn level has to be re-evaluated
+            h = Hash()
+            self.evaluate_warn(h)
+            if not h.empty():
+                self.set(h)
 
     def resetError(self):
-        self.log.INFO("Reset error counter")
-        self.error_counter.clear()
-        self.updateState(State.ON)
+        self.log.INFO("Called 'Reset Error'")
 
-    def update_warn(self, error=False, msg=""):
-        self.error_counter.append(error)
+        h = Hash('status', "Called 'Reset Error'")
+        self.error_counter.clear()
+        self.evaluate_warn(h)
+        self.set(h)
+
+        if self['state'] != State.ON:
+            self.updateState(State.ON)
+
+    def update_count(self, error=False, msg=""):
+        """ Update success/error counting, as well as warn level.
+
+        :param error: depending on this flag, one count will be added either
+        to errors, or to successes
+        :param msg: the error message to be logged
+        :return:
+        """
         h = Hash()
 
-        if self['errorCounter.count'] != self.error_counter.count_error:
-            # Update in device only if changed
-            h['errorCounter.count'] = self.error_counter.count_error
-
-        if self['errorCounter.fraction'] != self.error_counter.fraction:
-            # Update in device only if changed
-            h['errorCounter.fraction'] = self.error_counter.fraction
+        self.error_counter.append(error)
+        self.evaluate_warn(h)
 
         if not error:
             if self['status'] != "PROCESSING":
@@ -184,12 +202,26 @@ class ImageProcessorBase(PythonDevice):
             h['status'] = msg
             self.log.ERROR(msg)
 
+        if not h.empty():
+            self.set(h)
+
+    def evaluate_warn(self, h):
+        """ Evaluate the warn condition, and return it in a Hash
+
+        :param h: the device reconfiguration Hash
+        :return:
+        """
+        if self['errorCounter.count'] != self.error_counter.count_error:
+            # Update in device only if changed
+            h['errorCounter.count'] = self.error_counter.count_error
+
+        if self['errorCounter.fraction'] != self.error_counter.fraction:
+            # Update in device only if changed
+            h['errorCounter.fraction'] = self.error_counter.fraction
+
         if self['errorCounter.warnCondition'] != self.error_counter.warn:
             # Update in device only if changed
             h['errorCounter.warnCondition'] = self.error_counter.warn
-
-        if not h.empty():
-            self.set(h)
 
     def refresh_frame_rate_in(self):
         self.frame_rate_in.update()
