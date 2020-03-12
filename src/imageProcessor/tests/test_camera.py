@@ -40,42 +40,42 @@ class TestCamera(PythonDevice):
         outputData = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.ON, State.ACQUIRING)
-                .setNewDefaultValue(State.ON)
-                .commit(),
+            .setNewOptions(State.ON, State.ACQUIRING)
+            .setNewDefaultValue(State.ON)
+            .commit(),
 
             NODE_ELEMENT(outputData).key("data")
-                .displayedName("Data")
-                .commit(),
+            .displayedName("Data")
+            .commit(),
 
             IMAGEDATA_ELEMENT(outputData).key("data.image")
-                .displayedName("Image")
-                .commit(),
+            .displayedName("Image")
+            .commit(),
 
             OUTPUT_CHANNEL(expected).key("output")
-                .displayedName("Output")
-                .dataSchema(outputData)
-                .commit(),
+            .displayedName("Output")
+            .dataSchema(outputData)
+            .commit(),
 
             BOOL_ELEMENT(expected).key("corruptedImage")
-                .displayedName("Corrupted Image")
-                .description("If True, some invalid image will be written to "
-                             "the output channel.")
-                .assignmentOptional().defaultValue(False)
-                .reconfigurable()
-                .commit(),
+            .displayedName("Corrupted Image")
+            .description("If True, some invalid image will be written to "
+                         "the output channel.")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
 
             SLOT_ELEMENT(expected).key("acquire")
-                .displayedName("Acquire")
-                .description("Instructs camera to go into acquisition state")
-                .allowedStates(State.ON)
-                .commit(),
+            .displayedName("Acquire")
+            .description("Instructs camera to go into acquisition state")
+            .allowedStates(State.ON)
+            .commit(),
 
             SLOT_ELEMENT(expected).key("stop")
-                .displayedName("Stop")
-                .description("Instructs camera to stop current acquisition")
-                .allowedStates(State.ACQUIRING)
-                .commit(),
+            .displayedName("Stop")
+            .description("Instructs camera to stop current acquisition")
+            .allowedStates(State.ACQUIRING)
+            .commit(),
 
         )
 
