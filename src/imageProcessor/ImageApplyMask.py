@@ -117,7 +117,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = "Exception caught in onData: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -145,7 +145,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 self.log.DEBUG("Mask disabled!")
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Original image copied to output channel")
-                self.update_warn()  # Success
+                self.update_count()  # Success
                 return
 
             self.current_image = image_data.getData()  # np.ndarray
@@ -163,7 +163,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                         self.log.DEBUG("Mask applied")
                         self.writeImageToOutputs(ImageData(img), ts)
                         self.log.DEBUG("Image sent to output channel")
-                        self.update_warn()  # Success
+                        self.update_count()  # Success
                         return
 
                     else:
@@ -184,7 +184,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 self.log.DEBUG("Rectangular region selected")
                 self.writeImageToOutputs(ImageData(img), ts)
                 self.log.DEBUG("Image sent to output channel")
-                self.update_warn()  # Success
+                self.update_count()  # Success
                 return
 
             else:
@@ -193,7 +193,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
-            self.update_warn(error=True, msg=msg)
+            self.update_count(error=True, msg=msg)
 
     ##############################################
     #   Implementation of Slots                  #

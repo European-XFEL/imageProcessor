@@ -110,7 +110,7 @@ class ImageToSpectrum(Device):
             self.spectrumIntegral = QuantityValue(spectrum.sum(),
                                                   timestamp=ts)
 
-            self.errorCounter.update_warn()  # success
+            self.errorCounter.update_count()  # success
             if self.status != "PROCESSING":
                 self.status = "PROCESSING"
         except Exception as e:
@@ -121,7 +121,7 @@ class ImageToSpectrum(Device):
                 # Only update if not yet in WARN
                 self.status = msg
                 self.log.ERROR(msg)
-            self.errorCounter.update_warn(True)
+            self.errorCounter.update_count(True)
 
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.astype('double').tolist()
