@@ -4,8 +4,6 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-from asyncio import coroutine
-
 from karabo.middlelayer import (
     AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
     InputChannel, Node, QuantityValue, Slot, State, UInt32, Unit, VectorString
@@ -80,8 +78,7 @@ class BeamShapeCoarse(Device):
         accessMode=AccessMode.INITONLY,
         assignment=Assignment.MANDATORY
     )
-    @coroutine
-    def input(self, data, meta):
+    async def input(self, data, meta):
         if self.state != State.PROCESSING:
             self.state = State.PROCESSING
 
@@ -105,7 +102,7 @@ class BeamShapeCoarse(Device):
             self.fwhmX = QuantityValue(fwhm_x, timestamp=ts)
             self.fwhmY = QuantityValue(fwhm_y, timestamp=ts)
 
-            self.errorCounter.update_warn()  # success
+            self.errorCounter.update_count()  # success
             if self.status != "PROCESSING":
                 self.status = "PROCESSING"
         except Exception as e:
@@ -114,7 +111,7 @@ class BeamShapeCoarse(Device):
                 # Only update if not yet in WARN
                 self.status = msg
                 self.log.ERROR(msg)
-            self.errorCounter.update_warn(True)
+            self.errorCounter.update_count(True)
 
     @input.endOfStream
     def input(self, name):
@@ -123,12 +120,13 @@ class BeamShapeCoarse(Device):
             self.state = State.ON
 
     @Slot(displayedName='Reset', description="Reset error count.")
-    def resetError(self):
+    async def resetError(self):
         self.errorCounter.error_counter.clear()
-        self.state = State.ON
+        self.errorCounter.evaluate_warn()
+        if self.state != State.ON:
+            self.state = State.ON
 
-    @coroutine
-    def onInitialization(self):
+    async def onInitialization(self):
         """ This method will be called when the device starts.
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
