@@ -4,7 +4,6 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
@@ -69,8 +68,7 @@ class ImageToSpectrum(Device):
         accessMode=AccessMode.INITONLY,
         assignment=Assignment.MANDATORY
     )
-    @coroutine
-    def input(self, data, meta):
+    async def input(self, data, meta):
         if self.state != State.PROCESSING:
             self.state = State.PROCESSING
 
@@ -126,7 +124,7 @@ class ImageToSpectrum(Device):
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.astype('double').tolist()
 
-        yield from self.output.writeData(timestamp=ts)
+        await self.output.writeData(timestamp=ts)
 
     @input.endOfStream
     def input(self, name):
@@ -176,17 +174,18 @@ class ImageToSpectrum(Device):
     )
 
     @Slot(displayedName='Reset',  description="Reset error count.")
-    def resetError(self):
+    async def resetError(self):
         self.errorCounter.error_counter.clear()
-        self.state = State.ON
+        self.errorCounter.evaluate_warn()
+        if self.state != State.ON:
+            self.state = State.ON
 
     def valid_roi(self, roi):
         if any([roi[0] < 0, roi[1] < roi[0], roi[2] < 0, roi[3] < roi[2]]):
             return False
         return True
 
-    @coroutine
-    def onInitialization(self):
+    async def onInitialization(self):
         """ This method will be called when the device starts.
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
