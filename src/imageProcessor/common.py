@@ -44,6 +44,7 @@ class ErrorNode(Configurable):
         self.threshold = value
         if hasattr(self, 'error_counter'):
             self.error_counter.threshold = value
+            self.evaluate_warn()
 
     @Double(
         displayedName="Epsilon",
@@ -62,6 +63,7 @@ class ErrorNode(Configurable):
         self.epsilon = value
         if hasattr(self, 'error_counter'):
             self.error_counter.epsilon = value
+            self.evaluate_warn()
 
     fraction = Double(
         displayedName="Error Fraction",
@@ -89,9 +91,11 @@ class ErrorNode(Configurable):
             threshold=float(self.threshold),
             epsilon=float(self.epsilon))
 
-    def update_warn(self, error=False):
+    def update_count(self, error=False):
         self.error_counter.append(error)
+        self.evaluate_warn()
 
+    def evaluate_warn(self):
         if self.count != self.error_counter.count_error:
             # Update in device only if changed
             self.count = self.error_counter.count_error

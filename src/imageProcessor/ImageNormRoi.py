@@ -3,7 +3,6 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-from asyncio import coroutine
 import numpy as np
 
 from karabo.middlelayer import (
@@ -62,8 +61,7 @@ class ImageNormRoi(Device):
         displayedName="Input",
         accessMode=AccessMode.INITONLY,
         assignment=Assignment.MANDATORY)
-    @coroutine
-    def input(self, data, meta):
+    async def input(self, data, meta):
         if self.state != State.PROCESSING:
             self.state = State.PROCESSING
 
@@ -117,7 +115,7 @@ class ImageNormRoi(Device):
         # Write spectrum to output channel
         self.output.schema.data.spectrum = spectrum.tolist()
 
-        yield from self.output.writeData(timestamp=ts)
+        await self.output.writeData(timestamp=ts)
 
     @input.endOfStream
     def input(self, name):
@@ -169,12 +167,13 @@ class ImageNormRoi(Device):
         accessMode=AccessMode.READONLY)
 
     @Slot(displayedName='Reset', description="Reset error count.")
-    def resetError(self):
+    async def resetError(self):
         self.errorCounter.error_counter.clear()
-        self.state = State.ON
+        self.errorCounter.evaluate_warn()
+        if self.state != State.ON:
+            self.state = State.ON
 
-    @coroutine
-    def onInitialization(self):
+    async def onInitialization(self):
         """ This method will be called when the device starts.
         """
         self.frame_rate = RateCalculator(refresh_interval=1.0)
