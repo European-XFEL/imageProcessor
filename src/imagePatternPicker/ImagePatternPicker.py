@@ -5,10 +5,10 @@
 #############################################################################
 
 from karabo.bound import (
-    DaqDataType, DeviceClient, DOUBLE_ELEMENT, INPUT_CHANNEL,
-    KARABO_CLASSINFO, IMAGEDATA_ELEMENT, NODE_ELEMENT, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp, Types,
-    UINT32_ELEMENT, UINT64_ELEMENT, Unit
+    BOOL_ELEMENT, DaqDataType, DeviceClient, DOUBLE_ELEMENT, Hash, ImageData,
+    IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT,
+    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
+    Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -92,6 +92,19 @@ class ImagePatternPicker(PythonDevice):
             except Exception as e:
                 self.log.ERROR(f"Error Exception: {e}")
 
+    def preReconfigure(self, configuration):
+        for idx in range(NR_OF_CHANNELS):
+            node = f"chan_{idx}"
+            if f'{node}.enableCrosshair' in configuration:
+                enable = configuration[f'{node}.enableCrosshair']
+                warn_condition = self[f'{node}.warnCondition']
+                if enable and warn_condition == 0:
+                    # raise the warning
+                    self[f'{node}.warnCondition'] = 1
+                elif not enable and warn_condition != 0:
+                    # cancel the warning
+                    self[f'{node}.warnCondition'] = 0
+
     def onData(self, data, metaData):
         if not self.connections:
             return
@@ -100,9 +113,9 @@ class ImagePatternPicker(PythonDevice):
         update_dev, update_pipe = channel.split(":")
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
-        train_id = ts.trainId()
+        train_id = ts.getTrainId()
         # if same dev_output in channels we have same timestamp
-        # do not repeate the filling
+        # do not repeat the filling
         if train_id == self.last_train_id and channel == self.last_channel:
             return
         self.last_train_id = train_id
@@ -126,7 +139,53 @@ class ImagePatternPicker(PythonDevice):
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
                     data['data.trainId'] = train_id
-                    self.writeChannel(f"{node}.output", data, ts)
+                    if not self[f'{node}.enableCrosshair']:
+                        # forward image as it is
+                        output_data = data
+                    else:
+                        # superimpose a cross-hair, assuming the colormap
+                        # ranges from black to white
+                        image_data = data['data.image']
+                        image = image_data.getData()  # np.ndarray
+                        x0 = self[f'{node}.crosshairX']
+                        y0 = self[f'{node}.crosshairY']
+                        xmax = image.shape[1]
+                        ymax = image.shape[0]
+
+                        # Apply external 'black' crosshair
+                        width = max(10, int(0.025 * max(image.shape)))
+                        thickness = max(2, int(0.005 * max(image.shape)))
+                        x1 = max(x0 - width, 0)
+                        x2 = min(x0 + width, xmax)
+                        y1 = max(y0 - thickness, 0)
+                        y2 = min(y0 + thickness, ymax)
+                        image[y1:y2, x1:x2] = 0
+
+                        x1 = max(x0 - thickness, 0)
+                        x2 = min(x0 + thickness, xmax)
+                        y1 = max(y0 - width, 0)
+                        y2 = min(y0 + width, ymax)
+                        image[y1:y2, x1:x2] = 0
+
+                        # Apply internal 'white' crosshair
+                        thickness = thickness // 3
+
+                        x1 = max(x0 - width, 0)
+                        x2 = min(x0 + width, xmax)
+                        y1 = max(y0 - thickness, 0)
+                        y2 = min(y0 + thickness, ymax)
+                        image[y1:y2, x1:x2] = -1
+
+                        x1 = max(x0 - thickness, 0)
+                        x2 = min(x0 + thickness, xmax)
+                        y1 = max(y0 - width, 0)
+                        y2 = min(y0 + width, ymax)
+                        image[y1:y2, x1:x2] = -1
+
+                        image_data = ImageData(image)
+                        output_data = Hash('data.image', image_data)
+
+                    self.writeChannel(f"{node}.output", output_data, ts)
                     self.refresh_frame_rate_out(key)
 
     def onEndOfStream(self, inputChannel):
@@ -215,6 +274,35 @@ class ImagePatternPicker(PythonDevice):
                          "trainId satisfies the following relation: "
                          "(trainId%nBunchPatterns) ==  patternOffset.")
             .assignmentOptional().defaultValue(1)
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(schema).key(f"{channel}.enableCrosshair")
+            .displayedName("Enable Crosshair")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.warnCondition")
+            .displayedName("Warn Condition")
+            .description("True when cross-hair is enabled.")
+            .readOnly().initialValue(0)
+            .warnHigh(0).info("Cross-hair is enabled! Disable before saving "
+                              "images to DAQ or use them for processing.")
+            .needsAcknowledging(False)
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.crosshairX")
+            .displayedName("Crosshair X position")
+            .assignmentOptional().defaultValue(0)
+            .adminAccess()
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.crosshairY")
+            .displayedName("Crosshair Y position")
+            .assignmentOptional().defaultValue(0)
+            .adminAccess()
             .reconfigurable()
             .commit(),
 
