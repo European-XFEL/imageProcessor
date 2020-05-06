@@ -51,17 +51,15 @@ class ImagePatternPicker(PythonDevice):
         self.device_client.getDevices()  # Somehow needed to connect
 
         for idx in range(NR_OF_CHANNELS):
-            chan = "chan_{}".format(idx)
-            input_chan = '{}.input.connectedOutputChannels'.format(chan)
+            chan = f"chan_{idx}"
+            input_chan = f"{chan}.input.connectedOutputChannels"
             try:
                 inputs = self[input_chan]
                 if inputs:
 
                     # Register call-backs
-                    self.KARABO_ON_DATA("{}.input".format(chan),
-                                        self.onData)
-                    self.KARABO_ON_EOS("{}.input".format(chan),
-                                       self.onEndOfStream)
+                    self.KARABO_ON_DATA(f"{chan}.input", self.onData)
+                    self.KARABO_ON_EOS(f"{chan}.input", self.onEndOfStream)
 
                     # Variables for frames per second computation
                     self.frame_rate_in.append(
@@ -232,7 +230,7 @@ class ImagePatternPicker(PythonDevice):
                 self[f"{node}.inFrameRate"] = 0.
                 self[f"{node}.outFrameRate"] = 0.
                 # Signals end of stream
-                self.signalEndOfStream(f"{node}.output".format(node))
+                self.signalEndOfStream(f"{node}.output")
                 stopped_nodes += 1
 
         # state should be ON if all cameras are not acquiring
@@ -244,18 +242,16 @@ class ImagePatternPicker(PythonDevice):
         frame_rate.update()
         fps_in = frame_rate.refresh()
         if fps_in:
-            self['chan_{}.inFrameRate'.format(channel_idx)] = fps_in
-            self.log.DEBUG("Channel {}: Input rate {} Hz"
-                           .format(channel_idx, fps_in))
+            self[f"chan_{channel_idx}.inFrameRate"] = fps_in
+            self.log.DEBUG(f"Channel {channel_idx}: Input rate {fps_in} Hz")
 
     def refresh_frame_rate_out(self, channel_idx):
         frame_rate = self.frame_rate_out[channel_idx]
         frame_rate.update()
         fps_out = frame_rate.refresh()
         if fps_out:
-            self['chan_{}.outFrameRate'.format(channel_idx)] = fps_out
-            self.log.DEBUG("Channel {}: Output rate {} Hz".
-                           format(channel_idx, fps_out))
+            self[f"chan_{channel_idx}.outFrameRate"] = fps_out
+            self.log.DEBUG(f"Channel {channel_idx}: Output rate {fps_out} Hz")
 
     def on_camera_schema_update(self, deviceId, schema):
         # find all inputs connected to this updating schema device
@@ -414,21 +410,8 @@ class ImagePatternPicker(PythonDevice):
         )
 
     def update_output_schema(self, channel, shape, k_type):
-        # Get device configuration before schema update
-        try:
-            outputHostname = self["{}.output.hostname".format(channel)]
-        except AttributeError:
-            # Configuration does not contain "output.hostname"
-            outputHostname = None
-
         newSchema = Schema()
         ImagePatternPicker.create_channel_node(newSchema, channel, shape,
                                                k_type)
 
-        self.updateSchema(newSchema)
-
-        if outputHostname:
-            # Restore configuration
-            self.log.DEBUG("{}.output.hostname: {}".
-                           format(channel, outputHostname))
-            self.set("{}.output.hostname".format(channel), outputHostname)
+        self.appendSchema(newSchema)
