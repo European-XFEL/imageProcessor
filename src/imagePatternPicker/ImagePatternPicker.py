@@ -7,8 +7,8 @@
 from karabo.bound import (
     BOOL_ELEMENT, DaqDataType, DeviceClient, DOUBLE_ELEMENT, Hash, ImageData,
     IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT,
-    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State, Timestamp,
-    Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
+    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State,
+    STRING_ELEMENT, Timestamp, Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -16,7 +16,7 @@ from processing_utils.rate_calculator import RateCalculator
 NR_OF_CHANNELS = 2
 
 
-@KARABO_CLASSINFO("ImagePatternPicker", "2.5")
+@KARABO_CLASSINFO("ImagePatternPicker", "2.8")
 class ImagePatternPicker(PythonDevice):
 
     @staticmethod
@@ -41,8 +41,7 @@ class ImagePatternPicker(PythonDevice):
         self.frame_rate_in = []
         self.frame_rate_out = []
         self.connections = {}
-        self.last_train_id = 0
-        self.last_channel = None
+        self.last_train_id = {}
 
         # Define the first function to be called after the constructor has
         # finished
@@ -97,13 +96,42 @@ class ImagePatternPicker(PythonDevice):
             node = f"chan_{idx}"
             if f'{node}.enableCrosshair' in configuration:
                 enable = configuration[f'{node}.enableCrosshair']
-                warn_condition = self[f'{node}.warnCondition']
-                if enable and warn_condition == 0:
+                warn_crosshair = self[f'{node}.warnCrosshair']
+                if enable and warn_crosshair == 0:
                     # raise the warning
-                    self[f'{node}.warnCondition'] = 1
-                elif not enable and warn_condition != 0:
+                    self[f'{node}.warnCrosshair'] = 1
+                elif not enable and warn_crosshair != 0:
                     # cancel the warning
-                    self[f'{node}.warnCondition'] = 0
+                    self[f'{node}.warnCrosshair'] = 0
+
+    def is_valid_train_id(self, train_id, node):
+        last_train_id = self.last_train_id.get(node, 0)
+        self.last_train_id[node] = train_id
+        warn_train_id = self[f"{node}.warnTrainId"]
+
+        if train_id > last_train_id:
+            if warn_train_id != 0:
+                self[f"{node}.warnTrainId"] = 0  # remove warning
+            status = "Processing"
+            is_valid = True
+        else:
+            if warn_train_id == 0:
+                self[f"{node}.warnTrainId"] = 1  # raise warning
+
+            status = "Invalid trainId"
+            if train_id == 0:
+                status += ": received 0"
+            elif train_id < last_train_id:
+                status += ": decreasing"
+            elif train_id == last_train_id:
+                status += ": not increasing"
+
+            is_valid = False
+
+        if self[f"{node}.status"] != status:
+            self[f"{node}.status"] = status
+
+        return is_valid
 
     def onData(self, data, metaData):
         if not self.connections:
@@ -114,12 +142,6 @@ class ImagePatternPicker(PythonDevice):
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
         train_id = ts.getTrainId()
-        # if same dev_output in channels we have same timestamp
-        # do not repeat the filling
-        if train_id == self.last_train_id and channel == self.last_channel:
-            return
-        self.last_train_id = train_id
-        self.last_channel = channel
 
         # find which node the updating device belongs to
         # loop over dictionary of input devices
@@ -131,10 +153,15 @@ class ImagePatternPicker(PythonDevice):
             # updating device is in this block; proceed
             if update_dev == device_id and update_pipe == dev_pipe:
                 node = f"chan_{key}"
-                if self['state'] == State.ON:
-                    self.updateState(State.PROCESSING)
 
                 self.refresh_frame_rate_in(key)
+
+                # check wheher image has a valid trainId
+                if not self.is_valid_train_id(train_id, node):
+                    return
+
+                if self['state'] == State.ON:
+                    self.updateState(State.PROCESSING)
 
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
@@ -201,6 +228,7 @@ class ImagePatternPicker(PythonDevice):
             if device_id == dev.split(":")[0]:
                 node = f"chan_{key}"
                 self.log.INFO("onEndOfStream called")
+                self[f"{node}.status"] = "Idle"
                 self[f"{node}.inFrameRate"] = 0.
                 self[f"{node}.outFrameRate"] = 0.
                 # Signals end of stream
@@ -283,12 +311,27 @@ class ImagePatternPicker(PythonDevice):
             .reconfigurable()
             .commit(),
 
-            UINT32_ELEMENT(schema).key(f"{channel}.warnCondition")
-            .displayedName("Warn Condition")
-            .description("True when cross-hair is enabled.")
+            STRING_ELEMENT(schema).key(f"{channel}.status")
+            .displayedName("Status")
+            .readOnly().initialValue("")
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.warnCrosshair")
+            .displayedName("Crosshair Warning")
+            .description("Raise a warning when cross-hair is enabled.")
             .readOnly().initialValue(0)
             .warnHigh(0).info("Cross-hair is enabled! Disable before saving "
                               "images to DAQ or use them for processing.")
+            .needsAcknowledging(False)
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.warnTrainId")
+            .displayedName("Invalid TrainId")
+            .description("Raise a warning when image's trainId is invalid: 0, "
+                         "decreasing or not increasing.")
+            .readOnly().initialValue(0)
+            .warnHigh(0).info("Image's trainId is invalid! It is 0, "
+                              "decreasing or not increasing.")
             .needsAcknowledging(False)
             .commit(),
 
@@ -374,7 +417,7 @@ class ImagePatternPicker(PythonDevice):
         # Get device configuration before schema update
         try:
             outputHostname = self["{}.output.hostname".format(channel)]
-        except AttributeError as e:
+        except AttributeError:
             # Configuration does not contain "output.hostname"
             outputHostname = None
 
