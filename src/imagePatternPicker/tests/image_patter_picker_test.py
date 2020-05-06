@@ -18,12 +18,12 @@ class ImagePatternPicker_TestCase(unittest.TestCase):
 
         # enable cross-hair -> warn
         proc.preReconfigure(Hash('chan_0.enableCrosshair', True))
-        self.assertEqual(proc['chan_0.warnCondition'], 1)
+        self.assertEqual(proc['chan_0.warnCrosshair'], 1)
         self.assertEqual(proc['alarmCondition'], AlarmCondition.WARN)
 
         # disable cross-hair -> no warn
         proc.preReconfigure(Hash('chan_0.enableCrosshair', False))
-        self.assertEqual(proc['chan_0.warnCondition'], 0)
+        self.assertEqual(proc['chan_0.warnCrosshair'], 0)
         self.assertEqual(proc['alarmCondition'], AlarmCondition.NONE)
 
 
