@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from karabo.bound import AlarmCondition, Configurator, Hash, PythonDevice
@@ -25,6 +26,31 @@ class ImagePatternPicker_TestCase(unittest.TestCase):
         proc.preReconfigure(Hash('chan_0.enableCrosshair', False))
         self.assertEqual(proc['chan_0.warnCrosshair'], 0)
         self.assertEqual(proc['alarmCondition'], AlarmCondition.NONE)
+
+        # image trainId == 0 -> warn
+        is_valid = proc.is_valid_train_id(0, 'chan_0')
+        self.assertEqual(is_valid, False)
+        self.assertEqual(proc['chan_0.warnTrainId'], 1)
+        self.assertEqual(proc['alarmCondition'], AlarmCondition.WARN)
+
+        # increase trainId -> warn (due to memory effect)
+        is_valid = proc.is_valid_train_id(9, 'chan_0')
+        self.assertEqual(is_valid, True)  # the trainId in itself is valid
+        self.assertEqual(proc['chan_0.warnTrainId'], 1)
+        self.assertEqual(proc['alarmCondition'], AlarmCondition.WARN)
+
+        time.sleep(1.)
+        # increase trainId -> no warn (no memory after 1 s)
+        is_valid = proc.is_valid_train_id(10, 'chan_0')
+        self.assertEqual(is_valid, True)
+        self.assertEqual(proc['chan_0.warnTrainId'], 0)
+        self.assertEqual(proc['alarmCondition'], AlarmCondition.NONE)
+
+        # decrease trainId -> warn
+        is_valid = proc.is_valid_train_id(9, 'chan_0')
+        self.assertEqual(is_valid, False)
+        self.assertEqual(proc['chan_0.warnTrainId'], 1)
+        self.assertEqual(proc['alarmCondition'], AlarmCondition.WARN)
 
 
 if __name__ == '__main__':

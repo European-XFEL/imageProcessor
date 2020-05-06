@@ -4,6 +4,8 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
+import time
+
 from karabo.bound import (
     BOOL_ELEMENT, DaqDataType, DeviceClient, DOUBLE_ELEMENT, Hash, ImageData,
     IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT,
@@ -42,6 +44,7 @@ class ImagePatternPicker(PythonDevice):
         self.frame_rate_out = []
         self.connections = {}
         self.last_train_id = {}
+        self.last_bad_tid_time = {}
 
         # Define the first function to be called after the constructor has
         # finished
@@ -104,15 +107,20 @@ class ImagePatternPicker(PythonDevice):
 
     def is_valid_train_id(self, train_id, node):
         last_train_id = self.last_train_id.get(node, 0)
+        last_bad_tid_time = self.last_bad_tid_time.get(node, 0.)
         self.last_train_id[node] = train_id
         warn_train_id = self[f"{node}.warnTrainId"]
+        status = ""
 
         if train_id > last_train_id:
-            if warn_train_id != 0:
+            if warn_train_id != 0 and time.time() - last_bad_tid_time > 1.:
+                # no "bad" trainId received in the past 1 s
                 self[f"{node}.warnTrainId"] = 0  # remove warning
-            status = "Processing"
+                status = "Processing"
             is_valid = True
         else:
+            self.last_bad_tid_time[node] = time.time()
+
             if warn_train_id == 0:
                 self[f"{node}.warnTrainId"] = 1  # raise warning
 
@@ -126,7 +134,7 @@ class ImagePatternPicker(PythonDevice):
 
             is_valid = False
 
-        if self[f"{node}.status"] != status:
+        if status and self[f"{node}.status"] != status:
             self[f"{node}.status"] = status
 
         return is_valid
