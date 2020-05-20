@@ -110,13 +110,12 @@ class ImagePatternPicker(PythonDevice):
         last_bad_tid_time = self.last_bad_tid_time.get(node, 0.)
         self.last_train_id[node] = train_id
         warn_train_id = self[f"{node}.warnTrainId"]
-        status = ""
 
         if train_id > last_train_id:
             if warn_train_id != 0 and time.time() - last_bad_tid_time > 1.:
                 # no "bad" trainId received in the past 1 s
                 self[f"{node}.warnTrainId"] = 0  # remove warning
-                status = "Processing"
+            status = "Processing"
             is_valid = True
         else:
             self.last_bad_tid_time[node] = time.time()
@@ -134,7 +133,7 @@ class ImagePatternPicker(PythonDevice):
 
             is_valid = False
 
-        if status and self[f"{node}.status"] != status:
+        if self[f"{node}.status"] != status:
             self[f"{node}.status"] = status
 
         return is_valid
