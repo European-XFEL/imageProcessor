@@ -1130,10 +1130,16 @@ class ImageProcessor(ImageProcessorBase):
         if self.get("doXYSum") and is_2d_image:
             t0 = time.time()
             try:
-                x_min = np.maximum(user_defined_range[0], 0)
-                x_max = np.minimum(user_defined_range[1], image_width)
-                y_min = np.maximum(user_defined_range[2], 0)
-                y_max = np.minimum(user_defined_range[3], image_height)
+                if com_range == "user-defined":
+                    x_min = np.maximum(user_defined_range[0], 0)
+                    x_max = np.minimum(user_defined_range[1], image_width)
+                    y_min = np.maximum(user_defined_range[2], 0)
+                    y_max = np.minimum(user_defined_range[3], image_height)
+                else:
+                    x_min = 0
+                    x_max = image_width
+                    y_min = 0
+                    y_max = image_height
                 data = img[y_min:y_max, x_min:x_max]
                 # Sums along Y- and X-axes
                 img_x = image_processing.imageSumAlongY(data)
