@@ -725,7 +725,8 @@ class ImageProcessor(ImageProcessorBase):
 
             VECTOR_INT32_ELEMENT(output_data).key("data.imgBinCount")
             .displayedName("Pixel counts distribution")
-            .description("Distribution of the image pixel counts.")
+            .description("Distribution of the image pixel counts (before "
+                         "background and pedestal subtraction).")
             .unit(Unit.NUMBER)
             .readOnly().initialValue([0])
             .commit(),
@@ -1031,30 +1032,6 @@ class ImageProcessor(ImageProcessorBase):
                                "discarded!!!")
                 return
 
-        # Get pixel min/max/mean values
-        if self.get("doMinMaxMean"):
-            t0 = time.time()
-            try:
-                img_min = img.min()
-                img_max = img.max()
-                img_mean = img.mean()
-            except Exception as e:
-                msg = f"Exception caught whilst calculating min/max/mean: {e}"
-                self.update_count(error=True, msg=msg)
-                return
-
-            t1 = time.time()
-            self.averagers["minMaxMeanTime"].append(t1 - t0)
-
-            h.set("minPxValue", float(img_min))
-            h.set("maxPxValue", float(img_max))
-            h.set("meanPxValue", float(img_mean))
-            self.log.DEBUG("Pixel min/max/mean: done!")
-        else:
-            h.set("minPxValue", 0.0)
-            h.set("maxPxValue", 0.0)
-            h.set("meanPxValue", 0.0)
-
         # Frequency of Pixel Values
         if self.get("doBinCount"):
             t0 = time.time()
@@ -1123,6 +1100,30 @@ class ImageProcessor(ImageProcessorBase):
             t1 = time.time()
             self.averagers["subtractPedestalTime"].append(t1 - t0)
             self.log.DEBUG("Image pedestal subtraction: done!")
+
+        # Get pixel min/max/mean values
+        if self.get("doMinMaxMean"):
+            t0 = time.time()
+            try:
+                img_min = img.min()
+                img_max = img.max()
+                img_mean = img.mean()
+            except Exception as e:
+                msg = f"Exception caught whilst calculating min/max/mean: {e}"
+                self.update_count(error=True, msg=msg)
+                return
+
+            t1 = time.time()
+            self.averagers["minMaxMeanTime"].append(t1 - t0)
+
+            h.set("minPxValue", float(img_min))
+            h.set("maxPxValue", float(img_max))
+            h.set("meanPxValue", float(img_mean))
+            self.log.DEBUG("Pixel min/max/mean: done!")
+        else:
+            h.set("minPxValue", 0.0)
+            h.set("maxPxValue", 0.0)
+            h.set("meanPxValue", 0.0)
 
         # Sum the image along the x- and y-axes
         img_x = None
