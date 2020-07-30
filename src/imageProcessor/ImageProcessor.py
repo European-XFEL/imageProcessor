@@ -946,6 +946,11 @@ class ImageProcessor(ImageProcessorBase):
         self['status'] = 'ON'
 
     def process_image(self, imageData, ts):
+
+        def set_property(h, key, value):
+            if self[key] != value:
+                h[key] = value
+
         filter_images_by_threshold = self.get("filterImagesByThreshold")
         image_threshold = self.get("imageThreshold")
         com_range = self.get("comRange")
@@ -1121,9 +1126,9 @@ class ImageProcessor(ImageProcessorBase):
             h.set("meanPxValue", float(img_mean))
             self.log.DEBUG("Pixel min/max/mean: done!")
         else:
-            h.set("minPxValue", 0.0)
-            h.set("maxPxValue", 0.0)
-            h.set("meanPxValue", 0.0)
+            set_property(h, "minPxValue", 0.0)
+            set_property(h, "maxPxValue", 0.0)
+            set_property(h, "meanPxValue", 0.0)
 
         # Sum the image along the x- and y-axes
         img_x = None
@@ -1243,10 +1248,10 @@ class ImageProcessor(ImageProcessorBase):
             self.log.DEBUG("Centre-of-mass and widths: done!")
 
         else:
-            h.set("x0", 0.0)
-            h.set("sx", 0.0)
-            h.set("y0", 0.0)
-            h.set("sx", 0.0)
+            set_property(h, "x0", 0.0)
+            set_property(h, "sx", 0.0)
+            set_property(h, "y0", 0.0)
+            set_property(h, "sx", 0.0)
 
         # 1D Gaussian Fits
         if self.get("do1DFit"):
@@ -1450,18 +1455,18 @@ class ImageProcessor(ImageProcessorBase):
 
             self.log.DEBUG("1D gaussian fit: done!")
         else:
-            h.set("xFitSuccess", 0)
-            h.set("ax1d", 0.0)
-            h.set("x01d", 0.0)
-            h.set("ex01d", 0.0)
-            h.set("sx1d", 0.0)
-            h.set("esx1d", 0.0)
-            h.set("beamWidth1d", 0.0)
-            h.set("yFitSuccess", 0)
-            h.set("ay1d", 0.0)
-            h.set("y01d", 0.0)
-            h.set("sy1d", 0.0)
-            h.set("beamHeight1d", 0.0)
+            set_property(h, "xFitSuccess", 0)
+            set_property(h, "ax1d", 0.0)
+            set_property(h, "x01d", 0.0)
+            set_property(h, "ex01d", 0.0)
+            set_property(h, "sx1d", 0.0)
+            set_property(h, "esx1d", 0.0)
+            set_property(h, "beamWidth1d", 0.0)
+            set_property(h, "yFitSuccess", 0)
+            set_property(h, "ay1d", 0.0)
+            set_property(h, "y01d", 0.0)
+            set_property(h, "sy1d", 0.0)
+            set_property(h, "beamHeight1d", 0.0)
 
         # 2D Gaussian Fits
         rotation = self.get("doGaussRotation")
@@ -1594,20 +1599,20 @@ class ImageProcessor(ImageProcessorBase):
 
             self.log.DEBUG("2D gaussian fit: done!")
         else:
-            h.set("fitSuccess", 0)
-            h.set("a2d", 0.0)
-            h.set("x02d", 0.0)
-            h.set("ex02d", 0.0)
-            h.set("sx2d", 0.0)
-            h.set("esx2d", 0.0)
-            h.set("beamWidth2d", 0.0)
-            h.set("y02d", 0.0)
-            h.set("ey02d", 0.0)
-            h.set("sy2d", 0.0)
-            h.set("esy2d", 0.0)
-            h.set("beamHeight2d", 0.0)
-            h.set("theta2d", 0.0)
-            h.set("etheta2d", 0.0)
+            set_property(h, "fitSuccess", 0)
+            set_property(h, "a2d", 0.0)
+            set_property(h, "x02d", 0.0)
+            set_property(h, "ex02d", 0.0)
+            set_property(h, "sx2d", 0.0)
+            set_property(h, "esx2d", 0.0)
+            set_property(h, "beamWidth2d", 0.0)
+            set_property(h, "y02d", 0.0)
+            set_property(h, "ey02d", 0.0)
+            set_property(h, "sy2d", 0.0)
+            set_property(h, "esy2d", 0.0)
+            set_property(h, "beamHeight2d", 0.0)
+            set_property(h, "theta2d", 0.0)
+            set_property(h, "etheta2d", 0.0)
 
         # Region Integration
         integration_done = False
@@ -1647,8 +1652,8 @@ class ImageProcessor(ImageProcessorBase):
                 return
 
         if not integration_done:
-            h.set("regionIntegral", 0.0)
-            h.set("regionMean", 0.0)
+            set_property(h, "regionIntegral", 0.0)
+            set_property(h, "regionMean", 0.0)
 
         if time.time() - self.last_update_time > self.averaging_time_interval:
             # average processing times over 1 second
