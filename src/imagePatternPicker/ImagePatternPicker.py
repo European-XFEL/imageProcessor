@@ -175,8 +175,7 @@ class ImagePatternPicker(PythonDevice):
                         # forward image as it is
                         output_data = data
                     else:
-                        # superimpose a cross-hair, assuming the colormap
-                        # ranges from black to white
+                        # superimpose a cross-hair
                         image_data = data['data.image']
                         image = image_data.getData()  # np.ndarray
                         x0 = self[f'{node}.crosshairX']
@@ -184,35 +183,35 @@ class ImagePatternPicker(PythonDevice):
                         xmax = image.shape[1]
                         ymax = image.shape[0]
 
-                        # Apply external 'black' crosshair
+                        # Apply external 'dark' crosshair
                         width = max(10, int(0.025 * max(image.shape)))
                         thickness = max(2, int(0.005 * max(image.shape)))
                         x1 = max(x0 - width, 0)
                         x2 = min(x0 + width, xmax)
                         y1 = max(y0 - thickness, 0)
                         y2 = min(y0 + thickness, ymax)
-                        image[y1:y2, x1:x2] = 0
+                        image[y1:y2, x1:x2] = image.min()
 
                         x1 = max(x0 - thickness, 0)
                         x2 = min(x0 + thickness, xmax)
                         y1 = max(y0 - width, 0)
                         y2 = min(y0 + width, ymax)
-                        image[y1:y2, x1:x2] = 0
+                        image[y1:y2, x1:x2] = image.min()
 
-                        # Apply internal 'white' crosshair
+                        # Apply internal 'light' crosshair
                         thickness = thickness // 3
 
                         x1 = max(x0 - width, 0)
                         x2 = min(x0 + width, xmax)
                         y1 = max(y0 - thickness, 0)
                         y2 = min(y0 + thickness, ymax)
-                        image[y1:y2, x1:x2] = -1
+                        image[y1:y2, x1:x2] = image.max()
 
                         x1 = max(x0 - thickness, 0)
                         x2 = min(x0 + thickness, xmax)
                         y1 = max(y0 - width, 0)
                         y2 = min(y0 + width, ymax)
-                        image[y1:y2, x1:x2] = -1
+                        image[y1:y2, x1:x2] = image.max()
 
                         image_data = ImageData(image)
                         output_data = Hash('data.image', image_data)
