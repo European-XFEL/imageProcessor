@@ -20,12 +20,13 @@ from karabo.bound import (
 
 from image_processing import image_processing
 from .overview import generate_scene
+from ._version import version
 
 GAUSSIAN_FIT = "Gaussian Beam"
 HYP_SEC_FIT = "Sech^2 Beam"
 
 
-@KARABO_CLASSINFO("AutoCorrelator", "2.1")
+@KARABO_CLASSINFO("AutoCorrelator", version)
 class AutoCorrelator(PythonDevice):
 
     # AKA shape-factor

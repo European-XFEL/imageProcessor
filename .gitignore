@@ -2,5 +2,6 @@ dist/
 build/
 package/
 .idea/
-src/autoCorrelator.egg-info/
+autoCorrelator.egg-info/
 __pycache__/
+_version.py
