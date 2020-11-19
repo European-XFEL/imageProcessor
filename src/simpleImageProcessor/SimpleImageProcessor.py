@@ -15,8 +15,10 @@ from karabo.bound import (
 
 from image_processing import image_processing
 
+from ._version import version
 
-@KARABO_CLASSINFO("SimpleImageProcessor", "2.2")
+
+@KARABO_CLASSINFO("SimpleImageProcessor", version)
 class SimpleImageProcessor(PythonDevice):
     # Numerical factor to convert Gaussian standard deviation to beam size
     STD_TO_FWHM = 2.35

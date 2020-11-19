@@ -11,7 +11,7 @@ from ..SimpleImageProcessor import SimpleImageProcessor
 class SimpleImageProcessor_TestCase(unittest.TestCase):
     def test_proc(self):
         proc = Configurator(PythonDevice).create("SimpleImageProcessor", Hash(
-            "Logger.priority", "DEBUG",
+            "Logger.priority", "WARN",
             "deviceId", "SimpleImageProcessor_0"))
         proc.startFsm()
 

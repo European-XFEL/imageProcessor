@@ -1,7 +1,6 @@
 dist/
 build/
 .idea/
-src/simpleImageProcessor.egg-info/
-src/simpleImageProcessor/__pycache__/
-src/simpleImageProcessor/tests/__pycache__/
-
+simpleImageProcessor.egg-info/
+__pycache__/
+_version.py
