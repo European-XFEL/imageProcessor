@@ -170,7 +170,8 @@ def generate_scene(device):
     ped_set = CheckBoxModel(
         height=27, width=width3, x=x3, y=400,
         keys=[f'{device_id}.subtractPedestal'],
-        klass='EditableCheckBox', parent_component='EditableApplyLaterComponent')
+        klass='EditableCheckBox',
+        parent_component='EditableApplyLaterComponent')
 
     calib_par_scene = FixedLayoutModel(
         children=[delay_unit_label, delay_unit_get, delay_unit_set,
