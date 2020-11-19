@@ -28,249 +28,249 @@ class SimpleImageProcessor(PythonDevice):
         data = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
-                .setNewOptions(State.ON, State.PROCESSING)
-                .setNewDefaultValue(State.ON)
-                .commit(),
+            .setNewOptions(State.ON, State.PROCESSING)
+            .setNewDefaultValue(State.ON)
+            .commit(),
 
             VECTOR_STRING_ELEMENT(expected).key("interfaces")
-                .displayedName("Interfaces")
-                .readOnly()
-                .initialValue(["Processor"])
-                .commit(),
+            .displayedName("Interfaces")
+            .readOnly()
+            .initialValue(["Processor"])
+            .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
-                .displayedName("Reset")
-                .description("Resets the processor output values.")
-                .commit(),
+            .displayedName("Reset")
+            .description("Resets the processor output values.")
+            .commit(),
 
             IMAGEDATA_ELEMENT(data).key("image")
-                .commit(),
+            .commit(),
 
             INPUT_CHANNEL(expected).key("input")
-                .displayedName("Input")
-                .dataSchema(data)
-                .commit(),
+            .displayedName("Input")
+            .dataSchema(data)
+            .commit(),
 
             # Images should be dropped if processor is too slow
             OVERWRITE_ELEMENT(expected).key("input.onSlowness")
-                .setNewDefaultValue("drop")
-                .commit(),
+            .setNewDefaultValue("drop")
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("frameRate")
-                .displayedName("Frame Rate")
-                .description("The actual frame rate.")
-                .unit(Unit.HERTZ)
-                .readOnly()
-                .commit(),
+            .displayedName("Frame Rate")
+            .description("The actual frame rate.")
+            .unit(Unit.HERTZ)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("imageSizeX")
-                .displayedName("Image Width")
-                .description("The image width.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Width")
+            .description("The image width.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("imageSizeY")
-                .displayedName("Image Height")
-                .description("The image height.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Height")
+            .description("The image height.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("offsetX")
-                .displayedName("Image Offset X")
-                .description("The image offset in X direction, i.e. the X "
-                             "position of its top-left corner.")
-                .adminAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Offset X")
+            .description("The image offset in X direction, i.e. the X "
+                         "position of its top-left corner.")
+            .adminAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("offsetY")
-                .displayedName("Image Offset Y")
-                .description("The image offset in Y direction, i.e. the Y "
-                             "position of its top-left corner.")
-                .adminAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Offset Y")
+            .description("The image offset in Y direction, i.e. the Y "
+                         "position of its top-left corner.")
+            .adminAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("binningX")
-                .displayedName("Image Binning X")
-                .description("The image binning in X direction.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Binning X")
+            .description("The image binning in X direction.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             INT32_ELEMENT(expected).key("binningY")
-                .displayedName("Image Binning Y")
-                .description("The image binning in Y direction.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Image Binning Y")
+            .description("The image binning in Y direction.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             # Processor configuration
 
             FLOAT_ELEMENT(expected).key("pixelSize")
-                .displayedName("Pixel Size")
-                .description("The pixel size, to be used for converting the "
-                             "fit's standard deviation to FWHM.")
-                .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
-                .assignmentOptional().defaultValue(0.0)
-                .minInc(0.0)
-                .reconfigurable()
-                .commit(),
+            .displayedName("Pixel Size")
+            .description("The pixel size, to be used for converting the "
+                         "fit's standard deviation to FWHM.")
+            .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+            .assignmentOptional().defaultValue(0.0)
+            .minInc(0.0)
+            .reconfigurable()
+            .commit(),
 
             FLOAT_ELEMENT(expected).key("imageThreshold")
-                .displayedName("Image Threshold")
-                .description("The threshold for doing processing. Only images "
-                             "having maximum pixel value above this threshold "
-                             "will be processed.")
-                .assignmentOptional().defaultValue(0.)
-                .unit(Unit.NUMBER)
-                .expertAccess()
-                .init()
-                .commit(),
+            .displayedName("Image Threshold")
+            .description("The threshold for doing processing. Only images "
+                         "having maximum pixel value above this threshold "
+                         "will be processed.")
+            .assignmentOptional().defaultValue(0.)
+            .unit(Unit.NUMBER)
+            .expertAccess()
+            .init()
+            .commit(),
 
             BOOL_ELEMENT(expected).key("subtractImagePedestal")
-                .displayedName("Subtract Image Pedestal")
-                .description("Subtract the image pedestal (ie image = image - "
-                             "image.min()) before centre-of-mass and Gaussian "
-                             "fit.")
-                .assignmentOptional().defaultValue(True)
-                .expertAccess()
-                .init()
-                .commit(),
+            .displayedName("Subtract Image Pedestal")
+            .description("Subtract the image pedestal (ie image = image - "
+                         "image.min()) before centre-of-mass and Gaussian "
+                         "fit.")
+            .assignmentOptional().defaultValue(True)
+            .expertAccess()
+            .init()
+            .commit(),
 
             STRING_ELEMENT(expected).key("thresholdType")
-                .displayedName("Pixel threshold type")
-                .description("Defines whether an absolute or relative "
-                             "thresholding is used in the calculations.")
-                .assignmentOptional().defaultValue("None")
-                .options("None Absolute Relative")
-                .reconfigurable()
-                .commit(),
+            .displayedName("Pixel threshold type")
+            .description("Defines whether an absolute or relative "
+                         "thresholding is used in the calculations.")
+            .assignmentOptional().defaultValue("None")
+            .options("None Absolute Relative")
+            .reconfigurable()
+            .commit(),
 
             FLOAT_ELEMENT(expected).key("pixelThreshold")
-                .displayedName("Pixel threshold")
-                .description("If Pixel threshold type is set to absolute, "
-                             "pixels below this threshold will be set to 0 in "
-                             "the processing of images. If it is set to "
-                             "relative, pixels below this fraction of the "
-                             "maximum pixel value will be set to zero (and "
-                             "this property should be between 0 and 1). If "
-                             "it is set to None, no thresholding will occur.")
-                .assignmentOptional().defaultValue(0.1)
-                .reconfigurable()
-                .commit(),
+            .displayedName("Pixel threshold")
+            .description("If Pixel threshold type is set to absolute, "
+                         "pixels below this threshold will be set to 0 in "
+                         "the processing of images. If it is set to "
+                         "relative, pixels below this fraction of the "
+                         "maximum pixel value will be set to zero (and "
+                         "this property should be between 0 and 1). If "
+                         "it is set to None, no thresholding will occur.")
+            .assignmentOptional().defaultValue(0.1)
+            .reconfigurable()
+            .commit(),
 
             # Image processing outputs
 
             BOOL_ELEMENT(expected).key("success")
-                .displayedName("Success")
-                .description("Success boolean whether the image processing "
-                             "was successful or not.")
-                .readOnly().initialValue(False)
-                .commit(),
+            .displayedName("Success")
+            .description("Success boolean whether the image processing "
+                         "was successful or not.")
+            .readOnly().initialValue(False)
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
-                .displayedName("Max Pixel Value")
-                .description("Maximum pixel value.")
-                .unit(Unit.NUMBER)
-                .readOnly()
-                .commit(),
+            .displayedName("Max Pixel Value")
+            .description("Maximum pixel value.")
+            .unit(Unit.NUMBER)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("amplitudeX")
-                .displayedName("Amplitude X")
-                .description("Amplitude X from Gaussian fit.")
-                .unit(Unit.NUMBER)
-                .readOnly()
-                .commit(),
+            .displayedName("Amplitude X")
+            .description("Amplitude X from Gaussian fit.")
+            .unit(Unit.NUMBER)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("amplitudeY")
-                .displayedName("Amplitude Y")
-                .description("Amplitude Y from Gaussian fit.")
-                .unit(Unit.NUMBER)
-                .readOnly()
-                .commit(),
+            .displayedName("Amplitude Y")
+            .description("Amplitude Y from Gaussian fit.")
+            .unit(Unit.NUMBER)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("positionX")
-                .displayedName("Position X")
-                .description("Beam position X from Gaussian fit.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Position X")
+            .description("Beam position X from Gaussian fit.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("positionY")
-                .displayedName("Position Y")
-                .description("Beam position Y from Gaussian fit.")
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Position Y")
+            .description("Beam position Y from Gaussian fit.")
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("sigmaX")
-                .displayedName("Sigma X")
-                .description("Standard deviation X from Gaussian fit.")
-                .unit(Unit.PIXEL)
-                .expertAccess()
-                .readOnly()
-                .commit(),
+            .displayedName("Sigma X")
+            .description("Standard deviation X from Gaussian fit.")
+            .unit(Unit.PIXEL)
+            .expertAccess()
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("sigmaY")
-                .displayedName("Sigma Y")
-                .description("Standard deviation Y from Gaussian fit.")
-                .unit(Unit.PIXEL)
-                .expertAccess()
-                .readOnly()
-                .commit(),
+            .displayedName("Sigma Y")
+            .description("Standard deviation Y from Gaussian fit.")
+            .unit(Unit.PIXEL)
+            .expertAccess()
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("fwhmX")
-                .displayedName("FWHM X")
-                .description("FWHM obtained from standard deviation.")
-                .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
-                .readOnly()
-                .commit(),
+            .displayedName("FWHM X")
+            .description("FWHM obtained from standard deviation.")
+            .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("fwhmY")
-                .displayedName("FWHM Y")
-                .description("FWHM obtained from standard deviation.")
-                .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
-                .readOnly()
-                .commit(),
+            .displayedName("FWHM Y")
+            .description("FWHM obtained from standard deviation.")
+            .unit(Unit.METER).metricPrefix(MetricPrefix.MICRO)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("errPositionX")
-                .displayedName("Error Position X")
-                .description("Uncertainty on position X from Gaussian fit.")
-                .expertAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Error Position X")
+            .description("Uncertainty on position X from Gaussian fit.")
+            .expertAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("errPositionY")
-                .displayedName("Error Position Y")
-                .description("Uncertainty on position Y from Gaussian fit.")
-                .expertAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Error Position Y")
+            .description("Uncertainty on position Y from Gaussian fit.")
+            .expertAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("errSigmaX")
-                .displayedName("Error Sigma X")
-                .description("Uncertainty of the standard deviation X from "
-                             "Gaussian fit.")
-                .expertAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Error Sigma X")
+            .description("Uncertainty of the standard deviation X from "
+                         "Gaussian fit.")
+            .expertAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
 
             DOUBLE_ELEMENT(expected).key("errSigmaY")
-                .displayedName("Error Sigma Y")
-                .description("Uncertainty of the standard deviation Y from "
-                             "Gaussian fit.")
-                .expertAccess()
-                .unit(Unit.PIXEL)
-                .readOnly()
-                .commit(),
+            .displayedName("Error Sigma Y")
+            .description("Uncertainty of the standard deviation Y from "
+                         "Gaussian fit.")
+            .expertAccess()
+            .unit(Unit.PIXEL)
+            .readOnly()
+            .commit(),
         )
 
     def initialization(self):
