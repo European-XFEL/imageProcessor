@@ -7,18 +7,19 @@
 import time
 
 from karabo.bound import (
-    BOOL_ELEMENT, DaqDataType, DeviceClient, DOUBLE_ELEMENT, Hash, ImageData,
-    IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO, NODE_ELEMENT,
-    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice, Schema, State,
-    STRING_ELEMENT, Timestamp, Types, UINT32_ELEMENT, UINT64_ELEMENT, Unit
+    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
+    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
+    STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, DaqDataType, DeviceClient,
+    Hash, ImageData, PythonDevice, Schema, State, Timestamp, Types, Unit
 )
-
 from processing_utils.rate_calculator import RateCalculator
+
+from ._version import version as deviceVersion
 
 NR_OF_CHANNELS = 2
 
 
-@KARABO_CLASSINFO("ImagePatternPicker", "2.8")
+@KARABO_CLASSINFO("ImagePatternPicker", deviceVersion)
 class ImagePatternPicker(PythonDevice):
 
     @staticmethod

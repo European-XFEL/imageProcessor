@@ -1,19 +1,23 @@
+#!/usr/bin/env python
+import shutil
+from os.path import dirname, join, realpath
+
+from setuptools import find_packages, setup
+
+ROOT_FOLDER = dirname(realpath(__file__))
+VERSION_FILE_PATH = join(ROOT_FOLDER, '_version.py')
+
+try:
+    from karabo.packaging.versioning import device_scm_version
+    scm_version = device_scm_version(ROOT_FOLDER, VERSION_FILE_PATH)
+except ImportError:
+    # compatibility with karabo versions earlier than 2.10
+    scm_version = {'write_to': VERSION_FILE_PATH}
+
 #! /usr/bin/env python
-from os.path import dirname
-from setuptools import setup, find_packages
-
-
-def _get_version_string():
-    try:
-        from karabo.packaging.versioning import get_package_version
-    except ImportError:
-        print("WARNING: Karabo framework not found! Version will be blank!")
-        return ''
-
-    return get_package_version(dirname(__file__))
 
 setup(name='imagePatternPicker',
-      version=_get_version_string(),
+      use_scm_version=scm_version,
       author='parenti',
       author_email='parenti',
       description='',
@@ -29,3 +33,9 @@ setup(name='imagePatternPicker',
       package_data={},
       requires=[],
       )
+
+
+# copy to subpaths with Karabo class files
+
+shutil.copy(join(ROOT_FOLDER, '_version.py'),
+            join(ROOT_FOLDER, "src/imagePatternPicker"))
