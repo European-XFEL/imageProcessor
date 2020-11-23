@@ -4,13 +4,14 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-import numpy as np
 import os.path
+
+import numpy as np
 from PIL import Image
 
 from karabo.bound import (
-    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, PATH_ELEMENT,
-    SLOT_ELEMENT, State, Timestamp
+    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, PATH_ELEMENT, SLOT_ELEMENT,
+    State, Timestamp
 )
 
 from image_processing.image_processing import imageSubtractBackground
@@ -18,12 +19,14 @@ from image_processing.image_processing import imageSubtractBackground
 try:
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
-@KARABO_CLASSINFO("ImageBackgroundSubtraction", "2.6")
+@KARABO_CLASSINFO("ImageBackgroundSubtraction", deviceVersion)
 class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

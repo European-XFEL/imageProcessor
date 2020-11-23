@@ -15,8 +15,10 @@ from image_processing.image_processing import (
 
 try:
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
 def find_peaks(img_x, zero_point):
@@ -29,7 +31,7 @@ def find_peaks(img_x, zero_point):
     return value_1, pos_1, fwhm_1, value_2, pos_2, fwhm_2
 
 
-@KARABO_CLASSINFO("TwoPeakFinder", "2.6")
+@KARABO_CLASSINFO("TwoPeakFinder", deviceVersion)
 class TwoPeakFinder(ImageProcessorBase):
 
     def __init__(self, configuration):

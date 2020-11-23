@@ -5,13 +5,12 @@
 #############################################################################
 
 from collections import deque
-
 from threading import Lock
 
 from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, INT32_ELEMENT, INPUT_CHANNEL,
-    KARABO_CLASSINFO, OVERWRITE_ELEMENT, Schema, State, Timestamp, Unit,
-    UINT32_ELEMENT
+    BOOL_ELEMENT, DOUBLE_ELEMENT, INPUT_CHANNEL, INT32_ELEMENT,
+    KARABO_CLASSINFO, OVERWRITE_ELEMENT, Schema, State, Timestamp,
+    UINT32_ELEMENT, Unit
 )
 
 from processing_utils.rate_calculator import RateCalculator
@@ -20,12 +19,14 @@ from processing_utils.rate_calculator import RateCalculator
 try:
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
-@KARABO_CLASSINFO("ImagePicker", "2.6")
+@KARABO_CLASSINFO("ImagePicker", deviceVersion)
 class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
     """
     This device has two input channels (inputImage and inputTrainid).

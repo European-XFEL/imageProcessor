@@ -3,3 +3,4 @@ dist/
 .idea/
 src/imageProcessor.egg-info/
 __pycache__/
+_version.py

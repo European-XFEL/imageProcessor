@@ -11,15 +11,16 @@ from karabo.bound import (
 )
 
 from image_processing.image_running_mean import ImageRunningMean
-
 from processing_utils.rate_calculator import RateCalculator
 
 try:
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
 class ImageExponentialRunnningAverage:
@@ -134,7 +135,7 @@ class ImageStandardMean:
             return self.__mean.shape
 
 
-@KARABO_CLASSINFO('ImageAverager', '2.6')
+@KARABO_CLASSINFO('ImageAverager', deviceVersion)
 class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

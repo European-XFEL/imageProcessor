@@ -12,16 +12,20 @@ from karabo.middlelayer import (
 from image_processing.image_processing import (
     imageSumAlongX, imageSumAlongY, peakParametersEval
 )
-
 from processing_utils.rate_calculator import RateCalculator
 
 try:
     from .common import ErrorNode
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ErrorNode
+    from imageProcessor._version import version as deviceVersion
 
 
 class BeamShapeCoarse(Device):
+
+    # provide version for classVersion property
+    __version__ = deviceVersion
 
     # TODO base class for MDL: interfaces, frameRate, errorCounter, input
 
