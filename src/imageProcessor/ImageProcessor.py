@@ -5,8 +5,9 @@
 #############################################################################
 
 import math
-import numpy as np
 import time
+
+import numpy as np
 
 from karabo.bound import (
     BOOL_ELEMENT, DaqDataType, Dims, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
@@ -19,8 +20,10 @@ from image_processing import image_processing
 
 try:
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
 class Average():
@@ -42,7 +45,7 @@ class Average():
         return self.counter
 
 
-@KARABO_CLASSINFO("ImageProcessor", "2.6")
+@KARABO_CLASSINFO("ImageProcessor", deviceVersion)
 class ImageProcessor(ImageProcessorBase):
     # Numerical factor to convert gaussian standard deviation to beam size
     std_dev_2_beam_size = 4.0

@@ -8,7 +8,7 @@ from ..ImageAverager import ImageAverager
 class ImageAverages_TestCase(unittest.TestCase):
     def test_proc(self):
         proc = Configurator(PythonDevice).create("ImageAverager", Hash(
-            "Logger.priority", "DEBUG",
+            "Logger.priority", "WARN",
             "deviceId", "ImageAverages_0"))
         proc.startFsm()
 
@@ -22,7 +22,7 @@ class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
 
     def test_instantiation(self):
         self.imavg = Configurator(PythonDevice).create("ImageAverager", Hash(
-            "Logger.priority", "DEBUG",
+            "Logger.priority", "WARN",
             "deviceId", "ImageAverages_1",
             "runningAverage", True,
             "runningAvgMethod", "ExponentialRunningAverage"

@@ -7,18 +7,20 @@ import numpy as np
 
 from karabo.middlelayer import (
     AccessMode, Assignment, Configurable, DaqDataType, DaqPolicy, Device,
-    Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
-    Slot, State, Unit, VectorDouble, VectorInt32, VectorString
+    Double, InputChannel, Node, OutputChannel, QuantityValue, Slot, State,
+    Unit, VectorDouble, VectorInt32, VectorString, get_timestamp
 )
 
 from image_processing.image_processing import imageSumAlongY
-
 from processing_utils.rate_calculator import RateCalculator
+
 
 try:
     from .common import ErrorNode
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ErrorNode
+    from imageProcessor._version import version as deviceVersion
 
 
 class DataNode(Configurable):
@@ -33,6 +35,9 @@ class ChannelNode(Configurable):
 
 
 class ImageNormRoi(Device):
+    # provide version for classVersion property
+    __version__ = deviceVersion
+
     def __init__(self, configuration):
         super(ImageNormRoi, self).__init__(configuration)
         self.output.noInputShared = "drop"
