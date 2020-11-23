@@ -14,12 +14,14 @@ from image_processing.image_processing import thumbnail
 try:
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
-@KARABO_CLASSINFO("ImageThumbnail", "2.6")
+@KARABO_CLASSINFO("ImageThumbnail", deviceVersion)
 class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

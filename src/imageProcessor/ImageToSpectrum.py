@@ -13,13 +13,14 @@ from karabo.middlelayer import (
 )
 
 from image_processing.image_processing import imageSumAlongX, imageSumAlongY
-
 from processing_utils.rate_calculator import RateCalculator
 
 try:
     from .common import ErrorNode
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ErrorNode
+    from imageProcessor._version import version as deviceVersion
 
 
 class DataNode(Configurable):
@@ -35,6 +36,9 @@ class ChannelNode(Configurable):
 
 
 class ImageToSpectrum(Device):
+    # provide version for classVersion property
+    __version__ = deviceVersion
+
     def __init__(self, configuration):
         super(ImageToSpectrum, self).__init__(configuration)
         self.output.noInputShared = "drop"
