@@ -4,8 +4,9 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
-import numpy as np
 import os.path
+
+import numpy as np
 from PIL import Image
 
 from karabo.bound import (
@@ -13,19 +14,19 @@ from karabo.bound import (
     State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT
 )
 
-from image_processing.image_processing import (
-    imageApplyMask, imageSelectRegion
-)
+from image_processing.image_processing import imageApplyMask, imageSelectRegion
 
 try:
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
+    from imageProcessor._version import version as deviceVersion
 
 
-@KARABO_CLASSINFO("ImageApplyMask", "2.6")
+@KARABO_CLASSINFO("ImageApplyMask", deviceVersion)
 class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
     @staticmethod

@@ -14,11 +14,13 @@ from processing_utils.rate_calculator import RateCalculator
 
 try:
     from .common import ErrorCounter
+    from ._version import version as deviceVersion
 except ImportError:
     from imageProcessor.common import ErrorCounter
+    from imageProcessor._version import version as deviceVersion
 
 
-@KARABO_CLASSINFO("ImageProcessorBase", "2.6")
+@KARABO_CLASSINFO("ImageProcessorBase", deviceVersion)
 class ImageProcessorBase(PythonDevice):
 
     # TODO: move in this class the onData registration and boilerplate code
