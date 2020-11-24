@@ -14,7 +14,6 @@ except ImportError:
     # compatibility with karabo versions earlier than 2.10
     scm_version = {'write_to': VERSION_FILE_PATH}
 
-#! /usr/bin/env python
 
 setup(name='imagePatternPicker',
       use_scm_version=scm_version,
