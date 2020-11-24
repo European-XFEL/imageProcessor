@@ -10,7 +10,7 @@
     - source /root/karabo/activate
     - pushd $CI_PROJECT_DIR
     - karabo -g https://$XFEL_TOKEN@git.xfel.eu/gitlab install $REL_PROJECT_NAME $REL_TAG
-    - pip install --upgrade .
+    - pip install --upgrade -e .
     - nosetests .
   only:
     - branches
