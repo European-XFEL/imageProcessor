@@ -6,14 +6,17 @@
 import math
 import time
 
-from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash, IMAGEDATA_ELEMENT,
-    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Unit, VECTOR_STRING_ELEMENT
-)
-
 from image_processing import image_processing
+from karabo.bound import (
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
+    INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, OVERWRITE_ELEMENT,
+    SLOT_ELEMENT, STRING_ELEMENT, VECTOR_STRING_ELEMENT, Hash, MetricPrefix,
+    PythonDevice, Schema, State, Unit)
+from karabo.common.scenemodel.api import (
+    BoxLayoutModel, CheckBoxModel, ComboBoxModel, DisplayLabelModel,
+    DisplayStateColorModel, DoubleLineEditModel, ErrorBoolModel, LabelModel,
+    LineModel, ScatterGraphModel, SceneModel, StickerModel, TrendGraphModel,
+    write_scene)
 
 from ._version import version
 
@@ -143,7 +146,7 @@ class SimpleImageProcessor(PythonDevice):
             .commit(),
 
             STRING_ELEMENT(expected).key("thresholdType")
-            .displayedName("Pixel threshold type")
+            .displayedName("Pixel Threshold Type")
             .description("Defines whether an absolute or relative "
                          "thresholding is used in the calculations.")
             .assignmentOptional().defaultValue("None")
@@ -152,7 +155,7 @@ class SimpleImageProcessor(PythonDevice):
             .commit(),
 
             FLOAT_ELEMENT(expected).key("pixelThreshold")
-            .displayedName("Pixel threshold")
+            .displayedName("Pixel Threshold")
             .description("If Pixel threshold type is set to absolute, "
                          "pixels below this threshold will be set to 0 in "
                          "the processing of images. If it is set to "
@@ -271,6 +274,11 @@ class SimpleImageProcessor(PythonDevice):
             .unit(Unit.PIXEL)
             .readOnly()
             .commit(),
+
+            VECTOR_STRING_ELEMENT(expected).key('availableScenes')
+            .setSpecialDisplayType("Scenes")
+            .readOnly().initialValue(['scene', 'link'])
+            .commit(),
         )
 
     def initialization(self):
@@ -315,13 +323,34 @@ class SimpleImageProcessor(PythonDevice):
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
+        self.KARABO_SLOT(self.requestScene)
         self.registerInitialFunction(self.initialization)
 
         if self["pixelThreshold"] >= 1 and self["thresholdType"] == "Relative":
-            msg = f"Cannot initialize a device with a relative threshold " \
-                  f"greater than 1."
+            msg = "Cannot initialize a device with a relative threshold " \
+                  "greater than 1."
             self.log.ERROR(msg)
             raise ValueError(msg)
+
+    def requestScene(self, params):
+        """Fulfill a scene request from another device.
+
+        NOTE: Required by Scene Supply Protocol, which is defined in KEP 21.
+              The format of the reply is also specified there.
+
+        :param params: A `Hash` containing the method parameters
+        """
+        payload = Hash('success', False)
+
+        name = params.get('name', default='')
+        if name == 'scene':
+            payload.set('success', True)
+            payload.set('name', name)
+            payload.set('data', get_scene(self.getInstanceId()))
+
+        self.reply(Hash('type', 'deviceScene',
+                        'origin', self.getInstanceId(),
+                        'payload', payload))
 
     def reset(self):
         h = Hash()
@@ -555,7 +584,324 @@ class SimpleImageProcessor(PythonDevice):
 
     def _is_threshold_valid(self, t_type, threshold):
         if t_type == "Relative" and threshold > 1:
-            msg = f"Cannot set a relative threshold greater than 1."
+            msg = "Cannot set a relative threshold greater than 1."
             self.log.ERROR(msg)
             self["status"] = msg
             raise ValueError(msg)
+
+
+def get_scene(deviceId):
+    default_font = 'Source Sans Pro,10,-1,5,50,0,0,0,0,0'
+    scene00 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=28.0,
+        parent_component='DisplayComponent', text='Image Threshold',
+        width=141.0, x=10.0, y=300.0)
+    scene01 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=28.0,
+        parent_component='DisplayComponent', text='Subtract Image Pedestal',
+        width=141.0, x=10.0, y=328.0)
+    scene02 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=28.0,
+        parent_component='DisplayComponent', text='Pixel Threshold Type',
+        width=141.0, x=10.0, y=356.0)
+    scene03 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=27.0,
+        parent_component='DisplayComponent', text='Pixel Threshold',
+        width=141.0, x=10.0, y=384.0)
+    scene0 = BoxLayoutModel(
+        direction=2, height=111.0, width=141.0,
+        x=10.0, y=300.0, children=[scene00, scene01, scene02, scene03])
+    scene100 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=24.0,
+        parent_component='DisplayComponent', text='Frame Rate',
+        width=116.0, x=10.0, y=120.0)
+    scene101 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=23.0,
+        parent_component='DisplayComponent', text='Image Width', width=116.0,
+        x=10.0, y=144.0)
+    scene102 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=24.0,
+        parent_component='DisplayComponent', text='Image Height',
+        width=116.0, x=10.0, y=167.0)
+    scene103 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=23.0,
+        parent_component='DisplayComponent', text='Image Offset X',
+        width=116.0, x=10.0, y=191.0)
+    scene104 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=24.0,
+        parent_component='DisplayComponent', text='Image Binning X',
+        width=116.0, x=10.0, y=214.0)
+    scene105 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=23.0,
+        parent_component='DisplayComponent', text='Image Binning Y',
+        width=116.0, x=10.0, y=238.0)
+    scene10 = BoxLayoutModel(
+        direction=2, height=141.0, width=116.0, x=10.0, y=120.0, children=[
+            scene100, scene101, scene102, scene103, scene104, scene105])
+    scene110 = DisplayLabelModel(
+        font_size=10, height=24.0, keys=[
+            f'{deviceId}.frameRate'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=120.0)
+    scene111 = DisplayLabelModel(
+        font_size=10, height=23.0, keys=[
+            f'{deviceId}.imageSizeX'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=144.0)
+    scene112 = DisplayLabelModel(
+        font_size=10, height=24.0, keys=[
+            f'{deviceId}.imageSizeY'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=167.0)
+    scene113 = DisplayLabelModel(
+        font_size=10, height=23.0, keys=[
+            f'{deviceId}.offsetX'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=191.0)
+    scene114 = DisplayLabelModel(
+        font_size=10, height=24.0, keys=[
+            f'{deviceId}.binningX'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=214.0)
+    scene115 = DisplayLabelModel(
+        font_size=10, height=23.0, keys=[
+            f'{deviceId}.binningY'], parent_component='DisplayComponent',
+        width=115.0, x=126.0, y=238.0)
+    scene11 = BoxLayoutModel(
+        direction=2, height=141.0, width=115.0, x=126.0, y=120.0, children=[
+            scene110, scene111, scene112, scene113, scene114, scene115])
+    scene1 = BoxLayoutModel(
+        height=141.0, width=231.0,
+        x=10.0, y=120.0, children=[scene10, scene11])
+    scene2 = LabelModel(
+        font='Source Sans Pro,11,-1,5,50,0,1,0,0,0', height=20.0,
+        parent_component='DisplayComponent', text='Image Properties',
+        width=117.0, x=10.0, y=90.0)
+    scene3 = LabelModel(
+        font='Source Sans Pro,11,-1,5,50,0,1,0,0,0', height=20.0,
+        parent_component='DisplayComponent', text='Threshold',
+        width=117.0, x=10.0, y=270.0)
+    scene40 = DisplayLabelModel(
+        font_size=10, height=27.0, keys=[
+            f'{deviceId}.imageThreshold'], parent_component='DisplayComponent',
+        width=71.0, x=150.0, y=300.0)
+    scene41 = CheckBoxModel(
+        height=30.0, keys=[
+            f'{deviceId}.subtractImagePedestal'],
+        parent_component='DisplayComponent',
+        width=71.0, x=150.0, y=327.0)
+    scene42 = DisplayLabelModel(
+        font_size=10, height=28.0, keys=[
+            f'{deviceId}.thresholdType'], parent_component='DisplayComponent',
+        width=71.0, x=150.0, y=357.0)
+    scene43 = DisplayLabelModel(
+        font_size=10, height=27.0, keys=[
+            f'{deviceId}.pixelThreshold'],
+        parent_component='DisplayComponent',
+        width=71.0, x=150.0, y=385.0)
+    scene4 = BoxLayoutModel(
+        direction=2, height=112.0, width=71.0,
+        x=150.0, y=300.0, children=[scene40, scene41, scene42, scene43])
+    scene50 = ComboBoxModel(
+        height=26.0, keys=[f'{deviceId}.thresholdType'],
+        klass='EditableComboBox',
+        parent_component='EditableApplyLaterComponent',
+        width=81.0, x=220.0, y=360.0)
+    scene51 = DoubleLineEditModel(
+        height=26.0, keys=[
+            f'{deviceId}.pixelThreshold'],
+        parent_component='EditableApplyLaterComponent',
+        width=81.0, x=220.0, y=386.0)
+    scene5 = BoxLayoutModel(
+        direction=2, height=52.0, width=81.0,
+        x=220.0, y=360.0, children=[scene50, scene51])
+    scene6 = LabelModel(
+        font='Source Sans Pro,11,-1,5,50,0,1,0,0,0', height=20.0,
+        parent_component='DisplayComponent', text='Fit Parameters',
+        width=117.0, x=340.0, y=90.0)
+    scene700 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Success', width=111.0,
+        x=340.0, y=120.0)
+    scene701 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Max Pixel Value',
+        width=111.0, x=340.0, y=145.0)
+    scene702 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Amplitude X',
+        width=111.0, x=340.0, y=170.0)
+    scene703 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Amplitude Y',
+        width=111.0, x=340.0, y=195.0)
+    scene704 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Position X',
+        width=111.0, x=340.0, y=220.0)
+    scene705 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=26.0,
+        parent_component='DisplayComponent', text='Position Y',
+        width=111.0, x=340.0, y=245.0)
+    scene706 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Sigma X',
+        width=111.0, x=340.0, y=271.0)
+    scene707 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='Sigma Y',
+        width=111.0, x=340.0, y=296.0)
+    scene708 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='FWHM X', width=111.0,
+        x=340.0, y=321.0)
+    scene709 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0,
+        parent_component='DisplayComponent', text='FWHM Y',
+        width=111.0, x=340.0, y=346.0)
+    scene70 = BoxLayoutModel(
+        direction=2, height=251.0, width=111.0, x=340.0, y=120.0, children=[
+            scene700, scene701, scene702, scene703, scene704, scene705,
+            scene706, scene707, scene708, scene709])
+    scene710 = ErrorBoolModel(
+        height=25.0, keys=[
+            f'{deviceId}.success'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=120.0)
+    scene711 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.maxPxValue'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=145.0)
+    scene712 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.amplitudeX'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=170.0)
+    scene713 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.amplitudeY'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=195.0)
+    scene714 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.positionX'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=220.0)
+    scene715 = DisplayLabelModel(
+        font_size=10, height=26.0, keys=[
+            f'{deviceId}.positionY'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=245.0)
+    scene716 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.sigmaX'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=271.0)
+    scene717 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.sigmaY'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=296.0)
+    scene718 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.fwhmX'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=321.0)
+    scene719 = DisplayLabelModel(
+        font_size=10, height=25.0, keys=[
+            f'{deviceId}.fwhmY'], parent_component='DisplayComponent',
+        width=110.0, x=451.0, y=346.0)
+    scene71 = BoxLayoutModel(
+        direction=2, height=251.0, width=110.0, x=451.0, y=120.0, children=[
+            scene710, scene711, scene712, scene713, scene714, scene715,
+            scene716, scene717, scene718, scene719])
+    scene7 = BoxLayoutModel(
+        height=251.0, width=221.0,
+        x=340.0, y=120.0, children=[scene70, scene71])
+    scene8 = LineModel(
+        stroke='#000000', stroke_width=2.0,
+        x=320.0, x1=320.0, x2=320.0, y=80.0, y1=80.0, y2=580.0)
+    scene9 = ScatterGraphModel(
+        height=401.0, keys=[
+            f'{deviceId}.positionX', f'{deviceId}.positionY'],
+        parent_component='DisplayComponent', width=427.0, x=580.0, y=50.0)
+    scene10 = LabelModel(
+        font='Source Sans Pro,11,-1,5,75,0,0,0,0,0', height=20.0,
+        parent_component='DisplayComponent', text='Position (Fit)',
+        width=202.0, x=760.0, y=20.0)
+    scene11 = TrendGraphModel(
+        height=251.0, keys=[
+            f'{deviceId}.positionX'], parent_component='DisplayComponent',
+        width=491.0, x=1030.0, y=50.0)
+    scene12 = LabelModel(
+        font='Source Sans Pro,11,-1,5,75,0,0,0,0,0', height=27.0,
+        parent_component='DisplayComponent', text='Position (X)',
+        width=101.0, x=1240.0, y=20.0)
+    scene13 = TrendGraphModel(
+        height=251.0, keys=[
+            f'{deviceId}.positionY'], parent_component='DisplayComponent',
+        width=491.0, x=1030.0, y=350.0)
+    scene14 = LabelModel(
+        font='Source Sans Pro,11,-1,5,75,0,0,0,0,0', height=27.0,
+        parent_component='DisplayComponent', text='Position (Y)',
+        width=101.0, x=1240.0, y=320.0)
+    scene15 = StickerModel(
+        background='#bdbdbd', font=default_font,
+        foreground='#000000', height=51.0, parent_component='DisplayComponent',
+        text='Set a pixelSize for an appropriate FWHM calculation. The device defaults to `None`!',  # noqa
+        width=301.0, x=10.0, y=430.0)
+    scene160 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=31.0,
+        parent_component='DisplayComponent', text='Pixel Size', width=100.0,
+        x=10.0, y=490.0)
+    scene161 = DisplayLabelModel(
+        font_size=10, height=31.0, keys=[
+            f'{deviceId}.pixelSize'], parent_component='DisplayComponent',
+        width=101.0, x=110.0, y=490.0)
+    scene162 = DoubleLineEditModel(
+        height=31.0, keys=[
+            f'{deviceId}.pixelSize'],
+        parent_component='EditableApplyLaterComponent',
+        width=100.0, x=211.0, y=490.0)
+    scene16 = BoxLayoutModel(
+        height=31.0, width=301.0, x=10.0, y=490.0, children=[
+            scene160, scene161, scene162])
+    scene1700 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=26.0, parent_component='DisplayComponent', text='DeviceID',
+        width=67.0, x=10.0, y=20.0)
+    scene1701 = LabelModel(
+        font=default_font, foreground='#000000',
+        height=25.0, parent_component='DisplayComponent', text='State',
+        width=67.0, x=10.0, y=46.0)
+    scene170 = BoxLayoutModel(
+        direction=2, height=51.0, width=67.0,
+        x=10.0, y=20.0, children=[scene1700, scene1701])
+    scene1710 = DisplayLabelModel(
+        font_size=10, height=26.0, keys=[
+            f'{deviceId}.deviceId'], parent_component='DisplayComponent',
+        width=304.0, x=77.0, y=20.0)
+    scene1711 = DisplayStateColorModel(
+        height=25.0, keys=[
+            f'{deviceId}.state'], parent_component='DisplayComponent',
+        show_string=True, width=304.0, x=77.0, y=46.0)
+    scene171 = BoxLayoutModel(
+        direction=2, height=51.0, width=304.0,
+        x=77.0, y=20.0, children=[scene1710, scene1711])
+    scene17 = BoxLayoutModel(
+        height=51.0, width=371.0,
+        x=10.0, y=20.0, children=[scene170, scene171])
+    scene = SceneModel(
+        height=621.0, width=1537.0, children=[
+            scene0, scene1, scene2, scene3, scene4, scene5,
+            scene6, scene7, scene8, scene9, scene10, scene11,
+            scene12, scene13, scene14, scene15, scene16, scene17])
+    return write_scene(scene)
