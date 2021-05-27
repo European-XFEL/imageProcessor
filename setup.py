@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-
 from os.path import dirname, join, realpath
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 ROOT_FOLDER = dirname(realpath(__file__))
 VERSION_FILE_PATH = join(
