@@ -278,7 +278,8 @@ class ImagePatternPicker(PythonDevice):
                 self.update_output_schema(node, shape, k_type)
 
     @staticmethod
-    def create_channel_node(schema, channel, shape=(), k_type=Types.NONE):
+    def create_channel_node(schema, channel,
+                            shape=(), k_type=Types.NONE, skip_input=False):
         data_in = Schema()
         data_out = Schema()
         idx = channel.replace("chan_", "")
@@ -367,29 +368,26 @@ class ImagePatternPicker(PythonDevice):
             .unit(Unit.HERTZ)
             .readOnly()
             .commit(),
+        )
+        if not skip_input:
+            (
+             NODE_ELEMENT(data_in)
+             .key("data")
+             .displayedName("Data")
+             .commit(),
 
-            NODE_ELEMENT(data_in)
-            .key("data")
-            .displayedName("Data")
-            .commit(),
+             IMAGEDATA_ELEMENT(data_in)
+             .key("data.image")
+             .displayedName("Image")
+             .commit(),
 
-            IMAGEDATA_ELEMENT(data_in)
-            .key("data.image")
-            .displayedName("Image")
-            .commit(),
-
-            INPUT_CHANNEL(schema)
-            .key(f"{channel}.input")
-            .displayedName("Input")
-            .dataSchema(data_in)
-            .commit(),
-
-            # Images should be dropped if processor is too slow
-            OVERWRITE_ELEMENT(schema)
-            .key(f"{channel}.input.onSlowness")
-            .setNewDefaultValue("drop")
-            .commit(),
-
+             INPUT_CHANNEL(schema)
+             .key(f"{channel}.input")
+             .displayedName("Input")
+             .dataSchema(data_in)
+             .commit(),
+            )
+        (
             NODE_ELEMENT(data_out)
             .key('data')
             .displayedName("Data")
@@ -419,6 +417,6 @@ class ImagePatternPicker(PythonDevice):
     def update_output_schema(self, channel, shape, k_type):
         newSchema = Schema()
         ImagePatternPicker.create_channel_node(newSchema, channel, shape,
-                                               k_type)
+                                               k_type, skip_input=True)
 
         self.appendSchema(newSchema)
