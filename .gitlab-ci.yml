@@ -18,10 +18,6 @@
     - master
 
 ##### Test build #####
-test:ubuntu16:
-  image: europeanxfel/karabo-ci:ubuntu-16
-  <<: *test_build
-
 test:ubuntu18:
   image: europeanxfel/karabo-ci:ubuntu-18
   <<: *test_build
@@ -32,9 +28,5 @@ test:ubuntu20:
 
 test:centos7:
   image: europeanxfel/karabo-ci:centos-7gcc7
-  <<: *test_build
-
-test:centos8:
-  image: europeanxfel/karabo-ci:centos-8
   <<: *test_build
 
