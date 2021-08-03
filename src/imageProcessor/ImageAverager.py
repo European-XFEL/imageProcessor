@@ -10,7 +10,12 @@ from karabo.bound import (
     State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
 )
 
+from image_processing.image_exp_running_average import (
+    ImageExponentialRunnningAverage
+)
 from image_processing.image_running_mean import ImageRunningMean
+from image_processing.image_standard_mean import ImageStandardMean
+
 from processing_utils.rate_calculator import RateCalculator
 
 try:
@@ -21,118 +26,6 @@ except ImportError:
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
     from imageProcessor._version import version as deviceVersion
-
-
-class ImageExponentialRunnningAverage:
-    """Simple, fast and efficient running average method, widely used in
-    machine learning to track running statistics. It does not need to store
-    a 100000 image ringbuffer: the running average is held by a single numpy
-    array with the same size as the image and updated as the weighted average
-    of the previous state and the new frame according to:
-    ```
-    AVG_new = w*IMG_new + (1-w)*AVG_old
-    ```
-    The number of averaged frames sets the decay rate and can be changed
-    without clearing the buffer, i.e. you can start with a faster decay and
-    slow it down after initial convergence. The weighted average is stored as
-    a float64 array and must be converted back to the image type.
-    """
-
-    def __init__(self):
-        self.__nimages = 1.0
-        self.__mean = None
-
-    @property
-    def __tau(self):
-        """The decay rate is the inverse of the number of frames."""
-        return 1.0 / self.__nimages
-
-    def clear(self):
-        """Reset the mean"""
-        self.__mean = None
-
-    def append(self, image, n_images):
-        """Add a new image to the average"""
-        # Check for correct type and input values
-        if not isinstance(image, np.ndarray):
-            raise ValueError("Image has incorrect type: %s" % str(type(image)))
-        if n_images <= 0:
-            raise ValueError("The averager's smoothing rate must be positive "
-                             "instead of %f." % n_images)
-
-        # We assign the smoothing coefficient
-        self.__nimages = n_images
-
-        if self.__mean is None:
-            # If running average is empty, we explicitly assign fp64
-            self.__mean = image.astype(np.float64)
-        else:
-            # If it's already running, just update the state
-            self.__mean = self.__tau * image + (1.0 - self.__tau) * self.__mean
-
-    @property
-    def mean(self):
-        """Returns the current mean"""
-        return self.__mean
-
-    @property
-    def size(self):
-        """Return the inverse decay rate"""
-        return self.__nimages
-
-    @property
-    def shape(self):
-        if self.__mean is None:
-            return ()
-        else:
-            return self.__mean.shape
-
-
-class ImageStandardMean:
-    def __init__(self):
-        self.__mean = None  # Image mean
-        self.__images = 0  # number of images
-
-    def append(self, image):
-        """Add a new image to the average"""
-        if not isinstance(image, np.ndarray):
-            raise ValueError("image has incorrect type: %s" % str(type(image)))
-
-        # Update mean
-        if self.__images > 0:
-            if image.shape != self.shape:
-                raise ValueError("image has incorrect shape: %s != %s" %
-                                 (str(image.shape), str(self.shape)))
-
-            self.__mean = (self.__mean * self.__images +
-                           image) / (self.__images + 1)
-            self.__images += 1
-        else:
-            self.__mean = image.astype(np.float64)
-            self.__images = 1
-
-    def clear(self):
-        """Reset the mean"""
-        self.__mean = None
-        self.__images = 0
-
-    @property
-    def mean(self):
-        """Return the mean"""
-        return self.__mean
-
-    @property
-    def size(self):
-        """Return the number of images in the average"""
-        return self.__images
-
-    @property
-    def shape(self):
-        """Return the shape of images in the average"""
-        if self.size == 0:
-            return ()
-        else:
-            return self.__mean.shape
 
 
 @KARABO_CLASSINFO('ImageAverager', deviceVersion)
