@@ -45,13 +45,25 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
             UINT32_ELEMENT(expected).key("crosshair.extSize")
             .displayedName("Ext Crosshair Size")
-            .assignmentOptional().defaultValue(50)
+            .assignmentOptional().defaultValue(30)
             .reconfigurable()
             .commit(),
 
             UINT32_ELEMENT(expected).key("crosshair.intSize")
             .displayedName("Int Crosshair Size")
-            .assignmentOptional().defaultValue(20)
+            .assignmentOptional().defaultValue(10)
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("crosshair.autoThickness")
+            .displayedName("Auto-Thickness")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("crosshair.thickness")
+            .displayedName("Crosshair Thickness")
+            .assignmentOptional().defaultValue(5)
             .reconfigurable()
             .commit(),
 
@@ -98,7 +110,6 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
             self.refresh_frame_rate_in()
 
-            # XXX superimpose crosshair and marker to data
             if self['crosshair.enable']:
                 # superimpose a cross-hair
                 image = image_data.getData()  # np.ndarray
@@ -112,8 +123,12 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
                     ext_size = self['crosshair.extSize']
                     int_size = self['crosshair.intSize']
 
-                # XXX manual thickness, color
-                thickness = max(2, int(0.005 * max(image.shape)))
+                if self['crosshair.autoThickness']:
+                    thickness = max(2, int(0.005 * max(image.shape)))
+                else:
+                    thickness = self['crosshair.thickness']
+
+                # XXX manual color
                 ext_color = int(image.max())
                 int_color = int(image.min())
 
