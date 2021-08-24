@@ -67,6 +67,24 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
+            BOOL_ELEMENT(expected).key("crosshair.autoColor")
+            .displayedName("Auto-Color")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("crosshair.extColor")
+            .displayedName("Ext Crosshair 'Color'")
+            .assignmentOptional().defaultValue(65535)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("crosshair.intColor")
+            .displayedName("Int Crosshair 'Color'")
+            .assignmentOptional().defaultValue(0)
+            .reconfigurable()
+            .commit(),
+
             UINT32_ELEMENT(expected).key("xPosition")
             .displayedName("Crosshair/Marker X Position")
             .assignmentOptional().defaultValue(0)
@@ -128,9 +146,12 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
                 else:
                     thickness = self['crosshair.thickness']
 
-                # XXX manual color
-                ext_color = int(image.max())
-                int_color = int(image.min())
+                if self['crosshair.autoColor']:
+                    ext_color = int(image.max())
+                    int_color = int(image.min())
+                else:
+                    ext_color = self['crosshair.extColor']
+                    int_color = self['crosshair.intColor']
 
                 crosshair(image, center, ext_size, int_size, ext_color,
                           int_color, thickness, angle)
