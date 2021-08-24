@@ -6,7 +6,7 @@
 
 from karabo.bound import (
     BOOL_ELEMENT, ImageData, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
-    State, Timestamp, UINT32_ELEMENT
+    State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT
 )
 
 from image_processing.crosshair import crosshair
@@ -81,6 +81,59 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
             UINT32_ELEMENT(expected).key("crosshair.intColor")
             .displayedName("Int Crosshair 'Color'")
+            .assignmentOptional().defaultValue(0)
+            .reconfigurable()
+            .commit(),
+
+            NODE_ELEMENT(expected).key('marker')
+            .displayedName("Marker")
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("marker.enable")
+            .displayedName("Marker Crosshair")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            STRING_ELEMENT(expected).key("marker.type")
+            .displayedName("Marker Type")
+            .options("rectangle,ellipse")
+            .assignmentOptional().defaultValue('rectangle')
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("marker.width")
+            .displayedName("Marker Width")
+            .assignmentOptional().noDefaultValue()
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("marker.height")
+            .displayedName("Marker Height")
+            .assignmentOptional().noDefaultValue()
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("marker.autoThickness")
+            .displayedName("Auto-Thickness")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("marker.thickness")
+            .displayedName("Marker Thickness")
+            .assignmentOptional().defaultValue(5)
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("marker.autoColor")
+            .displayedName("Auto-Color")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key("marker.color")
+            .displayedName("Marker 'Color'")
             .assignmentOptional().defaultValue(0)
             .reconfigurable()
             .commit(),
