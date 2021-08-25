@@ -10,6 +10,7 @@ from karabo.bound import (
 )
 
 from image_processing.crosshair import crosshair
+from image_processing.marker import marker
 
 try:
     from .common import ImageProcOutputInterface
@@ -104,13 +105,13 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
             UINT32_ELEMENT(expected).key("marker.width")
             .displayedName("Marker Width")
-            .assignmentOptional().noDefaultValue()
+            .assignmentOptional().defaultValue(20)
             .reconfigurable()
             .commit(),
 
             UINT32_ELEMENT(expected).key("marker.height")
             .displayedName("Marker Height")
-            .assignmentOptional().noDefaultValue()
+            .assignmentOptional().defaultValue(20)
             .reconfigurable()
             .commit(),
 
@@ -178,36 +179,59 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             ts = Timestamp.fromHashAttributes(
                 metaData.getAttributes('timestamp'))
             image_data = data['data.image']
+            crosshair_enable = self['crosshair.enable']
+            marker_enable = self['marker.enable']
 
             self.refresh_frame_rate_in()
 
-            if self['crosshair.enable']:
-                # superimpose a cross-hair
+            if crosshair_enable or marker_enable:
                 image = image_data.getData()  # np.ndarray
                 center = (self['xPosition'], self['yPosition'])
                 angle = self['rotation']
 
-                if self['crosshair.autoSize']:
-                    ext_size = max(10, int(0.025 * max(image.shape)))
-                    int_size = ext_size // 3
-                else:
-                    ext_size = self['crosshair.extSize']
-                    int_size = self['crosshair.intSize']
+                if crosshair_enable:
+                    # superimpose a cross-hair
 
-                if self['crosshair.autoThickness']:
-                    thickness = max(2, int(0.005 * max(image.shape)))
-                else:
-                    thickness = self['crosshair.thickness']
+                    if self['crosshair.autoSize']:
+                        ext_size = max(10, int(0.025 * max(image.shape)))
+                        int_size = ext_size // 3
+                    else:
+                        ext_size = self['crosshair.extSize']
+                        int_size = self['crosshair.intSize']
 
-                if self['crosshair.autoColor']:
-                    ext_color = int(image.max())
-                    int_color = int(image.min())
-                else:
-                    ext_color = self['crosshair.extColor']
-                    int_color = self['crosshair.intColor']
+                    if self['crosshair.autoThickness']:
+                        thickness = max(2, int(0.005 * max(image.shape)))
+                    else:
+                        thickness = self['crosshair.thickness']
 
-                crosshair(image, center, ext_size, int_size, ext_color,
-                          int_color, thickness, angle)
+                    if self['crosshair.autoColor']:
+                        ext_color = None
+                        int_color = None
+                    else:
+                        ext_color = self['crosshair.extColor']
+                        int_color = self['crosshair.intColor']
+
+                    crosshair(image, center, ext_size, int_size, ext_color,
+                              int_color, thickness, angle)
+
+                if marker_enable:
+                    # superimpose a marker
+
+                    marker_type = self['marker.type']
+                    shape = (self['marker.width'], self['marker.height'])
+
+                    if self['marker.autoThickness']:
+                        thickness = max(2, int(0.005 * max(image.shape)))
+                    else:
+                        thickness = self['marker.thickness']
+
+                    if self['marker.autoColor']:
+                        color = None
+                    else:
+                        color = self['marker.color']
+
+                    marker(image, marker_type, center, shape, color, thickness,
+                           angle)
 
                 image_data = ImageData(image)
 
