@@ -91,7 +91,7 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             .commit(),
 
             BOOL_ELEMENT(expected).key("marker.enable")
-            .displayedName("Marker Crosshair")
+            .displayedName("Enable Marker")
             .assignmentOptional().defaultValue(True)
             .reconfigurable()
             .commit(),
