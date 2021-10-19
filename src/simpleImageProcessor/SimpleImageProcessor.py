@@ -319,6 +319,7 @@ class SimpleImageProcessor(PythonDevice):
         # Register additional slots
         self.registerSlot(self.reset)
 
+        self._exception_log = False
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
@@ -511,7 +512,18 @@ class SimpleImageProcessor(PythonDevice):
         p0 = image_processing.peakParametersEval(imgX)
 
         # 1-d Gaussian fit
-        out = image_processing.fitGauss(imgX, p0)
+        try:
+            out = image_processing.fitGauss(imgX, p0)
+            self._exception_log = False
+        except Exception as e:
+            # Set Hash for no success, the fitting did not work, e.g. no
+            # center found
+            if not self._exception_log:
+                self._exception_log = True
+                self.log.ERROR(f"Error in fitting gaussian: {e}")
+            self.set(h)
+            return
+
         paramX = out[0]  # parameters
         covX = out[1]  # covariance
         successX = out[2]  # error
