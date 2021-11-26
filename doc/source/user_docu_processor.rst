@@ -115,7 +115,7 @@ Options for Gaussian Fit
 ------------------------
 
 The Gaussian fit is done by using the ``fitGauss`` and ``fitGauss2DRot``
-functions available in the :rtd:`image-processing` package.
+functions available in the :ref:`image processing <imageprocessing>` package.
 
 Initial parameters fit are calculated by the ``peakParametersEval`` function
 in the imageProcessing package, when the "raw peak" option is choosen.

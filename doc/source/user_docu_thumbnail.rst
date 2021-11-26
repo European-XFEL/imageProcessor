@@ -10,7 +10,7 @@ purposes. It expects an image in input.
 It lets the user specify the size of a canvas where the output thumbnail image
 must fit. It outputs the image downscaled to fit in the specified canvas.
 Downscaled image is obtained by means of the `thumbnail` function from the
-:rtd:`image-processing` package.
+:ref:`image processing <imageprocessing>` package.
 
 
 .. _image-averager-settings:
