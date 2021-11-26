@@ -9,9 +9,9 @@ directions, then finds the position of the peak and the beam size on such
 integrals.
 
 Position and size of the beam are calculated with the `peakParametersEval`
-function from the :rtd:`image-processing` package, thus the evaluated values
-make sense only if the peak has a single maximum. Also noise (ripple) may
-affect the result.
+function from the :ref:`image processing <imageprocessing>` package, thus the
+evaluated values make sense only if the peak has a single maximum. Also noise
+(ripple) may affect the result.
 
 
 Commands
