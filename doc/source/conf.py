@@ -68,36 +68,19 @@ import slumber
 
 # the RTDHOST should be set to localhost if you only compile on RTD
 # otherwise it needs to be set to the server hosting the internal RTD
-RTDHOST = 'https://in.xfel.eu/readthedocs'
-api = slumber.API(base_url='{}/api/v1/'.format(RTDHOST))
-public_slugs = []
-offset = 0
-while True:
-    # get the *public* projects (by default they are limited)
-    # so we increment the offset of the query until
-    # it returns empty handed
-    new_projs = api.project.get(offset=offset)['objects']
-    if len(new_projs) == 0:
-        break
-    offset += len(new_projs)
-    public_slugs.extend([proj['slug'] for proj in new_projs])
-
-
-def _insert(d, slug):
-    d[slug.replace('-', '')] = \
-     ('{}/docs/{}/en/latest'.format(RTDHOST, slug), None)
-
-
-  # defining some default RTD intersphinx place map elements
+RTDHOST = 'https://rtd.xfel.eu'
+api = slumber.API(base_url='{}/api/v2/'.format(RTDHOST))
+projects = api.project.get()['results']
 isphinx = {'python': ('http://python.readthedocs.io/en/latest/', None),
-           'numpy': ('http://numpy.readthedocs.io/en/latest/', None)}
+           'numpy': ('http://numpy.readthedocs.io/en/latest/', None),
+           'scipy': ('http://scipy.readthedocs.io/en/latest/', None)}
 
+for proj in projects:
+    isphinx[proj['slug'].replace('-', '')] = \
+     ('{}/docs/{}/en/latest'.format(RTDHOST, proj['slug']), None)
 
-for slug in public_slugs:
-    _insert(isphinx, slug)
 
 intersphinx_mapping = isphinx
 
-extlinks = {'rtd': ('https://in.xfel.eu/readthedocs/docs/%s/en/latest/',
-                    '')}
-
+def setup(app):
+    app.add_config_value('includeDevInfo', 'false', 'env')
