@@ -30,7 +30,3 @@ test:ubuntu20:
 test:centos7:
   image: europeanxfel/karabo-ci:centos-7gcc7
   <<: *test_build
-
-test:centos8:
-  image: europeanxfel/karabo-ci:centos-8
-  <<: *test_build
