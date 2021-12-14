@@ -868,25 +868,28 @@ class ImageProcessor(ImageProcessorBase):
 
     def postReconfigure(self):
         window_length = self["lowPass.windowLength"]
+        polyorder = self["lowPass.polyorder"]
+
+        h = Hash()
+
+        if window_length <= polyorder:
+            window_length = polyorder + 1
+            msg = ("Low-Pass window length must be larger than polyorder "
+                   f"-> setting it to {window_length}")
+            self.log.WARN(msg)
+            h["status"] = msg
+            h["lowPass.windowLength"] = window_length
+
         if window_length % 2 == 0:
             window_length += 1
             msg = ("Low-Pass window length must be odd "
                    f"-> setting it to {window_length}")
             self.log.WARN(msg)
-            self["status"] = msg
-            self["lowPass.windowLength"] = window_length
+            h["status"] = msg
+            h["lowPass.windowLength"] = window_length
 
-        polyorder = self["lowPass.polyorder"]
-        if polyorder >= window_length:
-            if polyorder % 2 == 0:
-                window_length = polyorder + 1
-            else:
-                window_length = polyorder + 2
-            msg = ("Low-Pass window length must larger than polyorder "
-                   f"-> setting it to {window_length}")
-            self.log.WARN(msg)
-            self["status"] = msg
-            self["lowPass.windowLength"] = window_length
+        if not h.empty():
+            self.set(h)
 
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
