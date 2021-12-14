@@ -288,8 +288,10 @@ class ImageProcessor(ImageProcessorBase):
             INT32_ELEMENT(expected).key("lowPass.windowLength")
             .displayedName("Window Length")
             .description("The length of the filter window (i.e., the number "
-                         "of coefficients).")
+                         "of coefficients). It must be a positive odd "
+                         "integer.")
             .assignmentOptional().defaultValue(101)
+            .minInc(1)
             .reconfigurable()
             .commit(),
 
@@ -298,6 +300,7 @@ class ImageProcessor(ImageProcessorBase):
             .description("The order of the polynomial used to fit the "
                          "samples. It must be less than the windowLength.")
             .assignmentOptional().defaultValue(3)
+            .minInc(0)
             .reconfigurable()
             .commit(),
 
@@ -862,6 +865,28 @@ class ImageProcessor(ImageProcessorBase):
                 msg = f"Invalid user defined range {udr} has been discarded."
                 self.log.WARN(msg)
                 self["status"] = msg
+
+    def postReconfigure(self):
+        window_length = self["lowPass.windowLength"]
+        if window_length % 2 == 0:
+            window_length += 1
+            msg = ("Low-Pass window length must be odd "
+                   f"-> setting it to {window_length}")
+            self.log.WARN(msg)
+            self["status"] = msg
+            self["lowPass.windowLength"] = window_length
+
+        polyorder = self["lowPass.polyorder"]
+        if polyorder >= window_length:
+            if polyorder % 2 == 0:
+                window_length = polyorder + 1
+            else:
+                window_length = polyorder + 2
+            msg = ("Low-Pass window length must larger than polyorder "
+                   f"-> setting it to {window_length}")
+            self.log.WARN(msg)
+            self["status"] = msg
+            self["lowPass.windowLength"] = window_length
 
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
