@@ -993,6 +993,9 @@ class ImageProcessor(ImageProcessorBase):
         thr = self.get("threshold")
         user_defined_range = self.get("userDefinedRange")
         absolute_positions = self.get("absolutePositions")
+        enable_low_pass = self.get("lowPass.enable")
+        window_length = self.get("lowPass.windowLength")
+        polyorder = self.get("lowPass.polyorder")
 
         h = Hash()  # Device properties updates
         out_hash = Hash()  # Output channel updates
@@ -1184,6 +1187,11 @@ class ImageProcessor(ImageProcessorBase):
                 img_x = image_processing.imageSumAlongY(data)
                 img_y = image_processing.imageSumAlongX(data)
 
+                if enable_low_pass:
+                    # Low-pass filter
+                    img_x = savgol_filter(img_x, window_length, polyorder)
+                    img_y = savgol_filter(img_y, window_length, polyorder)
+
             except Exception as e:
                 msg = f"Exception caught during x/y integration: {e}"
                 self.update_count(error=True, msg=msg)
@@ -1288,9 +1296,6 @@ class ImageProcessor(ImageProcessorBase):
 
         # 1D Gaussian Fits
         if self.get("do1DFit"):
-            enable_low_pass = self.get("lowPass.enable")
-            window_length = self.get("lowPass.windowLength")
-            polyorder = self.get("lowPass.polyorder")
             enable_polynomial = self.get("enablePolynomial")
             gauss1d_start_values = self.get("gauss1dStartValues")
 
@@ -1301,16 +1306,15 @@ class ImageProcessor(ImageProcessorBase):
                         img_x = image_processing.imageSumAlongY(img)
                     else:
                         img_x = img
+                    if enable_low_pass:
+                        # Low-pass filter
+                        img_x = savgol_filter(img_x, window_length, polyorder)
 
                 # Select sub-range and substract pedestal
                 data = img_x[x_min:x_max]
                 img_min = data.min()
                 if img_min > 0:
                     data -= data.min()
-
-                if enable_low_pass:
-                    # Low-pass filter
-                    data = savgol_filter(data, window_length, polyorder)
 
                 # Initial parameters
                 if gauss1d_start_values == "raw_peak":
@@ -1353,16 +1357,16 @@ class ImageProcessor(ImageProcessorBase):
                 try:
                     if img_y is None:
                         img_y = image_processing.imageSumAlongX(img)
+                        if enable_low_pass:
+                            # Low-pass filter
+                            img_y = savgol_filter(
+                                img_y, window_length, polyorder)
 
                     # Select sub-range and substract pedestal
                     data = img_y[y_min:y_max]
                     imgMin = data.min()
                     if imgMin > 0:
                         data -= data.min()
-
-                    if enable_low_pass:
-                        # Low-pass filter
-                        data = savgol_filter(data, window_length, polyorder)
 
                     # Initial parameters
                     if gauss1d_start_values == "raw_peak":
