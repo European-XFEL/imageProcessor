@@ -856,7 +856,15 @@ class ImageProcessor(ImageProcessorBase):
 
     def preReconfigure(self, incomingReconfiguration):
         # always call ImageProcessorBase preReconfigure first!
-        super(ImageProcessor, self).preReconfigure(incomingReconfiguration)
+        super().preReconfigure(incomingReconfiguration)
+
+        def get(key):
+            """Get the key from the incoming reconfiguration, if available, or
+            from the device otherwise"""
+            if incomingReconfiguration.has(key):
+                return incomingReconfiguration[key]
+            else:
+                return self[key]
 
         if incomingReconfiguration.has("userDefinedRange"):
             udr = incomingReconfiguration["userDefinedRange"]
@@ -866,33 +874,29 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.WARN(msg)
                 self["status"] = msg
 
-    def postReconfigure(self):
-        window_length = self["lowPass.windowLength"]
-        polyorder = self["lowPass.polyorder"]
-
-        h = Hash()
-
-        if window_length <= polyorder:
-            window_length = polyorder + 1
-            msg = ("Low-Pass window length must be larger than polyorder "
-                   f"-> setting it to {window_length}")
-            self.log.WARN(msg)
-            h["status"] = msg
-            h["lowPass.windowLength"] = window_length
-
-        if window_length % 2 == 0:
-            window_length += 1
-            msg = ("Low-Pass window length must be odd "
-                   f"-> setting it to {window_length}")
-            self.log.WARN(msg)
-            h["status"] = msg
-            h["lowPass.windowLength"] = window_length
-
-        if not h.empty():
-            self.set(h)
+        if (incomingReconfiguration.has("lowPass.windowLength") or
+                incomingReconfiguration.has("lowPass.polyorder")):
+            window_length = get("lowPass.windowLength")
+            polyorder = get("lowPass.polyorder")
+            is_valid, msg = self.is_low_pass_config_valid(
+                window_length, polyorder)
+            if not is_valid:
+                self["status"] = msg
+                raise ValueError(msg)
 
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
+
+    def is_low_pass_config_valid(self, window_length, polyorder):
+        if window_length <= polyorder:
+            msg = "Low-Pass window length must be larger than polyorder"
+            return False, msg
+
+        if window_length % 2 == 0:
+            msg = "Low-Pass window length must be odd"
+            return False, msg
+
+        return True, ""
 
     def useAsBackgroundImage(self):
         self.log.INFO("Use current image as background.")
