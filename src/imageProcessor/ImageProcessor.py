@@ -275,7 +275,8 @@ class ImageProcessor(ImageProcessorBase):
             NODE_ELEMENT(expected).key("lowPass")
             .displayedName("Low-Pass Filter")
             .description("Configure low pass (Savitzky-Golay) filter of the "
-                         "1d distributions.")
+                         "1d distributions. The filtering is done before the "
+                         "1d gaussian fit.")
             .commit(),
 
             BOOL_ELEMENT(expected).key("lowPass.enable")
