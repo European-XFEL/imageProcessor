@@ -850,6 +850,14 @@ class ImageProcessor(ImageProcessorBase):
             self.log.ERROR(msg)
             raise ValueError(msg)
 
+        window_length = configuration["lowPass.windowLength"]
+        polyorder = configuration["lowPass.polyorder"]
+        is_valid, msg = self.is_low_pass_config_valid(
+                window_length, polyorder)
+        if not is_valid:
+            self.log.ERROR(msg)
+            raise ValueError(msg)
+
     def initialization(self):
         """ This method will be called after the constructor. """
         self.reset()
