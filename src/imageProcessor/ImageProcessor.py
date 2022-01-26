@@ -76,6 +76,14 @@ class ImageProcessor(ImageProcessorBase):
 
             # General Settings
 
+            BOOL_ELEMENT(expected).key("warnOnFitOutOfBounds")
+            .displayedName("Enable Warning if fit center is out of bound")
+            .description("If the fitted center position is outside the "
+                         "image size, raise an alarm")
+            .assignmentOptional().defaultValue(False)
+            .init()
+            .commit(),
+
             BOOL_ELEMENT(expected).key("filterImagesByThreshold")
             .displayedName("Filter Images by Threshold")
             .description("If True, images will be only processed if "
@@ -926,8 +934,8 @@ class ImageProcessor(ImageProcessorBase):
                 elif len(dims) == 1:  # 1d
                     image_height = 1
                     image_width = dims[0]
-
-                self.update_warn_levels(0, image_height, 0, image_width)
+                if self["warnOnFitOutOfBounds"]:
+                    self.update_warn_levels(0, image_height, 0, image_width)
 
                 bpp = image_data.getBitsPerPixel()
                 self.update_output_schema(image_height, image_width, bpp)
