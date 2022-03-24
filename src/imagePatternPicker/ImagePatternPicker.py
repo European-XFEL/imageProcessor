@@ -9,9 +9,12 @@ import time
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
-    STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, DaqDataType, DeviceClient,
-    Hash, ImageData, PythonDevice, Schema, State, Timestamp, Types, Unit
+    STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, VECTOR_UINT32_ELEMENT,
+    DaqDataType, DeviceClient, Hash, ImageData, PythonDevice, Schema, State,
+    Timestamp, Types, Unit
 )
+
+from image_processing import crosshair, imageArbitraryRotation
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -172,47 +175,41 @@ class ImagePatternPicker(PythonDevice):
                 if ((train_id % self[f'{node}.nBunchPatterns']) ==
                    self[f'{node}.patternOffset']):
                     data['data.trainId'] = train_id
-                    if not self[f'{node}.enableCrosshair']:
+
+                    need_processing = (
+                        self[f'{node}.enableCrosshair'] or
+                        self[f'{node}.enableRotation'])
+
+                    if not need_processing:
                         # forward image as it is
                         output_data = data
                     else:
-                        # superimpose a cross-hair
                         image_data = data['data.image']
                         image = image_data.getData()  # np.ndarray
-                        x0 = self[f'{node}.crosshairX']
-                        y0 = self[f'{node}.crosshairY']
-                        xmax = image.shape[1]
-                        ymax = image.shape[0]
 
-                        # Apply external 'dark' crosshair
-                        width = max(10, int(0.025 * max(image.shape)))
-                        thickness = max(2, int(0.005 * max(image.shape)))
-                        x1 = max(x0 - width, 0)
-                        x2 = min(x0 + width, xmax)
-                        y1 = max(y0 - thickness, 0)
-                        y2 = min(y0 + thickness, ymax)
-                        image[y1:y2, x1:x2] = image.min()
+                        if self[f'{node}.enableRotation']:
+                            # rotate image
+                            angle = self[f'{node}.rotationAngle']
+                            center = self[f'{node}.rotationCenter']
+                            if len(center) != 2:
+                                center = None
+                            if angle != 0.:
+                                image = imageArbitraryRotation(
+                                    image, -angle, center)  # clocwise rotation
 
-                        x1 = max(x0 - thickness, 0)
-                        x2 = min(x0 + thickness, xmax)
-                        y1 = max(y0 - width, 0)
-                        y2 = min(y0 + width, ymax)
-                        image[y1:y2, x1:x2] = image.min()
+                        if self[f'{node}.enableCrosshair']:
+                            # superimpose a cross-hair
+                            x0 = self[f'{node}.crosshairX']
+                            y0 = self[f'{node}.crosshairY']
+                            center = (x0, y0)
 
-                        # Apply internal 'light' crosshair
-                        thickness = thickness // 3
+                            ext_size = max(10, int(0.025 * max(image.shape)))
+                            int_size = ext_size // 3
+                            color = None
+                            thickness = max(2, int(0.005 * max(image.shape)))
 
-                        x1 = max(x0 - width, 0)
-                        x2 = min(x0 + width, xmax)
-                        y1 = max(y0 - thickness, 0)
-                        y2 = min(y0 + thickness, ymax)
-                        image[y1:y2, x1:x2] = image.max()
-
-                        x1 = max(x0 - thickness, 0)
-                        x2 = min(x0 + thickness, xmax)
-                        y1 = max(y0 - width, 0)
-                        y2 = min(y0 + width, ymax)
-                        image[y1:y2, x1:x2] = image.max()
+                            crosshair(image, center, ext_size, int_size, color,
+                                      thickness)
 
                         image_data = ImageData(image)
                         output_data = Hash('data.image', image_data)
@@ -350,6 +347,29 @@ class ImagePatternPicker(PythonDevice):
             .displayedName("Crosshair Y position")
             .assignmentOptional().defaultValue(0)
             .adminAccess()
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(schema).key(f"{channel}.enableRotation")
+            .displayedName("Enable Rotation")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            VECTOR_UINT32_ELEMENT(schema).key(f"{channel}.rotationCenter")
+            .displayedName("Rotation Center")
+            .description("Leave empty to rotate around the image center.")
+            .assignmentOptional().defaultValue([])
+            .maxSize(2)
+            .reconfigurable()
+            .commit(),
+
+            DOUBLE_ELEMENT(schema).key(f"{channel}.rotationAngle")
+            .displayedName("Rotation Angle")
+            .description("The image rotation angle (clockwise).")
+            .assignmentOptional().defaultValue(0)
+            .minInc(-15.).maxInc(15.)
+            .unit(Unit.DEGREE)
             .reconfigurable()
             .commit(),
 
