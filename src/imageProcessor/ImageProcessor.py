@@ -8,6 +8,7 @@ import math
 import time
 
 import numpy as np
+from scipy.signal import savgol_filter
 
 from karabo.bound import (
     BOOL_ELEMENT, DaqDataType, Dims, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
@@ -276,6 +277,35 @@ class ImageProcessor(ImageProcessorBase):
             .description("Add a 1st order polynomial term (ramp) to "
                          "gaussian fits.")
             .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            NODE_ELEMENT(expected).key("lowPass")
+            .displayedName("Low-Pass Filter")
+            .description("Configure low pass (Savitzky-Golay) filter of the "
+                         "1d distributions.")
+            .commit(),
+
+            BOOL_ELEMENT(expected).key("lowPass.enable")
+            .displayedName("Enable")
+            .description("Enable the filter.")
+            .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            INT32_ELEMENT(expected).key("lowPass.windowLength")
+            .displayedName("Window Length")
+            .description("The length of the filter window (i.e., the number "
+                         "of coefficients).")
+            .assignmentOptional().defaultValue(101)
+            .reconfigurable()
+            .commit(),
+
+            INT32_ELEMENT(expected).key("lowPass.polyorder")
+            .displayedName("Poly Order")
+            .description("The order of the polynomial used to fit the "
+                         "samples. It must be less than the windowLength.")
+            .assignmentOptional().defaultValue(3)
             .reconfigurable()
             .commit(),
 
@@ -1162,6 +1192,8 @@ class ImageProcessor(ImageProcessorBase):
                 img_x = image_processing.imageSumAlongY(data)
                 img_y = image_processing.imageSumAlongX(data)
 
+                # XXX possibly apply low-pass filter already here
+
             except Exception as e:
                 msg = f"Exception caught during x/y integration: {e}"
                 self.update_count(error=True, msg=msg)
@@ -1266,6 +1298,9 @@ class ImageProcessor(ImageProcessorBase):
 
         # 1D Gaussian Fits
         if self.get("do1DFit"):
+            enable_low_pass = self.get("lowPass.enable")
+            window_length = self.get("lowPass.windowLength")
+            polyorder = self.get("lowPass.polyorder")
             enable_polynomial = self.get("enablePolynomial")
             gauss1d_start_values = self.get("gauss1dStartValues")
 
@@ -1282,6 +1317,10 @@ class ImageProcessor(ImageProcessorBase):
                 img_min = data.min()
                 if img_min > 0:
                     data -= data.min()
+
+                if enable_low_pass:
+                    # Low-pass filter
+                    data = savgol_filter(data, window_length, polyorder)
 
                 # Initial parameters
                 if gauss1d_start_values == "raw_peak":
@@ -1330,6 +1369,10 @@ class ImageProcessor(ImageProcessorBase):
                     imgMin = data.min()
                     if imgMin > 0:
                         data -= data.min()
+
+                    if enable_low_pass:
+                        # Low-pass filter
+                        data = savgol_filter(data, window_length, polyorder)
 
                     # Initial parameters
                     if gauss1d_start_values == "raw_peak":
