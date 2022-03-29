@@ -41,3 +41,8 @@ test:centos7_prerelease:
     - export KARABO_TAG="latest_prerelease_build"
   <<: *test_build
 
+test:almalinux8:
+  image: europeanxfel/karabo-ci:almalinux-8
+  before_script:
+    - export KARABO_TAG="latest_build"
+  <<: *test_build
