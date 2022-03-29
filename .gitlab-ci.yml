@@ -30,3 +30,6 @@ test:centos7:
   image: europeanxfel/karabo-ci:centos-7gcc7
   <<: *test_build
 
+test:almalinux8:
+  image: europeanxfel/karabo-ci:almalinux-8
+  <<: *test_build
