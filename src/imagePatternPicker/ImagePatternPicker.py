@@ -205,7 +205,7 @@ class ImagePatternPicker(PythonDevice):
 
                             ext_size = max(10, int(0.025 * max(image.shape)))
                             int_size = ext_size // 3
-                            color = None
+                            color = round(image.max() // 2)
                             thickness = max(2, int(0.005 * max(image.shape)))
 
                             crosshair(image, center, ext_size, int_size, color,
