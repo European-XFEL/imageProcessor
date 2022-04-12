@@ -25,7 +25,7 @@ def generate_scene(device):
     camera_id = input_node["connectedOutputChannels"]
     if camera_id:
         camera_id = camera_id[0].split(":")[0]
-    camera_label = f"Camera Scene"
+    camera_label = "Camera Scene"
     cam_link = DeviceSceneLinkModel(
         keys=[f"{camera_id}.availableScenes"],
         target_window=SceneTargetWindow.Dialog,
@@ -66,11 +66,11 @@ def generate_scene(device):
         keys=[f'{device_id}.useAsCalibrationImage2'],
         parent_component='DisplayComponent')
     calib_do = DisplayCommandModel(
-         height=24.0, width=cmd_width, x=675, y=170,
-         keys=[f'{device_id}.calibrate'],
-         parent_component='DisplayComponent')
+        height=24.0, width=cmd_width, x=675, y=170,
+        keys=[f'{device_id}.calibrate'],
+        parent_component='DisplayComponent')
     calib_scene = FixedLayoutModel(
-         children=[calib_acquire_01, calib_acquire_02, calib_do])
+        children=[calib_acquire_01, calib_acquire_02, calib_do])
 
     x1 = 675
     width1 = 230
@@ -229,8 +229,8 @@ def generate_scene(device):
                   status_label, status_log])
 
     op_scene = FixedLayoutModel(
-         height=761.0, width=1342.0,
-         children=[op_panel, state, calib_scene, calib_par_scene])
+        height=761.0, width=1342.0,
+        children=[op_panel, state, calib_scene, calib_par_scene])
 
     scene = SceneModel(
         height=800, width=1100,
