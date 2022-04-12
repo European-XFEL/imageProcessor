@@ -9,7 +9,7 @@ from ..ImagePatternPicker import ImagePatternPicker
 class ImagePatternPicker_TestCase(unittest.TestCase):
     def test_proc(self):
         proc = Configurator(PythonDevice).create("ImagePatternPicker", Hash(
-            "Logger.priority", "WARN",
+            "Logger.priority", "ERROR",
             "deviceId", "ImagePatternPicker_0"))
 
         proc.startFsm()
