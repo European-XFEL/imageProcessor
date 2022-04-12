@@ -378,7 +378,7 @@ class AutoCorrelator(PythonDevice):
                 image_processing.fitGauss(img_x[x_min_fit:x_max_fit])
             x0 = pars[1] + x_min_fit
             # height = par[0], x0 = pars[1], sx = pars[2]
-            fit_func = image_processing.gauss1d(x_axis, pars[0],  x0,  pars[2])
+            fit_func = image_processing.gauss1d(x_axis, pars[0], x0, pars[2])
         elif beam_shape == HYP_SEC_FIT:
             pars, cov, err = \
                 image_processing.fitSech2(img_x[x_min_fit:x_max_fit])
