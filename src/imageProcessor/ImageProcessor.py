@@ -1101,8 +1101,8 @@ class ImageProcessor(ImageProcessorBase):
         if self.get("subtractBkgImage"):
             t0 = time.time()
             try:
-                if(self.bkg_image is not None and
-                   self.bkg_image.shape == img.shape):
+                if (self.bkg_image is not None
+                        and self.bkg_image.shape == img.shape):
 
                     if self.current_image is img:
                         # Must copy, or self.currentImage will be modified
@@ -1281,8 +1281,8 @@ class ImageProcessor(ImageProcessorBase):
             self.averagers["cOfMTime"].append(t1 - t0)
 
             if absolute_positions:
-                h.set("x0", image_binning_x*(x0 + image_offset_x))
-                h.set("y0", image_binning_y*(y0 + image_offset_y))
+                h.set("x0", image_binning_x * (x0 + image_offset_x))
+                h.set("y0", image_binning_y * (y0 + image_offset_y))
             else:
                 h.set("x0", x0)
                 h.set("y0", y0)
@@ -1615,9 +1615,9 @@ class ImageProcessor(ImageProcessorBase):
 
                 if absolute_positions:
                     h.set("x02d",
-                          image_binning_x*(x_min + p_xy[1] + image_offset_x))
+                          image_binning_x * (x_min + p_xy[1] + image_offset_x))
                     h.set("y02d",
-                          image_binning_y*(y_min + p_xy[2] + image_offset_y))
+                          image_binning_y * (y_min + p_xy[2] + image_offset_y))
                 else:
                     h.set("x02d", x_min + p_xy[1])
                     h.set("y02d", y_min + p_xy[2])
@@ -1688,7 +1688,7 @@ class ImageProcessor(ImageProcessorBase):
                     mask = thresholdRange[0] <= data
                     mask *= data <= thresholdRange[1]
                     data_size = np.float64(np.sum(mask))
-                    data = data*mask
+                    data = data * mask
                 else:
                     data_size = data.size
 
@@ -1726,7 +1726,7 @@ class ImageProcessor(ImageProcessorBase):
     def eval_starting_point(self, data):
         fit_ampl, peak_pixel, fwhm = image_processing.peakParametersEval(data)
 
-        return fit_ampl, peak_pixel, fwhm/self.gauss_2_fwhm
+        return fit_ampl, peak_pixel, fwhm / self.gauss_2_fwhm
 
     def update_warn_levels(self, x_min, x_max, y_min, y_max):
         new_schema = Schema()
