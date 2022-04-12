@@ -175,13 +175,13 @@ class TwoPeakFinder(ImageProcessorBase):
                     raise RuntimeError("zero_point is outside ROI.")
 
                 # sum along y axis
-                img_x = imageSumAlongY(img[:, low_x:high_x+1])
+                img_x = imageSumAlongY(img[:, low_x:high_x + 1])
             else:
                 # No valid ROI
                 low_x = 0
                 img_x = imageSumAlongY(img)
 
-            peaks = find_peaks(img_x, zero_point-low_x)
+            peaks = find_peaks(img_x, zero_point - low_x)
 
             h = Hash()
             h.set('peak1Value', peaks[0])
@@ -191,7 +191,7 @@ class TwoPeakFinder(ImageProcessorBase):
             h.set('peak2Position', low_x + peaks[4])
             h.set('peak2Fwhm', peaks[5])
             if peaks[3] > 0.0:
-                h.set('peakRatio', peaks[0]/peaks[3])
+                h.set('peakRatio', peaks[0] / peaks[3])
             self.set(h, ts)
 
             self.update_count()  # Success

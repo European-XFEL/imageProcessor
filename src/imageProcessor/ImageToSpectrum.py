@@ -177,7 +177,7 @@ class ImageToSpectrum(Device):
         accessMode=AccessMode.READONLY,
     )
 
-    @Slot(displayedName='Reset',  description="Reset error count.")
+    @Slot(displayedName='Reset', description="Reset error count.")
     async def resetError(self):
         self.errorCounter.error_counter.clear()
         self.errorCounter.evaluate_warn()
