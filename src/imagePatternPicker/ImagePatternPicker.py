@@ -172,13 +172,13 @@ class ImagePatternPicker(PythonDevice):
                 if self['state'] == State.ON:
                     self.updateState(State.PROCESSING)
 
-                if ((train_id % self[f'{node}.nBunchPatterns']) ==
-                   self[f'{node}.patternOffset']):
+                if ((train_id % self[f'{node}.nBunchPatterns'])
+                        == self[f'{node}.patternOffset']):
                     data['data.trainId'] = train_id
 
                     need_processing = (
-                        self[f'{node}.enableCrosshair'] or
-                        self[f'{node}.enableRotation'])
+                        self[f'{node}.enableCrosshair']
+                        or self[f'{node}.enableRotation'])
 
                     if not need_processing:
                         # forward image as it is
@@ -260,8 +260,8 @@ class ImagePatternPicker(PythonDevice):
     def on_camera_schema_update(self, deviceId, schema):
         # find all inputs connected to this updating schema device
         channels_key = [key for key in list(self.connections.keys())
-                        if deviceId ==
-                        self.connections[key]["device_id"]]
+                        if deviceId
+                        == self.connections[key]["device_id"]]
 
         # loop over connected inputs
         for key in channels_key:
@@ -389,24 +389,26 @@ class ImagePatternPicker(PythonDevice):
             .readOnly()
             .commit(),
         )
+
         if not skip_input:
             (
-             NODE_ELEMENT(data_in)
-             .key("data")
-             .displayedName("Data")
-             .commit(),
+                NODE_ELEMENT(data_in)
+                .key("data")
+                .displayedName("Data")
+                .commit(),
 
-             IMAGEDATA_ELEMENT(data_in)
-             .key("data.image")
-             .displayedName("Image")
-             .commit(),
+                IMAGEDATA_ELEMENT(data_in)
+                .key("data.image")
+                .displayedName("Image")
+                .commit(),
 
-             INPUT_CHANNEL(schema)
-             .key(f"{channel}.input")
-             .displayedName("Input")
-             .dataSchema(data_in)
-             .commit(),
+                INPUT_CHANNEL(schema)
+                .key(f"{channel}.input")
+                .displayedName("Input")
+                .dataSchema(data_in)
+                .commit(),
             )
+
         (
             NODE_ELEMENT(data_out)
             .key('data')
