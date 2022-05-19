@@ -11,7 +11,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, IMAGEDATA_ELEMENT,
     INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO, OVERWRITE_ELEMENT,
     SLOT_ELEMENT, STRING_ELEMENT, VECTOR_STRING_ELEMENT, Hash, MetricPrefix,
-    PythonDevice, Schema, State, Unit)
+    PythonDevice, Schema, State, Timestamp, Unit)
 from karabo.common.scenemodel.api import (
     BoxLayoutModel, CheckBoxModel, ComboBoxModel, DisplayLabelModel,
     DisplayStateColorModel, DoubleLineEditModel, ErrorBoolModel, LabelModel,
@@ -377,12 +377,15 @@ class SimpleImageProcessor(PythonDevice):
             self.log.INFO("Start of Stream")
             self.updateState(State.PROCESSING)
 
+        ts = Timestamp.fromHashAttributes(
+            metaData.getAttributes('timestamp'))
+
         if data.has('data.image'):
-            self.processImage(data['data.image'])
+            self.processImage(data['data.image'], ts)
         elif data.has('image'):
             # To ensure backward compatibility
             # with older versions of cameras
-            self.processImage(data['image'])
+            self.processImage(data['image'], ts)
         else:
             self.log.INFO("data does not have any image")
 
@@ -391,7 +394,7 @@ class SimpleImageProcessor(PythonDevice):
         self.set("frameRate", 0.)
         self.updateState(State.ON)
 
-    def processImage(self, imageData):
+    def processImage(self, imageData, ts):
         img_threshold = self.get("imageThreshold")
         thr_type = self.get("thresholdType")
         pix_thr = self.get("pixelThreshold")
@@ -592,7 +595,7 @@ class SimpleImageProcessor(PythonDevice):
         self.log.DEBUG("1-d Gaussian fit: done!")
 
         # Update device parameters (all at once)
-        self.set(h)
+        self.set(h, ts)
 
     def _is_threshold_valid(self, t_type, threshold):
         if t_type == "Relative" and threshold > 1:
