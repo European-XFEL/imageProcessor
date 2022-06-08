@@ -6,7 +6,6 @@
 
 import math
 import numpy
-import numpy as np
 import scipy.constants
 
 from karabo.common.api import KARABO_SCHEMA_DISPLAY_TYPE_SCENES as DT_SCENES
@@ -143,7 +142,7 @@ class AutoCorrelator(PythonDevice):
             .displayedName("Beam Shape")
             .description("Time shape of the beam.")
             .assignmentOptional().defaultValue("Gaussian Beam")
-            .options(','.join([k for k in 
+            .options(','.join([k for k in
                               DECONVOLUTION_FACTOR.keys()]), sep=",")
             .reconfigurable()
             .commit(),
@@ -369,7 +368,8 @@ class AutoCorrelator(PythonDevice):
         x_axis = numpy.linspace(0, len(img_x) - 1, len(img_x))
         # get pedestal if required
         if self["subtractPedestal"]:
-            alpha = (float(img_x[-1]) - float(img_x[0])) / (x_axis[-1] - x_axis[0])
+            alpha = (
+                float(img_x[-1]) - float(img_x[0])) / (x_axis[-1] - x_axis[0])
             ped_func = alpha * x_axis + img_x[0]
             img_x = numpy.subtract(img_x, ped_func)
 
