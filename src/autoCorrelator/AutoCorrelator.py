@@ -24,14 +24,14 @@ from ._version import version
 
 GAUSSIAN_FIT = "Gaussian Beam"
 HYP_SEC_FIT = "Sech^2 Beam"
+# shape-factor
+DECONVOLUTION_FACTOR = {
+    GAUSSIAN_FIT: 1 / math.sqrt(2),
+    HYP_SEC_FIT: 1 / 1.543}
 
 
 @KARABO_CLASSINFO("AutoCorrelator", version)
 class AutoCorrelator(PythonDevice):
-
-    # AKA shape-factor
-    deconvolution_factor = {GAUSSIAN_FIT: 1 / math.sqrt(2),
-                            HYP_SEC_FIT: 1 / 1.543}
 
     @staticmethod
     def expectedParameters(expected):
@@ -143,8 +143,7 @@ class AutoCorrelator(PythonDevice):
             .displayedName("Beam Shape")
             .description("Time shape of the beam.")
             .assignmentOptional().defaultValue("Gaussian Beam")
-            .options(','.join([k for k in AutoCorrelator.
-                              deconvolution_factor.keys()]), sep=",")
+            .options(','.join(DECONVOLUTION_FACTOR), ',')
             .reconfigurable()
             .commit(),
 
@@ -301,7 +300,7 @@ class AutoCorrelator(PythonDevice):
             recalculate_width = True
 
         if recalculate_width is True and self.current_fwhm is not None:
-            s_f = self.deconvolution_factor[beam_shape]
+            s_f = DECONVOLUTION_FACTOR[beam_shape]
             w3 = self.current_fwhm * s_f * calibration_factor
             ew3 = self.current_e_fwhm * s_f * calibration_factor
             h = Hash("pulseWidth", w3, "ePulseWidth", ew3)
@@ -369,7 +368,8 @@ class AutoCorrelator(PythonDevice):
         x_axis = numpy.linspace(0, len(img_x) - 1, len(img_x))
         # get pedestal if required
         if self["subtractPedestal"]:
-            alpha = (img_x[-1] - img_x[0]) / (x_axis[-1] - x_axis[0])
+            alpha = (
+                float(img_x[-1]) - float(img_x[0])) / (x_axis[-1] - x_axis[0])
             ped_func = alpha * x_axis + img_x[0]
             img_x = numpy.subtract(img_x, ped_func)
 
@@ -469,7 +469,7 @@ class AutoCorrelator(PythonDevice):
 
         try:
             calibration_factor = self.get("calibrationFactor")
-            s_f = self.deconvolution_factor[self.get("beamShape")]
+            s_f = DECONVOLUTION_FACTOR[self.get("beamShape")]
 
             image_array = imageData.getData()
             x3, s3, es3, fit_status = self.find_peak_fwhm(image_array)
