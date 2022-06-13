@@ -143,7 +143,7 @@ class AutoCorrelator(PythonDevice):
             .displayedName("Beam Shape")
             .description("Time shape of the beam.")
             .assignmentOptional().defaultValue("Gaussian Beam")
-            .options(','.join(DECONVOLUTION_FACTOR))
+            .options(','.join(DECONVOLUTION_FACTOR), ',')
             .reconfigurable()
             .commit(),
 
