@@ -25,8 +25,9 @@ from ._version import version
 GAUSSIAN_FIT = "Gaussian Beam"
 HYP_SEC_FIT = "Sech^2 Beam"
 # shape-factor
-DECONVOLUTION_FACTOR = {GAUSSIAN_FIT: 1 / math.sqrt(2),
-                        HYP_SEC_FIT: 1 / 1.543}
+DECONVOLUTION_FACTOR = {
+    GAUSSIAN_FIT: 1 / math.sqrt(2),
+    HYP_SEC_FIT: 1 / 1.543}
 
 
 @KARABO_CLASSINFO("AutoCorrelator", version)
@@ -142,8 +143,7 @@ class AutoCorrelator(PythonDevice):
             .displayedName("Beam Shape")
             .description("Time shape of the beam.")
             .assignmentOptional().defaultValue("Gaussian Beam")
-            .options(','.join([k for k in
-                              DECONVOLUTION_FACTOR.keys()]), sep=",")
+            .options(','.join([k for k in DECONVOLUTION_FACTOR.keys())
             .reconfigurable()
             .commit(),
 
