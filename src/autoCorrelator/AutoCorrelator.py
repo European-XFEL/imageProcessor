@@ -22,6 +22,9 @@ from image_processing import image_processing
 from .overview import generate_scene
 from ._version import version
 
+DEVICE_SCENES = {
+    "scene": generate_scene}
+
 GAUSSIAN_FIT = "Gaussian Beam"
 HYP_SEC_FIT = "Sech^2 Beam"
 # shape-factor
@@ -46,7 +49,7 @@ class AutoCorrelator(PythonDevice):
 
             VECTOR_STRING_ELEMENT(expected).key('availableScenes')
             .setSpecialDisplayType(DT_SCENES)
-            .readOnly().initialValue(['scene'])
+            .readOnly().initialValue(list(DEVICE_SCENES))
             .commit(),
 
             INPUT_CHANNEL(expected).key("input")
@@ -272,15 +275,14 @@ class AutoCorrelator(PythonDevice):
         :param params: A `Hash` containing the method parameters
         """
         payload = Hash('success', False)
-
         name = params.get('name', default='')
-        if name == 'scene':
-            payload.set('success', True)
-            payload.set('name', name)
-            payload.set('data', generate_scene(self))
-            self.reply(Hash('type', 'deviceScene', 'origin',
-                            self.getInstanceId(),
-                            'payload', payload))
+        scene_func = DEVICE_SCENES.get(name)
+        payload.set('success', True)
+        payload.set('name', name)
+        payload.set('data', scene_func(self))
+        self.reply(Hash('type', 'deviceScene', 'origin',
+                        self.getInstanceId(),
+                        'payload', payload))
 
     def preReconfigure(self, input_config):
         self.log.INFO("preReconfigure")
