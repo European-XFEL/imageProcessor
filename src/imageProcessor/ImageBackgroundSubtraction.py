@@ -10,11 +10,9 @@ import numpy as np
 from PIL import Image
 
 from karabo.bound import (
-    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, PATH_ELEMENT, SLOT_ELEMENT,
-    State, Timestamp
+    BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, State, STRING_ELEMENT,
+    Timestamp, UINT32_ELEMENT
 )
-
-from image_processing.image_processing import imageSubtractBackground
 
 try:
     from .common import ImageProcOutputInterface
@@ -39,7 +37,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
-            PATH_ELEMENT(expected).key('imageFilename')
+            STRING_ELEMENT(expected).key('imageFilename')
             .displayedName("Image Filename")
             .description("The full filename to the background image. "
                          "File format must be 'npy', 'raw' or TIFF.")
@@ -67,6 +65,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .description("Use the current image as background image.")
             .commit(),
 
+            UINT32_ELEMENT(expected).key('offset')
+            .displayedName("Offset")
+            .description("The offset to be added to the input image, before "
+                         "doing the background subtraction.")
+            .assignmentOptional().defaultValue(100)
+            .reconfigurable()
+            .commit(),
         )
 
     def __init__(self, configuration):
@@ -136,10 +141,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         try:
             self.current_image = image_data.getData()  # np.ndarray
             # Copy current image, before doing any processing
-            # Also, convert it to float in order to allow negative values
-            img = self.current_image.astype('float')
-            bpp = image_data.getBitsPerPixel()
-            encoding = image_data.getEncoding()
+            # Also, convert it to float in order to avoid over- and underflows
+            img = self.current_image.astype(np.float32)
+            d_type = self.current_image.dtype
 
             disable = self['disable']
             if disable:
@@ -155,13 +159,21 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 return
 
             if self.bkg_image.shape == img.shape:
-                # Subtract background image
-                imageSubtractBackground(img, self.bkg_image)
+                if d_type.kind in ('i', 'u'):  # integer type
+                    max_value = np.iinfo(d_type).max
+                elif d_type.kind == 'f':  # floating point
+                    max_value = np.finfo(d_type).max
+                else:
+                    max_value = None
+
+                # Add offset, subtract background, clip, and finally cast to
+                # the original dtype
+                img = (img + self['offset'] - self.bkg_image).clip(
+                    min=0, max=max_value).astype(d_type)
 
                 self.log.DEBUG("Background image subtracted")
 
-                image_data = ImageData(img, bitsPerPixel=bpp,
-                                       encoding=encoding)
+                image_data.setData(img)
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Image sent to output channel")
                 self.update_count()  # Success
