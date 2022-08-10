@@ -41,7 +41,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .displayedName("Image Filename")
             .description("The full filename to the background image. "
                          "File format must be 'npy', 'raw' or TIFF.")
-            .assignmentOptional().defaultValue("background.npy")
+            .assignmentOptional().noDefaultValue()
             .reconfigurable()
             .commit(),
 
@@ -93,6 +93,12 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         self.KARABO_SLOT(self.save)
         self.KARABO_SLOT(self.load)
         self.KARABO_SLOT(self.useAsBackgroundImage)
+
+        if 'imageFilename' not in configuration:
+            device_id = self['deviceId']
+            fname = device_id.replace('/', '_')
+            fname = f'{fname}.npy'
+            configuration['imageFilename'] = fname
 
     ##############################################
     #   Implementation of Callbacks              #
