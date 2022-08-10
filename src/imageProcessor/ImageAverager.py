@@ -6,8 +6,8 @@ Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
 import numpy as np
 
 from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, ImageData, KARABO_CLASSINFO, SLOT_ELEMENT,
-    State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, DOUBLE_ELEMENT, ImageData, KARABO_CLASSINFO,
+    SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_exp_running_average import (
@@ -167,8 +167,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
     def process_image(self, input_image, ts):
         try:
             pixels = input_image.getData()
-            bpp = input_image.getBitsPerPixel()
-            encoding = input_image.getEncoding()
             d_type = str(pixels.dtype)
 
             # Compute average
@@ -188,10 +186,9 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                 elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                     self.image_exp_running_mean.append(pixels, n_images)
                     pixels = self.image_exp_running_mean.mean.astype(d_type)
-                image_data = ImageData(pixels, bitsPerPixel=bpp,
-                                       encoding=encoding)
+                input_image.setData(pixels)
 
-                self.writeImageToOutputs(image_data, ts)
+                self.writeImageToOutputs(input_image, ts)
                 self.update_count()  # Success
                 self.refresh_frame_rate_out()
                 return
@@ -200,10 +197,9 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                 self.image_standard_mean.append(pixels)
                 if self.image_standard_mean.size >= n_images:
                     pixels = self.image_standard_mean.mean.astype(d_type)
-                    image_data = ImageData(pixels, bitsPerPixel=bpp,
-                                           encoding=encoding)
+                    input_image.setData(pixels)
 
-                    self.writeImageToOutputs(image_data, ts)
+                    self.writeImageToOutputs(input_image, ts)
                     self.update_count()  # Success
                     self.refresh_frame_rate_out()
 
