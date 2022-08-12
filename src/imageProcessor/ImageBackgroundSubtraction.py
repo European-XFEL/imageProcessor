@@ -4,14 +4,16 @@
 # Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 #############################################################################
 
+import copy
 import os.path
-
 import numpy as np
+
 from PIL import Image
+from threading import Lock
 
 from karabo.bound import (
     BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, State, STRING_ELEMENT,
-    Timestamp, UINT32_ELEMENT
+    Timestamp, UINT32_ELEMENT, Unit
 )
 
 try:
@@ -61,8 +63,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .commit(),
 
             SLOT_ELEMENT(expected).key('useAsBackgroundImage')
-            .displayedName("Current Image as Background")
-            .description("Use the current image as background image.")
+            .displayedName("Current Image(s) as Background")
+            .description("Use the average of 'nImages' for the background "
+                         "subtraction.")
             .commit(),
 
             UINT32_ELEMENT(expected).key('offset')
@@ -70,6 +73,15 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .description("The offset to be added to the input image, before "
                          "doing the background subtraction.")
             .assignmentOptional().defaultValue(100)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key('nImages')
+            .displayedName('Number of Background Images')
+            .description('Number of background images to be averaged.')
+            .unit(Unit.NUMBER)
+            .assignmentOptional().defaultValue(10)
+            .minInc(1).maxInc(100)
             .reconfigurable()
             .commit(),
         )
@@ -83,6 +95,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
         # Background image
         self.bkg_image = None
+
+        self.avg_bkg_image = None  # Background average
+        self.n_images = 0
+        self.update_avg = False  # Average needs update
+        self.avg_lock = Lock()  # Lock for bkg image and avg
 
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
@@ -99,6 +116,17 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             fname = device_id.replace('/', '_')
             fname = f'{fname}.npy'
             configuration['imageFilename'] = fname
+
+    def preReconfigure(self, incomingReconfiguration):
+        if 'nImages' in incomingReconfiguration:
+            self.reset_background()
+
+    def reset_background(self, recalculate=True):
+        with self.avg_lock:
+            self.update_avg = recalculate  # Recalculate average
+            self.n_images = 0
+            self.avg_bkg_image = None
+            self.bkg_image = None
 
     ##############################################
     #   Implementation of Callbacks              #
@@ -151,44 +179,62 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             img = self.current_image.astype(np.float32)
             d_type = self.current_image.dtype
 
-            disable = self['disable']
-            if disable:
-                self.log.DEBUG("Background subtraction disabled!")
-                self.writeImageToOutputs(image_data, ts)
-                self.log.DEBUG("Original image copied to output channel")
-                return
+            with self.avg_lock:
+                if self.update_avg:
+                    # Calculate background image average
+                    n_images = self['nImages']
+                    if self.n_images == 0:
+                        self.avg_bkg_image = copy.deepcopy(img)
+                        self.n_images = 1
+                    elif self.n_images < n_images:
+                        self.avg_bkg_image += img
+                        self.n_images += 1
 
-            if self.bkg_image is None:
-                self.log.DEBUG("No background image loaded!")
-                self.writeImageToOutputs(image_data, ts)
-                self.log.DEBUG("Original image copied to output channel")
-                return
+                    if self.n_images == n_images:
+                        self.update_avg = False
+                        self.avg_bkg_image /= n_images
+                        self.bkg_image = self.avg_bkg_image
+                    else:
+                        self.log.DEBUG("Calculating background...")
+                        return
 
-            if self.bkg_image.shape == img.shape:
-                if d_type.kind in ('i', 'u'):  # integer type
-                    max_value = np.iinfo(d_type).max
-                elif d_type.kind == 'f':  # floating point
-                    max_value = np.finfo(d_type).max
+                disable = self['disable']
+                if disable:
+                    self.log.DEBUG("Background subtraction disabled!")
+                    self.writeImageToOutputs(image_data, ts)
+                    self.log.DEBUG("Original image copied to output channel")
+                    return
+
+                if self.bkg_image is None:
+                    self.log.DEBUG("No background image loaded!")
+                    self.writeImageToOutputs(image_data, ts)
+                    self.log.DEBUG("Original image copied to output channel")
+                    return
+
+                if self.bkg_image.shape == img.shape:
+                    if d_type.kind in ('i', 'u'):  # integer type
+                        max_value = np.iinfo(d_type).max
+                    elif d_type.kind == 'f':  # floating point
+                        max_value = np.finfo(d_type).max
+                    else:
+                        max_value = None
+
+                    # Add offset, subtract background, clip, and finally cast
+                    # to the original dtype
+                    img = (img + self['offset'] - self.bkg_image).clip(
+                        min=0, max=max_value).astype(d_type)
+
+                    self.log.DEBUG("Background image subtracted")
+
+                    image_data.setData(img)
+                    self.writeImageToOutputs(image_data, ts)
+                    self.log.DEBUG("Image sent to output channel")
+                    self.update_count()  # Success
+
                 else:
-                    max_value = None
-
-                # Add offset, subtract background, clip, and finally cast to
-                # the original dtype
-                img = (img + self['offset'] - self.bkg_image).clip(
-                    min=0, max=max_value).astype(d_type)
-
-                self.log.DEBUG("Background image subtracted")
-
-                image_data.setData(img)
-                self.writeImageToOutputs(image_data, ts)
-                self.log.DEBUG("Image sent to output channel")
-                self.update_count()  # Success
-
-            else:
-                msg = ("Cannot subtract background image... shapes are "
-                       "different: {} != {}"
-                       .format(self.bkg_image.shape, img.shape))
-                self.update_count(error=True, msg=msg)
+                    msg = ("Cannot subtract background image... shapes are "
+                           f"different: {self.bkg_image.shape} != {img.shape}")
+                    self.update_count(error=True, msg=msg)
 
         except Exception as e:
             msg = "Exception caught in process_image: {}".format(e)
@@ -200,44 +246,46 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
     def resetBackgroundImage(self):
         self.log.INFO("Reset background image")
-        self.bkg_image = None
+        self.reset_background(recalculate=False)
 
     def save(self):
         self.log.INFO("Save background image to file")
 
-        if self.bkg_image is None:
-            self.log.WARN("No background image loaded!")
-            return
+        with self.avg_lock:
+            if self.bkg_image is None:
+                self.log.WARN("No background image loaded!")
+                return
 
-        try:
-            # Try to save image file
-            filename = self['imageFilename']
-            extension = os.path.splitext(filename)[1]
+            try:
+                # Try to save image file
+                filename = self['imageFilename']
+                extension = os.path.splitext(filename)[1]
 
-            if extension in ('.npy', '.NPY'):
-                self.bkg_image.dump(filename)
-                self.log.INFO('Background image saved to file ' + filename)
-
-            elif extension in ('.raw', ".RAW"):
-                self.bkg_image.tofile(filename)
-                self.log.INFO('Background image saved to file ' + filename)
-
-            elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
-                if self.bkg_image.dtype == 'uint8':
-                    pilImage = Image.fromarray(self.bkg_image)
-                    pilImage.save(filename)
+                if extension in ('.npy', '.NPY'):
+                    self.bkg_image.dump(filename)
                     self.log.INFO('Background image saved to file ' + filename)
-                else:
-                    raise RuntimeError("dtype must be uint8 but is {}"
-                                       .format(self.bkg_image.dtype))
-            else:
-                raise RuntimeError("unsupported file type {}"
-                                   .format(filename))
 
-        except Exception as e:
-            self.log.ERROR("Exception caught in save: {}".format(e))
-            if self['state'] != State.ERROR:
-                self.updateState(State.ERROR)
+                elif extension in ('.raw', ".RAW"):
+                    self.bkg_image.tofile(filename)
+                    self.log.INFO('Background image saved to file ' + filename)
+
+                elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
+                    if self.bkg_image.dtype == 'uint8':
+                        pilImage = Image.fromarray(self.bkg_image)
+                        pilImage.save(filename)
+                        self.log.INFO(
+                            'Background image saved to file ' + filename)
+                    else:
+                        raise RuntimeError("dtype must be uint8 but is {}"
+                                           .format(self.bkg_image.dtype))
+                else:
+                    raise RuntimeError("unsupported file type {}"
+                                       .format(filename))
+
+            except Exception as e:
+                self.log.ERROR("Exception caught in save: {}".format(e))
+                if self['state'] != State.ERROR:
+                    self.updateState(State.ERROR)
 
     def load(self):
         self.log.DEBUG("Load background image from file")
@@ -248,10 +296,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             extension = os.path.splitext(filename)[1]
 
             if extension in ('.npy', '.NPY'):
-                data = np.load(filename)
+                data = np.load(filename, allow_pickle=True)
                 self.log.INFO("Background image loaded from file {}"
                               .format(filename))
-                self.bkg_image = data
+                with self.avg_lock:
+                    self.bkg_image = data
 
             elif extension in ('.raw', ".RAW"):
                 if self.current_image is None:
@@ -266,14 +315,16 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     data = np.fromfile(filename, dtype=d_type).reshape(shape)
                     self.log.INFO("Background image loaded from file {}"
                                   .format(filename))
-                    self.bkg_image = data
+                    with self.avg_lock:
+                        self.bkg_image = data
 
             elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                 pil_image = Image.open(filename)
                 data = np.array(pil_image)
                 self.log.INFO("Background image loaded from file {}"
                               .format(filename))
-                self.bkg_image = data
+                with self.avg_lock:
+                    self.bkg_image = data
 
             else:
                 raise RuntimeError("unsupported file type {}"
@@ -285,13 +336,5 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 self.updateState(State.ERROR)
 
     def useAsBackgroundImage(self):
-        self.log.DEBUG("Use current image as background")
-        if self.current_image is not None:
-            # Copy current image to background image
-            self.bkg_image = np.copy(self.current_image)
-            self.log.INFO("Current image loaded as background")
-        else:
-            self.log.WARN("No current image available to be used as "
-                          "background")
-            if self['state'] != State.ERROR:
-                self.updateState(State.ERROR)
+        self.log.INFO("Use current image(s) as background")
+        self.reset_background()
