@@ -230,4 +230,4 @@ class ImageProcessorBase(PythonDevice):
         fps_in = self.frame_rate_in.refresh()
         if fps_in:
             self['inFrameRate'] = fps_in
-            self.log.DEBUG("Input rate {} Hz".format(fps_in))
+            self.log.DEBUG(f"Input rate {fps_in} Hz")

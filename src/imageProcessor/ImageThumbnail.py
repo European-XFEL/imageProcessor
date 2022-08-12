@@ -98,7 +98,7 @@ class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
             return
 
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 

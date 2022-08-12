@@ -147,7 +147,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 
@@ -174,7 +174,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                             {'ts': ts, 'imageData': image_data})
 
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
 
     def onDataTrainId(self, data, metaData):
@@ -245,7 +245,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                         break
             except Exception as e:
                 raise RuntimeError("searchForMatch() got unexpected "
-                                   "exception: {}".format(e))
+                                   f"exception: {e}")
 
         return match_found
 
@@ -254,7 +254,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         fps_out = self.frame_rate_out.refresh()
         if fps_out:
             self['outFrameRate'] = fps_out
-            self.log.DEBUG("Output rate {} Hz".format(fps_out))
+            self.log.DEBUG(f"Output rate {fps_out} Hz")
 
     def cleanup_image_queue(self, tid):
         """
@@ -268,7 +268,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                 break
 
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream on channel {}".format(inputChannel))
+        self.log.INFO(f"End of Stream on channel {inputChannel}")
 
         self.is_channel_active[inputChannel] = False
         self['errorCount'] = 0

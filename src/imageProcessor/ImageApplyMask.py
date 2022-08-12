@@ -117,7 +117,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 
@@ -169,8 +169,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
                     else:
                         msg = ("Cannot apply mask... shapes are different: "
-                               "{} != {}"
-                               .format(self.bkg_image.shape, img.shape))
+                               f"{self.bkg_image.shape} != {img.shape}")
                         raise RuntimeError(msg)
 
             elif mask_type == "rectangular":
@@ -179,7 +178,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                     img = imageSelectRegion(img, *x1x2y1y2, copy=True)
                 else:
                     msg = ("Cannot apply rectangular region, as "
-                           "image.ndim: {}".format(img.ndim))
+                           f"image.ndim: {img.ndim}")
                     raise RuntimeError(msg)
 
                 self.log.DEBUG("Rectangular region selected")
@@ -189,11 +188,11 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 return
 
             else:
-                msg = "Unknown option for maskType: {}".format(mask_type)
+                msg = f"Unknown option for maskType: {mask_type}"
                 raise RuntimeError(msg)
 
         except Exception as e:
-            msg = "Exception caught in process_image: {}".format(e)
+            msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
 
     ##############################################
@@ -234,15 +233,14 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
             elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                 pil_image = Image.open(filename)
                 data = np.array(pil_image)
-                self.log.INFO("Mask loaded from file {}".format(filename))
+                self.log.INFO(f"Mask loaded from file {filename}")
                 self.mask_image = data
 
             else:
-                raise RuntimeError("Cannot load mask from {}: "
-                                   "unsupported image format"
-                                   .format(filename))
+                raise RuntimeError(f"Cannot load mask from {filename}: "
+                                   "unsupported image format")
 
         except Exception as e:
-            self.log.ERROR("Exception caught in loadMask: {}".format(e))
+            self.log.ERROR(f"Exception caught in loadMask: {e}")
             if self['state'] != State.ERROR:
                 self.updateState(State.ERROR)
