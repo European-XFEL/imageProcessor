@@ -144,7 +144,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                 self.process_ndarray(np.array(image_data), ts)
 
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 
@@ -162,7 +162,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         fps_out = self.frame_rate_out.refresh()
         if fps_out:
             self['outFrameRate'] = fps_out
-            self.log.DEBUG("Output rate {} Hz".format(fps_out))
+            self.log.DEBUG(f"Output rate {fps_out} Hz")
 
     def process_image(self, input_image, ts):
         try:
@@ -207,7 +207,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                     return
 
         except Exception as e:
-            msg = "Exception caught in process_image: {}".format(e)
+            msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
 
     def process_ndarray(self, array, ts):
@@ -231,7 +231,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                     array = self.image_standard_mean.mean.astype(np.float64)
                     self.image_standard_mean.clear()
         except Exception as e:
-            msg = "Exception caught in process_ndarray: {}".format(e)
+            msg = f"Exception caught in process_ndarray: {e}"
             self.update_count(error=True, msg=msg)
         else:
             self.writeNDArrayToOutputs(array, ts)

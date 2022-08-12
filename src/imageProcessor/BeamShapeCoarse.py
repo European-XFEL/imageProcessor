@@ -111,7 +111,7 @@ class BeamShapeCoarse(Device):
                 self.status = "PROCESSING"
         except Exception as e:
             if self.errorCounter.warnCondition == 0:
-                msg = "Exception while processing input image: {}".format(e)
+                msg = f"Exception while processing input image: {e}"
                 # Only update if not yet in WARN
                 self.status = msg
                 self.log.ERROR(msg)

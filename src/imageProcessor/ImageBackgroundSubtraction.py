@@ -149,7 +149,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 
@@ -237,7 +237,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     self.update_count(error=True, msg=msg)
 
         except Exception as e:
-            msg = "Exception caught in process_image: {}".format(e)
+            msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
 
     ##############################################
@@ -276,14 +276,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                         self.log.INFO(
                             'Background image saved to file ' + filename)
                     else:
-                        raise RuntimeError("dtype must be uint8 but is {}"
-                                           .format(self.bkg_image.dtype))
+                        raise RuntimeError("dtype must be uint8 but is "
+                                           f"{self.bkg_image.dtype}")
                 else:
-                    raise RuntimeError("unsupported file type {}"
-                                       .format(filename))
+                    raise RuntimeError(f"unsupported file type {filename}")
 
             except Exception as e:
-                self.log.ERROR("Exception caught in save: {}".format(e))
+                self.log.ERROR(f"Exception caught in save: {e}")
                 if self['state'] != State.ERROR:
                     self.updateState(State.ERROR)
 
@@ -297,8 +296,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
             if extension in ('.npy', '.NPY'):
                 data = np.load(filename, allow_pickle=True)
-                self.log.INFO("Background image loaded from file {}"
-                              .format(filename))
+                self.log.INFO(f"Background image loaded from file {filename}")
                 with self.avg_lock:
                     self.bkg_image = data
 
@@ -313,25 +311,23 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     shape = self.current_image.shape
                     d_type = self.current_image.dtype
                     data = np.fromfile(filename, dtype=d_type).reshape(shape)
-                    self.log.INFO("Background image loaded from file {}"
-                                  .format(filename))
+                    self.log.INFO(
+                        f"Background image loaded from file {filename}")
                     with self.avg_lock:
                         self.bkg_image = data
 
             elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                 pil_image = Image.open(filename)
                 data = np.array(pil_image)
-                self.log.INFO("Background image loaded from file {}"
-                              .format(filename))
+                self.log.INFO(f"Background image loaded from file {filename}")
                 with self.avg_lock:
                     self.bkg_image = data
 
             else:
-                raise RuntimeError("unsupported file type {}"
-                                   .format(filename))
+                raise RuntimeError(f"unsupported file type {filename}")
 
         except Exception as e:
-            self.log.ERROR("Exception caught in load: {}".format(e))
+            self.log.ERROR(f"Exception caught in load: {e}")
             if self['state'] != State.ERROR:
                 self.updateState(State.ERROR)
 

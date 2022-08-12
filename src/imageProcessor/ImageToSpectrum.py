@@ -118,7 +118,7 @@ class ImageToSpectrum(Device):
         except Exception as e:
             spectrum = np.full((1,), np.nan)
             self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
-            msg = "Exception while processing input image: {}".format(e)
+            msg = f"Exception while processing input image: {e}"
             if self.errorCounter.warnCondition == 0:
                 # Only update if not yet in WARN
                 self.status = msg
@@ -152,8 +152,8 @@ class ImageToSpectrum(Device):
         if self.valid_roi(value):
             self.roi = value
         elif self.roi.value is None:
-            self.logger.error("Invalid initial ROI = {}, reset to "
-                              "default.".format(value.value))
+            self.logger.error(f"Invalid initial ROI = {value.value}, reset to "
+                              "default.")
             self.roi = self.roi_default
         else:
             self.logger.error("Invalid ROI: Cannot apply changes")

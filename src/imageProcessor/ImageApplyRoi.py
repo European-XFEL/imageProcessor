@@ -69,7 +69,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
             valid = self.valid_roi(roi)
             if valid:
                 self['disable'] = False
-                self.log.INFO("Applying new roi {}".format(roi))
+                self.log.INFO(f"Applying new roi {roi}")
             else:
                 incomingReconfiguration.erase("roi")
                 self.log.ERROR("New ROI is invalid -> rejected")
@@ -89,7 +89,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
             return
 
@@ -137,7 +137,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
             return
 
         except Exception as e:
-            msg = "Exception caught in process_image: {}".format(e)
+            msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
 
     @staticmethod
