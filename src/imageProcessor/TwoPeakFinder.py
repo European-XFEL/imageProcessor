@@ -147,7 +147,7 @@ class TwoPeakFinder(ImageProcessorBase):
             self.process_image(image_data, ts)  # Process image
 
         except Exception as e:
-            msg = "Exception caught in onData: {}".format(e)
+            msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, msg=msg)
 
     def onEndOfStream(self, inputChannel):
@@ -197,5 +197,5 @@ class TwoPeakFinder(ImageProcessorBase):
             self.update_count()  # Success
 
         except Exception as e:
-            msg = "Exception caught in process_image: {}".format(e)
+            msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
