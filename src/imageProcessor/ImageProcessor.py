@@ -1024,8 +1024,7 @@ class ImageProcessor(ImageProcessorBase):
                 image_width = dims[0]
                 is_2d_image = False
             else:
-                self.log.DEBUG("Neither image nor spectrum. dims="
-                               "{}".format(dims))
+                self.log.DEBUG(f"Neither image nor spectrum: dims={dims}")
 
             if image_width != self.get("imageWidth"):
                 h.set("imageWidth", image_width)

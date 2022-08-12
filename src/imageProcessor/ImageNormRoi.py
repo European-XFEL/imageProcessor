@@ -139,8 +139,8 @@ class ImageNormRoi(Device):
         defaultValue=roi_default)
     def roiSize(self, value):
         if value is None:
-            self.logger.error("Invalid initial ROI = {}, reset to "
-                              "default.".format(value.value))
+            self.logger.error(f"Invalid initial ROI = {value.value}, reset to "
+                              "default.")
             self.roiSize = [0, 0]
             return
 
