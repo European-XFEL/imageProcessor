@@ -88,7 +88,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImageBackgroundSubtraction, self).__init__(configuration)
+        super().__init__(configuration)
 
         # Current image
         self.current_image = None
@@ -167,7 +167,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts):
         self.refresh_frame_rate_in()
@@ -206,9 +206,10 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     return
 
                 if self.bkg_image is None:
-                    self.log.DEBUG("No background image loaded!")
-                    self.writeImageToOutputs(image_data, ts)
-                    self.log.DEBUG("Original image copied to output channel")
+                    msg = "Dropping images as no bkg is loaded"
+                    if self['status'] != msg:
+                        self['status'] = msg
+                        self.log.WARN(msg)
                     return
 
                 if self.bkg_image.shape == img.shape:
@@ -231,6 +232,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     self.log.DEBUG("Image sent to output channel")
                     self.update_count()  # Success
 
+                    if self['status'] != "Processing":
+                        self['status'] = "Processing"
+
                 else:
                     msg = ("Cannot subtract background image... shapes are "
                            f"different: {self.bkg_image.shape} != {img.shape}")
@@ -249,14 +253,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         self.reset_background(recalculate=False)
 
     def save(self):
-        self.log.INFO("Save background image to file")
+        self.log.DEBUG("Save background image to file")
 
         with self.avg_lock:
-            if self.bkg_image is None:
-                self.log.WARN("No background image loaded!")
-                return
-
             try:
+                if self.bkg_image is None:
+                    raise RuntimeError("no bkg to be saved!")
+
                 # Try to save image file
                 filename = self['imageFilename']
                 extension = os.path.splitext(filename)[1]
@@ -282,9 +285,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     raise RuntimeError(f"unsupported file type {filename}")
 
             except Exception as e:
-                self.log.ERROR(f"Exception caught in save: {e}")
+                msg = f"Exception in save: {e}"
+                self['status'] = msg
                 if self['state'] != State.ERROR:
                     self.updateState(State.ERROR)
+                raise
 
     def load(self):
         self.log.DEBUG("Load background image from file")
@@ -327,9 +332,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError(f"unsupported file type {filename}")
 
         except Exception as e:
-            self.log.ERROR(f"Exception caught in load: {e}")
+            msg = f"Exception in load: {e}"
+            self['status'] = msg
             if self['state'] != State.ERROR:
                 self.updateState(State.ERROR)
+            raise
 
     def useAsBackgroundImage(self):
         self.log.INFO("Use current image(s) as background")
