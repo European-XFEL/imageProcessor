@@ -203,10 +203,13 @@ class ImagePatternPicker(PythonDevice):
                             y0 = self[f'{node}.crosshairY']
                             center = (x0, y0)
 
-                            ext_size = max(10, int(0.025 * max(image.shape)))
+                            if self[f'{node}.crosshairAutoSize']:
+                                ext_size = max(10, max(image.shape) // 40)
+                            else:
+                                ext_size = self[f'{node}.crosshairSize']
                             int_size = ext_size // 3
                             color = round(image.max() // 2)
-                            thickness = max(2, int(0.005 * max(image.shape)))
+                            thickness = max(2, ext_size // 5)
 
                             crosshair(image, center, ext_size, int_size, color,
                                       thickness)
@@ -347,6 +350,23 @@ class ImagePatternPicker(PythonDevice):
             .displayedName("Crosshair Y position")
             .assignmentOptional().defaultValue(0)
             .adminAccess()
+            .reconfigurable()
+            .commit(),
+
+            BOOL_ELEMENT(schema).key(f"{channel}.crosshairAutoSize")
+            .displayedName("Crosshair Auto-Size")
+            .description("The crosshair size will be calculated from the "
+                         "image size.")
+            .assignmentOptional().defaultValue(True)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(schema).key(f"{channel}.crosshairSize")
+            .displayedName("Cross-Hair Size")
+            .description("The crosshair size. This property will be ignored "
+                         "if the 'Auto-Size' option is selected.")
+            .assignmentOptional().defaultValue(30)
+            .unit(Unit.PIXEL)
             .reconfigurable()
             .commit(),
 
