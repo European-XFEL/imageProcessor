@@ -103,7 +103,8 @@ class ImageToSpectrum(Device):
                 # In case of [0, 0, 0 , 0] no ROI is applied
                 cropped_image = image
             else:
-                cropped_image = image[low_y:high_y, low_x:high_x]
+                cropped_image = image[int(low_y):int(high_y),
+                                      int(low_x):int(high_x)]
 
             # Calculate spectrum
             spectrum = self.calculate_spectrum(cropped_image)
