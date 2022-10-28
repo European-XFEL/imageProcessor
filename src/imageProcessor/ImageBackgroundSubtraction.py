@@ -206,10 +206,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     return
 
                 if self.bkg_image is None:
-                    msg = "Dropping images as no bkg is loaded"
+                    msg = (
+                        "No bkg is loaded: original image copied to output "
+                        "channel")
                     if self['status'] != msg:
                         self['status'] = msg
                         self.log.WARN(msg)
+                    self.writeImageToOutputs(image_data, ts)
                     return
 
                 if self.bkg_image.shape == img.shape:
