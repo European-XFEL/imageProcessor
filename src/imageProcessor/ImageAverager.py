@@ -57,6 +57,16 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
+            BOOL_ELEMENT(expected).key('convertToFloat')
+            .displayedName('Convert to Float')
+            .description('Use floating point pixel values for the '
+                         'averaged image instead of the source type')
+            .assignmentOptional().defaultValue(False)
+            .expertAccess()
+            .reconfigurable()
+            .allowedStates(State.ON)
+            .commit(),
+
             BOOL_ELEMENT(expected).key('runningAverage')
             .displayedName('Running Average')
             .description('Calculate running average (instead of '
@@ -86,7 +96,8 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
     def __init__(self, configuration):
         # always call superclass constructor first!
         super(ImageAverager, self).__init__(configuration)
-        self.is_image_data = False
+        self.is_image_data = None
+        self.is_ndarray = None
 
         # Get an instance of the mean calculator
         self.image_running_mean = ImageRunningMean()
@@ -134,14 +145,15 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                 metaData.getAttributes('timestamp'))
 
             if first_image:
-                # Update schema
                 self.is_image_data = isinstance(image_data, ImageData)
-                self.updateOutputSchema(image_data)
+                self.is_ndarray = isinstance(image_data, np.ndarray)
 
             if self.is_image_data:
-                self.process_image(image_data, ts)
+                self.process_image(image_data, ts, first_image)
+            elif self.is_ndarray:
+                self.process_ndarray(image_data, ts, first_image)
             else:
-                self.process_ndarray(np.array(image_data), ts)
+                self.process_ndarray(np.array(image_data), ts, first_image)
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
@@ -164,44 +176,47 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             self['outFrameRate'] = fps_out
             self.log.DEBUG(f"Output rate {fps_out} Hz")
 
-    def process_image(self, input_image, ts):
+    def process_image(self, input_image, ts, first_image):
         try:
             pixels = input_image.getData()
-            d_type = str(pixels.dtype)
+            in_dtype = pixels.dtype
+            if self['convertToFloat']:
+                out_dtype = np.float32
+            else:
+                out_dtype = in_dtype
 
             # Compute average
             n_images = self['nImages']
             running_average = self['runningAverage']
             if n_images == 1:
                 # No averaging needed
-                self.writeImageToOutputs(input_image, ts)
-                self.update_count()  # Success
-                self.refresh_frame_rate_out()
+                if in_dtype != out_dtype:
+                    pixels = pixels.astype(out_dtype)
+                    input_image.setData(pixels)
+                self.write_image(input_image, ts, first_image)
                 return
 
             elif running_average:
                 if self['runningAvgMethod'] == 'ExactRunningAverage':
                     self.image_running_mean.append(pixels, n_images)
-                    pixels = self.image_running_mean.runningMean.astype(d_type)
+                    pixels = self.image_running_mean.runningMean
                 elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                     self.image_exp_running_mean.append(pixels, n_images)
-                    pixels = self.image_exp_running_mean.mean.astype(d_type)
+                    pixels = self.image_exp_running_mean.mean
+                if pixels.dtype != out_dtype:
+                    pixels = pixels.astype(out_dtype)
                 input_image.setData(pixels)
-
-                self.writeImageToOutputs(input_image, ts)
-                self.update_count()  # Success
-                self.refresh_frame_rate_out()
+                self.write_image(input_image, ts, first_image)
                 return
 
             else:
                 self.image_standard_mean.append(pixels)
                 if self.image_standard_mean.size >= n_images:
-                    pixels = self.image_standard_mean.mean.astype(d_type)
+                    pixels = self.image_standard_mean.mean
+                    if pixels.dtype != out_dtype:
+                        pixels = pixels.astype(out_dtype)
                     input_image.setData(pixels)
-
-                    self.writeImageToOutputs(input_image, ts)
-                    self.update_count()  # Success
-                    self.refresh_frame_rate_out()
+                    self.write_image(input_image, ts, first_image)
 
                     self.image_standard_mean.clear()
                     return
@@ -210,9 +225,29 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
 
-    def process_ndarray(self, array, ts):
+    def write_image(self, image, ts, first_image):
+        """This function will: 1. update the device schema (if needed);
+        2. write the image to the output channels; 3. refresh the error count
+        and frame rates."""
+
+        if first_image:
+            # Update schema
+            self.updateOutputSchema(image)
+
+        self.writeImageToOutputs(image, ts)
+        self.update_count()  # Success
+        self.refresh_frame_rate_out()
+
+    def process_ndarray(self, array, ts, first_image):
         n_images = self['nImages']
         running_average = self['runningAverage']
+
+        in_dtype = array.dtype
+        if self['convertToFloat']:
+            out_dtype = np.float32
+        else:
+            out_dtype = in_dtype
+
         try:
             if n_images == 1:
                 pass  # No averaging needed
@@ -220,20 +255,26 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             elif running_average:
                 if self['runningAvgMethod'] == 'ExactRunningAverage':
                     self.image_running_mean.append(array, n_images)
-                    array = self.image_running_mean.runningMean.astype(np.float64)  # noqa
+                    array = self.image_running_mean.runningMean
                 elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                     self.image_exp_running_mean.append(array, n_images)
-                    array = self.image_exp_running_mean.mean.astype(np.float64)
+                    array = self.image_exp_running_mean.mean.astype
 
             else:
                 self.image_standard_mean.append(array)
                 if self.image_standard_mean.size >= n_images:
-                    array = self.image_standard_mean.mean.astype(np.float64)
+                    array = self.image_standard_mean.mean
                     self.image_standard_mean.clear()
         except Exception as e:
             msg = f"Exception caught in process_ndarray: {e}"
             self.update_count(error=True, msg=msg)
         else:
+            if array.dtype != out_dtype:
+                array = array.astype(out_dtype)
+            if first_image:
+                # Update schema
+                self.updateOutputSchema(array)
+
             self.writeNDArrayToOutputs(array, ts)
             self.refresh_frame_rate_out()
             self.update_count()  # Success
