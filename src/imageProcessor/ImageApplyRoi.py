@@ -114,10 +114,14 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
         try:
             disable = self['disable']
             if disable:
+                if image_data.getDimensions() != self.shape:
+                    self.updateOutputSchema(image_data)
+
                 self.log.DEBUG("ROI disabled!")
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Original image copied to output channel")
                 self.update_count()  # Success
+                self.refresh_frame_rate_out()
                 return
 
             low_x, high_x, low_y, high_y = self['roi']
@@ -134,6 +138,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
             self.writeImageToOutputs(cropped_image, ts)
             self.update_count()  # Success
+            self.refresh_frame_rate_out()
             return
 
         except Exception as e:

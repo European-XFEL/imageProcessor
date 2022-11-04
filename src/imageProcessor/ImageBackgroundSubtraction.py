@@ -202,6 +202,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 if disable:
                     self.log.DEBUG("Background subtraction disabled!")
                     self.writeImageToOutputs(image_data, ts)
+                    self.refresh_frame_rate_out()
                     self.log.DEBUG("Original image copied to output channel")
                     return
 
@@ -213,6 +214,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                         self['status'] = msg
                         self.log.WARN(msg)
                     self.writeImageToOutputs(image_data, ts)
+                    self.refresh_frame_rate_out()
                     return
 
                 if self.bkg_image.shape == img.shape:
@@ -232,6 +234,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
                     image_data.setData(img)
                     self.writeImageToOutputs(image_data, ts)
+                    self.refresh_frame_rate_out()
                     self.log.DEBUG("Image sent to output channel")
                     self.update_count()  # Success
 

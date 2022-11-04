@@ -6,8 +6,8 @@ Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
 import numpy as np
 
 from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, ImageData, KARABO_CLASSINFO,
-    SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
 )
 
 from image_processing.image_exp_running_average import (
@@ -15,8 +15,6 @@ from image_processing.image_exp_running_average import (
 )
 from image_processing.image_running_mean import ImageRunningMean
 from image_processing.image_standard_mean import ImageStandardMean
-
-from processing_utils.rate_calculator import RateCalculator
 
 try:
     from .common import ImageProcOutputInterface
@@ -84,13 +82,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             .defaultValue('ExponentialRunningAverage')
             .reconfigurable()
             .commit(),
-
-            DOUBLE_ELEMENT(expected).key('outFrameRate')
-            .displayedName('Output Frame Rate')
-            .description('The output frame rate.')
-            .unit(Unit.HERTZ)
-            .readOnly()
-            .commit(),
         )
 
     def __init__(self, configuration):
@@ -103,10 +94,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.image_running_mean = ImageRunningMean()
         self.image_exp_running_mean = ImageExponentialRunnningAverage()
         self.image_standard_mean = ImageStandardMean()
-
-        # Variables for frames per second computation
-        self.frame_rate_in = RateCalculator(refresh_interval=1.0)
-        self.frame_rate_out = RateCalculator(refresh_interval=1.0)
 
         # Register channel callback
         self.KARABO_ON_DATA('input', self.onData)
@@ -168,13 +155,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.signalEndOfStreams()
         self.updateState(State.ON)
         self['status'] = 'ON'
-
-    def refresh_frame_rate_out(self):
-        self.frame_rate_out.update()
-        fps_out = self.frame_rate_out.refresh()
-        if fps_out:
-            self['outFrameRate'] = fps_out
-            self.log.DEBUG(f"Output rate {fps_out} Hz")
 
     def process_image(self, input_image, ts, first_image):
         try:

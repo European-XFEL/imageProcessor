@@ -16,10 +16,10 @@ from processing_utils.rate_calculator import RateCalculator
 
 
 try:
-    from .common import ErrorNode
+    from .common_mdl import ErrorNode
     from ._version import version as deviceVersion
 except ImportError:
-    from imageProcessor.common import ErrorNode
+    from imageProcessor.common_mdl import ErrorNode
     from imageProcessor._version import version as deviceVersion
 
 
