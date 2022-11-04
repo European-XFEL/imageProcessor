@@ -95,6 +95,7 @@ class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
 
             self.writeImageToOutputs(thumb_img, ts)
             self.update_count()  # Success
+            self.refresh_frame_rate_out()
             return
 
         except Exception as e:
