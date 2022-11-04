@@ -84,6 +84,16 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .minInc(1).maxInc(100)
             .reconfigurable()
             .commit(),
+
+            BOOL_ELEMENT(expected).key('convertToFloat')
+            .displayedName('Convert to Float')
+            .description('Use floating point pixel values for the '
+                         'averaged image instead of the source type')
+            .assignmentOptional().defaultValue(False)
+            .expertAccess()
+            .reconfigurable()
+            .allowedStates(State.ON)
+            .commit(),
         )
 
     def __init__(self, configuration):
@@ -156,10 +166,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
 
-        if first_image:
-            self.updateOutputSchema(image_data)
-
-        self.process_image(image_data, ts)
+        self.process_image(image_data, ts, first_image)
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("onEndOfStream called")
@@ -169,7 +176,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         self.updateState(State.ON)
         self['status'] = 'Idle'
 
-    def process_image(self, image_data, ts):
+    def process_image(self, image_data, ts, first_image):
         self.refresh_frame_rate_in()
 
         try:
@@ -177,7 +184,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             # Copy current image, before doing any processing
             # Also, convert it to float in order to avoid over- and underflows
             img = self.current_image.astype(np.float32)
-            d_type = self.current_image.dtype
+            in_dtype = self.current_image.dtype
+            if self['convertToFloat']:
+                out_dtype = np.dtype('float32')
+            else:
+                out_dtype = in_dtype
 
             with self.avg_lock:
                 if self.update_avg:
@@ -201,8 +212,14 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 disable = self['disable']
                 if disable:
                     self.log.DEBUG("Background subtraction disabled!")
-                    self.writeImageToOutputs(image_data, ts)
-                    self.refresh_frame_rate_out()
+                    if in_dtype == out_dtype:
+                        img = self.current_image
+                    elif img.dtype == out_dtype:
+                        pass
+                    else:
+                        img = self.current_image.astype(out_dtype)
+                    image_data.setData(img)
+                    self.write_image(image_data, ts, first_image)
                     self.log.DEBUG("Original image copied to output channel")
                     return
 
@@ -213,30 +230,40 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     if self['status'] != msg:
                         self['status'] = msg
                         self.log.WARN(msg)
-                    self.writeImageToOutputs(image_data, ts)
-                    self.refresh_frame_rate_out()
+
+                    if in_dtype == out_dtype:
+                        img = self.current_image
+                    elif img.dtype == out_dtype:
+                        pass
+                    else:
+                        img = self.current_image.astype(out_dtype)
+                    image_data.setData(img)
+                    self.write_image(image_data, ts, first_image)
+
                     return
 
                 if self.bkg_image.shape == img.shape:
-                    if d_type.kind in ('i', 'u'):  # integer type
-                        max_value = np.iinfo(d_type).max
-                    elif d_type.kind == 'f':  # floating point
-                        max_value = np.finfo(d_type).max
+                    if out_dtype.kind in ('i', 'u'):  # integer type
+                        max_value = np.iinfo(out_dtype).max
+                        min_value = np.iinfo(out_dtype).min
+                    elif out_dtype.kind == 'f':  # floating point
+                        max_value = np.finfo(out_dtype).max
+                        min_value = None
                     else:
                         max_value = None
+                        min_value = None
 
                     # Add offset, subtract background, clip, and finally cast
-                    # to the original dtype
+                    # to the original dtype, or, if set by the users, to float
                     img = (img + self['offset'] - self.bkg_image).clip(
-                        min=0, max=max_value).astype(d_type)
-
+                        min=min_value, max=max_value)
+                    if img.dtype != out_dtype:
+                        img = img.astype(out_dtype)
                     self.log.DEBUG("Background image subtracted")
 
                     image_data.setData(img)
-                    self.writeImageToOutputs(image_data, ts)
-                    self.refresh_frame_rate_out()
+                    self.write_image(image_data, ts, first_image)
                     self.log.DEBUG("Image sent to output channel")
-                    self.update_count()  # Success
 
                     if self['status'] != "Processing":
                         self['status'] = "Processing"
@@ -249,6 +276,19 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
             self.update_count(error=True, msg=msg)
+
+    def write_image(self, image, ts, first_image):
+        """This function will: 1. update the device schema (if needed);
+        2. write the image to the output channels; 3. refresh the error count
+        and frame rates."""
+
+        if first_image:
+            # Update schema
+            self.updateOutputSchema(image)
+
+        self.writeImageToOutputs(image, ts)
+        self.update_count()  # Success
+        self.refresh_frame_rate_out()
 
     ##############################################
     #   Implementation of Slots                  #
