@@ -260,6 +260,7 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
             self.writeImageToOutputs(image_data, ts)
             self.update_count()  # Success
+            self.refresh_frame_rate_out()
             return
 
         except Exception as e:
