@@ -8,13 +8,9 @@ from collections import deque
 from threading import Lock
 
 from karabo.bound import (
-    BOOL_ELEMENT, DOUBLE_ELEMENT, INPUT_CHANNEL, INT32_ELEMENT,
-    KARABO_CLASSINFO, OVERWRITE_ELEMENT, Schema, State, Timestamp,
-    UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO,
+    OVERWRITE_ELEMENT, Schema, State, Timestamp, UINT32_ELEMENT
 )
-
-from processing_utils.rate_calculator import RateCalculator
-
 
 try:
     from .common import ImageProcOutputInterface
@@ -56,13 +52,6 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
             # Images should be dropped if processor is too slow
             OVERWRITE_ELEMENT(expected).key("inputTrainId.onSlowness")
             .setNewDefaultValue("drop")
-            .commit(),
-
-            DOUBLE_ELEMENT(expected).key('outFrameRate')
-            .displayedName('Output Frame Rate')
-            .description('The output frame rate.')
-            .unit(Unit.HERTZ)
-            .readOnly()
             .commit(),
 
             INT32_ELEMENT(expected).key("trainIdOffset")
@@ -115,9 +104,6 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         self.KARABO_ON_EOS("inputTrainId", self.onEndOfStream)
 
         self.registerInitialFunction(self.initialization)
-
-        # Variables for frames per second computation
-        self.frame_rate_out = RateCalculator(refresh_interval=1.0)
 
     def initialization(self):
         """ This method will be called after the constructor. """
@@ -248,13 +234,6 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                                    f"exception: {e}")
 
         return match_found
-
-    def refresh_frame_rate_out(self):
-        self.frame_rate_out.update()
-        fps_out = self.frame_rate_out.refresh()
-        if fps_out:
-            self['outFrameRate'] = fps_out
-            self.log.DEBUG(f"Output rate {fps_out} Hz")
 
     def cleanup_image_queue(self, tid):
         """

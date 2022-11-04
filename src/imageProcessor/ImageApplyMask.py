@@ -147,6 +147,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 self.writeImageToOutputs(image_data, ts)
                 self.log.DEBUG("Original image copied to output channel")
                 self.update_count()  # Success
+                self.refresh_frame_rate_out()
                 return
 
             self.current_image = image_data.getData()  # np.ndarray
@@ -165,6 +166,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                         self.writeImageToOutputs(ImageData(img), ts)
                         self.log.DEBUG("Image sent to output channel")
                         self.update_count()  # Success
+                        self.refresh_frame_rate_out()
                         return
 
                     else:
@@ -185,6 +187,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 self.writeImageToOutputs(ImageData(img), ts)
                 self.log.DEBUG("Image sent to output channel")
                 self.update_count()  # Success
+                self.refresh_frame_rate_out()
                 return
 
             else:
