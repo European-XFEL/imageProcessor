@@ -36,7 +36,7 @@ class TwoPeakFinder(ImageProcessorBase):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(TwoPeakFinder, self).__init__(configuration)
+        super().__init__(configuration)
 
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
@@ -148,13 +148,13 @@ class TwoPeakFinder(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self['inFrameRate'] = 0.
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     ##############################################
     #   Implementation of process_image          #
@@ -198,4 +198,4 @@ class TwoPeakFinder(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)

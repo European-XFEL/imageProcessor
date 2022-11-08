@@ -39,7 +39,7 @@ class ImageNormRoi(Device):
     __version__ = deviceVersion
 
     def __init__(self, configuration):
-        super(ImageNormRoi, self).__init__(configuration)
+        super().__init__(configuration)
         self.output.noInputShared = "drop"
 
     # TODO base class for MDL: interfaces, frameRate, errorCounter, input

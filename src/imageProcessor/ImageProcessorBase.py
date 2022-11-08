@@ -130,7 +130,7 @@ class ImageProcessorBase(PythonDevice):
 
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
-        super(ImageProcessorBase, self).__init__(configuration)
+        super().__init__(configuration)
 
         if configuration.has('errorCounter.windowSize'):
             window_size = configuration['errorCounter.windowSize']
@@ -145,6 +145,8 @@ class ImageProcessorBase(PythonDevice):
         if configuration.has('errorCounter.epsilon'):
             self.error_counter.epsilon = configuration[
                 'errorCounter.epsilon']
+
+        configuration['status'] = 'Idle'
 
         # Variables for frames per second computation
         self.frame_rate_in = RateCalculator(refresh_interval=1.0)
@@ -183,12 +185,12 @@ class ImageProcessorBase(PythonDevice):
         if self['state'] != State.ON:
             self.updateState(State.ON)
 
-    def update_count(self, error=False, msg=""):
+    def update_count(self, error=False, status="Processing"):
         """ Update success/error counting, as well as warn level.
 
         :param error: depending on this flag, one count will be added either
         to errors, or to successes
-        :param msg: the error message to be logged
+        :param status: the new status to be set and logged
         :return:
         """
         h = Hash()
@@ -196,13 +198,12 @@ class ImageProcessorBase(PythonDevice):
         self.error_counter.append(error)
         self.evaluate_warn(h)
 
-        if not error:
-            if self['status'] != "PROCESSING":
-                h['status'] = "PROCESSING"
-        elif not self['errorCounter.warnCondition'] and msg:
-            # Only update if not yet in WARN
-            h['status'] = msg
-            self.log.ERROR(msg)
+        if self['status'] != status:
+            h['status'] = status
+            if error:
+                self.log.ERROR(status)
+            else:
+                self.log.INFO(status)
 
         if not h.empty():
             self.set(h)

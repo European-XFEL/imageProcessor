@@ -40,7 +40,7 @@ class ImageToSpectrum(Device):
     __version__ = deviceVersion
 
     def __init__(self, configuration):
-        super(ImageToSpectrum, self).__init__(configuration)
+        super().__init__(configuration)
         self.output.noInputShared = "drop"
         if self.xIntegral:
             self.calculate_spectrum = imageSumAlongX
