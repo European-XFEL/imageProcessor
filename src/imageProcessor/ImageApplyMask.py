@@ -80,7 +80,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImageApplyMask, self).__init__(configuration)
+        super().__init__(configuration)
 
         # Current image
         self.current_image = None
@@ -118,7 +118,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -135,7 +135,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts):
         self.refresh_frame_rate_in()
@@ -196,7 +196,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     ##############################################
     #   Implementation of Slots                  #

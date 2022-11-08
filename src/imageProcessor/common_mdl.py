@@ -81,7 +81,7 @@ class ErrorNode(Configurable):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ErrorNode, self).__init__(configuration)
+        super().__init__(configuration)
 
         self.error_counter = ErrorCounter(
             window_size=int(self.windowSize.value),

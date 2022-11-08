@@ -14,7 +14,7 @@ class ImageProcOutputInterface(NoFsm):
     """Interface for processor output channels"""
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
-        super(ImageProcOutputInterface, self).__init__(configuration)
+        super().__init__(configuration)
 
         self.shape = None
         self.kType = None

@@ -85,7 +85,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImagePicker, self).__init__(configuration)
+        super().__init__(configuration)
 
         # frames per second
         self.last_time = None
@@ -134,7 +134,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
         self.updateOutputSchema(image_data)
@@ -161,7 +161,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     def onDataTrainId(self, data, metaData):
         if self.tid_buffer is None:
@@ -260,4 +260,4 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         if not self.isActive():
             # Signals end of stream
             self.updateState(State.ON)
-            self['status'] = 'ON'
+            self['status'] = 'Idle'
