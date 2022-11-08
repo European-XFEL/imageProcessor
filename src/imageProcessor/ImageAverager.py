@@ -86,7 +86,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImageAverager, self).__init__(configuration)
+        super().__init__(configuration)
         self.is_image_data = None
         self.is_ndarray = None
 
@@ -144,7 +144,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
     def onEndOfStream(self, inputChannel):
@@ -154,7 +154,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     def process_image(self, input_image, ts, first_image):
         try:
@@ -203,7 +203,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     def write_image(self, image, ts, first_image):
         """This function will: 1. update the device schema (if needed);
@@ -247,7 +247,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                     self.image_standard_mean.clear()
         except Exception as e:
             msg = f"Exception caught in process_ndarray: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
         else:
             if array.dtype != out_dtype:
                 array = array.astype(out_dtype)

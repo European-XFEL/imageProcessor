@@ -12,8 +12,8 @@ from PIL import Image
 from threading import Lock
 
 from karabo.bound import (
-    BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, State, STRING_ELEMENT,
-    Timestamp, UINT32_ELEMENT, Unit
+    BOOL_ELEMENT, KARABO_CLASSINFO, OVERWRITE_ELEMENT, SLOT_ELEMENT, State,
+    STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
 )
 
 try:
@@ -32,6 +32,11 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
     @staticmethod
     def expectedParameters(expected):
         (
+            OVERWRITE_ELEMENT(expected).key('state')
+            .setNewOptions(
+                State.ON, State.PROCESSING, State.ACQUIRING, State.ERROR)
+            .commit(),
+
             BOOL_ELEMENT(expected).key('disable')
             .displayedName("Disable")
             .description("Disable background subtraction.")
@@ -55,17 +60,20 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             SLOT_ELEMENT(expected).key('save')
             .displayedName("Save Background Image")
             .description("Save to file the current image.")
+            .allowedStates(State.ON, State.PROCESSING)
             .commit(),
 
             SLOT_ELEMENT(expected).key('load')
             .displayedName("Load Background Image")
             .description("Load a background image from file.")
+            .allowedStates(State.ON, State.PROCESSING)
             .commit(),
 
             SLOT_ELEMENT(expected).key('useAsBackgroundImage')
             .displayedName("Current Image(s) as Background")
             .description("Use the average of 'nImages' for the background "
                          "subtraction.")
+            .allowedStates(State.ON, State.PROCESSING)
             .commit(),
 
             UINT32_ELEMENT(expected).key('offset')
@@ -146,8 +154,18 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         first_image = False
         if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
+            if self.update_avg:
+                # Calculating background average
+                self.updateState(State.ACQUIRING)
+            else:
+                self.updateState(State.PROCESSING)
             first_image = True
+        elif self['state'] == State.PROCESSING and self.update_avg:
+            # Calculating background average
+            self.updateState(State.ACQUIRING)
+        elif self['state'] == State.ACQUIRING and not self.update_avg:
+            # Background average is now available
+            self.updateState(State.PROCESSING)
 
         try:
             if data.has('data.image'):
@@ -160,7 +178,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -211,7 +229,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
                 disable = self['disable']
                 if disable:
-                    self.log.DEBUG("Background subtraction disabled!")
+                    status = (
+                        "Bkg subtraction disabled: original image copied to "
+                        "output channel")
                     if in_dtype == out_dtype:
                         img = self.current_image
                     elif img.dtype == out_dtype:
@@ -219,17 +239,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     else:
                         img = self.current_image.astype(out_dtype)
                     image_data.setData(img)
-                    self.write_image(image_data, ts, first_image)
-                    self.log.DEBUG("Original image copied to output channel")
+                    self.write_image(image_data, ts, first_image, status)
                     return
 
                 if self.bkg_image is None:
-                    msg = (
+                    status = (
                         "No bkg is loaded: original image copied to output "
                         "channel")
-                    if self['status'] != msg:
-                        self['status'] = msg
-                        self.log.WARN(msg)
 
                     if in_dtype == out_dtype:
                         img = self.current_image
@@ -238,7 +254,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     else:
                         img = self.current_image.astype(out_dtype)
                     image_data.setData(img)
-                    self.write_image(image_data, ts, first_image)
+                    self.write_image(image_data, ts, first_image, status)
 
                     return
 
@@ -265,19 +281,16 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
                     self.write_image(image_data, ts, first_image)
                     self.log.DEBUG("Image sent to output channel")
 
-                    if self['status'] != "Processing":
-                        self['status'] = "Processing"
-
                 else:
                     msg = ("Cannot subtract background image... shapes are "
                            f"different: {self.bkg_image.shape} != {img.shape}")
-                    self.update_count(error=True, msg=msg)
+                    self.update_count(error=True, status=msg)
 
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
-    def write_image(self, image, ts, first_image):
+    def write_image(self, image, ts, first_image, status="Processing"):
         """This function will: 1. update the device schema (if needed);
         2. write the image to the output channels; 3. refresh the error count
         and frame rates."""
@@ -287,7 +300,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             self.updateOutputSchema(image)
 
         self.writeImageToOutputs(image, ts)
-        self.update_count()  # Success
+        self.update_count(status=status)  # Success
         self.refresh_frame_rate_out()
 
     ##############################################

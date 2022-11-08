@@ -44,7 +44,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImageApplyRoi, self).__init__(configuration)
+        super().__init__(configuration)
 
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
@@ -90,7 +90,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
         ts = Timestamp.fromHashAttributes(
@@ -106,7 +106,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts):
         self.refresh_frame_rate_in()
@@ -143,7 +143,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     @staticmethod
     def valid_roi(roi):
