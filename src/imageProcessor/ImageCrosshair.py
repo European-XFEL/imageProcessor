@@ -265,7 +265,7 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
     def onEndOfStream(self, inputChannel):
@@ -274,4 +274,4 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'

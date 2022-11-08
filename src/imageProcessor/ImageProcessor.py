@@ -793,7 +793,7 @@ class ImageProcessor(ImageProcessorBase):
 
     def __init__(self, configuration):
         # always call superclass constructor first!
-        super(ImageProcessor, self).__init__(configuration)
+        super().__init__(configuration)
 
         # 1d gaussian fit parameters
         self.ax1d = None
@@ -976,7 +976,7 @@ class ImageProcessor(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
@@ -984,7 +984,7 @@ class ImageProcessor(ImageProcessorBase):
         # Signals end of stream
         self.signalEndOfStream("output")
         self.updateState(State.ON)
-        self['status'] = 'ON'
+        self['status'] = 'Idle'
 
     def process_image(self, imageData, ts):
 
@@ -1067,7 +1067,7 @@ class ImageProcessor(ImageProcessorBase):
 
         except Exception as e:
             msg = f"Exception when opening image: {e}"
-            self.update_count(error=True, msg=msg)
+            self.update_count(error=True, status=msg)
             return
 
         # Filter by Threshold
@@ -1086,7 +1086,7 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.DEBUG("Pixel values distribution: done!")
             except Exception as e:
                 msg = f"Exception caught whilst counting value frequency: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1117,7 +1117,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during background subtraction: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1139,7 +1139,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during pedestal subtraction: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1155,7 +1155,7 @@ class ImageProcessor(ImageProcessorBase):
                 img_mean = img.mean()
             except Exception as e:
                 msg = f"Exception caught whilst calculating min/max/mean: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1195,7 +1195,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during x/y integration: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             if img_x is None or img_y is None:
@@ -1273,7 +1273,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught whilst calculating CoM: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1353,7 +1353,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during gaussian fit [x]: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1407,7 +1407,7 @@ class ImageProcessor(ImageProcessorBase):
 
                 except Exception as e:
                     msg = f"Exception caught during gaussian fit [y]: {e}"
-                    self.update_count(error=True, msg=msg)
+                    self.update_count(error=True, status=msg)
                     return
 
                 t2 = time.time()
@@ -1450,7 +1450,7 @@ class ImageProcessor(ImageProcessorBase):
 
                 except Exception as e:
                     msg = f"Exception caught during gaussian fit [x]: {e}"
-                    self.update_count(error=True, msg=msg)
+                    self.update_count(error=True, status=msg)
                     return
 
             if is_2d_image:
@@ -1493,7 +1493,7 @@ class ImageProcessor(ImageProcessorBase):
 
                     except Exception as e:
                         msg = f"Exception caught during gaussian fit [y]: {e}"
-                        self.update_count(error=True, msg=msg)
+                        self.update_count(error=True, status=msg)
                         return
 
                 if success_x in (1, 2, 3, 4) and success_y in (1, 2, 3, 4):
@@ -1589,7 +1589,7 @@ class ImageProcessor(ImageProcessorBase):
 
             except Exception as e:
                 msg = f"Exception caught during 2D gaussian fit: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
             t1 = time.time()
@@ -1701,7 +1701,7 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.DEBUG("Region integration: done!")
             except Exception as e:
                 msg = f"Exception caught during region integration: {e}"
-                self.update_count(error=True, msg=msg)
+                self.update_count(error=True, status=msg)
                 return
 
         if not integration_done:
