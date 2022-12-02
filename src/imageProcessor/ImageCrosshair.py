@@ -5,21 +5,22 @@
 #############################################################################
 
 from karabo.bound import (
-    BOOL_ELEMENT, ImageData, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
-    State, STRING_ELEMENT, Timestamp, Unit, UINT32_ELEMENT,
-    VECTOR_UINT32_ELEMENT
-)
+    BOOL_ELEMENT, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
+    STRING_ELEMENT, UINT32_ELEMENT, VECTOR_STRING_ELEMENT,
+    VECTOR_UINT32_ELEMENT, Hash, ImageData, State, Timestamp, Unit)
 
 from image_processing import crosshair, marker
 
 try:
+    from ._version import version as deviceVersion
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
-    from ._version import version as deviceVersion
+    from .scenes import get_scene
 except ImportError:
+    from imageProcessor._version import version as deviceVersion
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
-    from imageProcessor._version import version as deviceVersion
+    from imageProcessor.scenes import get_scene
 
 
 @KARABO_CLASSINFO("ImageCrosshair", deviceVersion)
@@ -172,6 +173,12 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
+            VECTOR_STRING_ELEMENT(expected).key("availableScenes")
+            .displayedName("Available Scenes")
+            .description("Provides a scene for the Configuration Manager.")
+            .setSpecialDisplayType("Scenes")
+            .readOnly().initialValue(['scene'])
+            .commit(),
         )
 
     def __init__(self, configuration):
@@ -181,6 +188,24 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
         # Register call-backs
         self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
+
+        self.KARABO_SLOT(self.requestScene)
+
+    def requestScene(self, params):
+        """Fulfill a scene request from another device.
+
+        :param params: A `Hash` containing the method parameters
+        """
+        payload = Hash('success', False)
+        name = params.get('name', default='')
+        if name == 'scene':
+            payload.set('success', True)
+            payload.set('name', name)
+            payload.set('data', get_scene(self.getInstanceId()))
+
+        self.reply(Hash('type', 'deviceScene',
+                        'origin', self.getInstanceId(),
+                        'payload', payload))
 
     def superimpose_crosshair(self, image):
         """Superimpose a crosshair to the image"""
