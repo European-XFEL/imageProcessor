@@ -1,6 +1,6 @@
 from karabo.common.scenemodel.api import (
     BoxLayoutModel, CheckBoxModel, DisplayLabelModel, DisplayListModel,
-    DisplayStateColorModel, EditableComboBoxModel, EditableListModel,
+    DisplayStateColorModel, ComboBoxModel, EditableListModel,
     IntLineEditModel, LabelModel, LineModel, RectangleModel, SceneModel,
     UnknownWidgetDataModel, write_scene)
 
@@ -80,53 +80,53 @@ def get_scene(deviceId):
                                 scene05, scene06, scene07
                             ])
     scene10 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.crosshair.enable'],
+                            keys=[f'{deviceId}.crosshair.enable'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=850.0,
                             y=170.0)
     scene11 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.crosshair.autoSize'],
+                            keys=[f'{deviceId}.crosshair.autoSize'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=850.0,
                             y=194.0)
     scene12 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.crosshair.extSize'],
+                                keys=[f'{deviceId}.crosshair.extSize'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=850.0,
                                 y=218.0)
     scene13 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.crosshair.intSize'],
+                                keys=[f'{deviceId}.crosshair.intSize'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=850.0,
                                 y=242.0)
     scene14 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.crosshair.autoThickness'],
+                            keys=[f'{deviceId}.crosshair.autoThickness'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=850.0,
                             y=266.0)
     scene15 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.crosshair.thickness'],
+                                keys=[f'{deviceId}.crosshair.thickness'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=850.0,
                                 y=290.0)
     scene16 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.crosshair.autoColor'],
+                            keys=[f'{deviceId}.crosshair.autoColor'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=850.0,
                             y=314.0)
     scene17 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.crosshair.color'],
+                                keys=[f'{deviceId}.crosshair.color'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=850.0,
@@ -141,53 +141,53 @@ def get_scene(deviceId):
                                 scene15, scene16, scene17
                             ])
     scene20 = CheckBoxModel(height=21.0,
-                            keys=['image_corsshair.crosshair.enable'],
+                            keys=[f'{deviceId}.crosshair.enable'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=141.0,
                             x=970.0,
                             y=170.0)
     scene21 = CheckBoxModel(height=21.0,
-                            keys=['image_corsshair.crosshair.autoSize'],
+                            keys=[f'{deviceId}.crosshair.autoSize'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=141.0,
                             x=970.0,
                             y=191.0)
     scene22 = IntLineEditModel(height=29.0,
-                               keys=['image_corsshair.crosshair.extSize'],
+                               keys=[f'{deviceId}.crosshair.extSize'],
                                parent_component='EditableApplyLaterComponent',
                                width=141.0,
                                x=970.0,
                                y=212.0)
     scene23 = IntLineEditModel(height=28.0,
-                               keys=['image_corsshair.crosshair.intSize'],
+                               keys=[f'{deviceId}.crosshair.intSize'],
                                parent_component='EditableApplyLaterComponent',
                                width=141.0,
                                x=970.0,
                                y=241.0)
     scene24 = CheckBoxModel(height=18.0,
-                            keys=['image_corsshair.crosshair.autoThickness'],
+                            keys=[f'{deviceId}.crosshair.autoThickness'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=141.0,
                             x=970.0,
                             y=269.0)
     scene25 = IntLineEditModel(height=27.0,
-                               keys=['image_corsshair.crosshair.thickness'],
+                               keys=[f'{deviceId}.crosshair.thickness'],
                                parent_component='EditableApplyLaterComponent',
                                width=141.0,
                                x=970.0,
                                y=287.0)
     scene26 = CheckBoxModel(height=19.0,
-                            keys=['image_corsshair.crosshair.autoColor'],
+                            keys=[f'{deviceId}.crosshair.autoColor'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=141.0,
                             x=970.0,
                             y=314.0)
     scene27 = IntLineEditModel(height=29.0,
-                               keys=['image_corsshair.crosshair.color'],
+                               keys=[f'{deviceId}.crosshair.color'],
                                parent_component='EditableApplyLaterComponent',
                                width=141.0,
                                x=970.0,
@@ -248,14 +248,14 @@ def get_scene(deviceId):
                              children=[scene500, scene501, scene502])
     scene510 = DisplayLabelModel(font_size=10,
                                  height=21.0,
-                                 keys=['image_corsshair.deviceId'],
+                                 keys=[f'{deviceId}.deviceId'],
                                  parent_component='DisplayComponent',
                                  width=266.0,
                                  x=121.0,
                                  y=20.0)
     scene511 = DisplayStateColorModel(font_size=10,
                                       height=31.0,
-                                      keys=['image_corsshair.state'],
+                                      keys=[f'{deviceId}.state'],
                                       parent_component='DisplayComponent',
                                       show_string=True,
                                       width=266.0,
@@ -263,7 +263,7 @@ def get_scene(deviceId):
                                       y=41.0)
     scene512 = DisplayLabelModel(font_size=10,
                                  height=21.0,
-                                 keys=['image_corsshair.status'],
+                                 keys=[f'{deviceId}.status'],
                                  parent_component='DisplayComponent',
                                  width=266.0,
                                  x=121.0,
@@ -360,54 +360,54 @@ def get_scene(deviceId):
                                 scene75, scene76, scene77
                             ])
     scene80 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.marker.enable'],
+                            keys=[f'{deviceId}.marker.enable'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=840.0,
                             y=430.0)
     scene81 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.marker.type'],
+                                keys=[f'{deviceId}.marker.type'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=840.0,
                                 y=454.0)
     scene82 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.marker.width'],
+                                keys=[f'{deviceId}.marker.width'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=840.0,
                                 y=478.0)
     scene83 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.marker.height'],
+                                keys=[f'{deviceId}.marker.height'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=840.0,
                                 y=502.0)
     scene84 = CheckBoxModel(height=23.0,
-                            keys=['image_corsshair.marker.autoThickness'],
+                            keys=[f'{deviceId}.marker.autoThickness'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=840.0,
                             y=526.0)
     scene85 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.marker.thickness'],
+                                keys=[f'{deviceId}.marker.thickness'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=840.0,
                                 y=549.0)
     scene86 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.marker.autoColor'],
+                            keys=[f'{deviceId}.marker.autoColor'],
                             parent_component='DisplayComponent',
                             width=111.0,
                             x=840.0,
                             y=573.0)
     scene87 = DisplayLabelModel(font_size=10,
                                 height=24.0,
-                                keys=['image_corsshair.marker.color'],
+                                keys=[f'{deviceId}.marker.color'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=840.0,
@@ -422,53 +422,53 @@ def get_scene(deviceId):
                                 scene85, scene86, scene87
                             ])
     scene90 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.marker.enable'],
+                            keys=[f'{deviceId}.marker.enable'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=149.0,
                             x=960.0,
                             y=430.0)
-    scene91 = EditableComboBoxModel(
+    scene91 = ComboBoxModel(
         height=24.0,
-        keys=['image_corsshair.marker.type'],
+        keys=[f'{deviceId}.marker.type'],
         parent_component='EditableApplyLaterComponent',
         width=149.0,
         x=960.0,
         y=454.0)
     scene92 = IntLineEditModel(height=24.0,
-                               keys=['image_corsshair.marker.width'],
+                               keys=[f'{deviceId}.marker.width'],
                                parent_component='EditableApplyLaterComponent',
                                width=149.0,
                                x=960.0,
                                y=478.0)
     scene93 = IntLineEditModel(height=24.0,
-                               keys=['image_corsshair.marker.height'],
+                               keys=[f'{deviceId}.marker.height'],
                                parent_component='EditableApplyLaterComponent',
                                width=149.0,
                                x=960.0,
                                y=502.0)
     scene94 = CheckBoxModel(height=23.0,
-                            keys=['image_corsshair.marker.autoThickness'],
+                            keys=[f'{deviceId}.marker.autoThickness'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=149.0,
                             x=960.0,
                             y=526.0)
     scene95 = IntLineEditModel(height=24.0,
-                               keys=['image_corsshair.marker.thickness'],
+                               keys=[f'{deviceId}.marker.thickness'],
                                parent_component='EditableApplyLaterComponent',
                                width=149.0,
                                x=960.0,
                                y=549.0)
     scene96 = CheckBoxModel(height=24.0,
-                            keys=['image_corsshair.marker.autoColor'],
+                            keys=[f'{deviceId}.marker.autoColor'],
                             klass='EditableCheckBox',
                             parent_component='EditableApplyLaterComponent',
                             width=149.0,
                             x=960.0,
                             y=573.0)
     scene97 = IntLineEditModel(height=24.0,
-                               keys=['image_corsshair.marker.color'],
+                               keys=[f'{deviceId}.marker.color'],
                                parent_component='EditableApplyLaterComponent',
                                width=149.0,
                                x=960.0,
@@ -511,13 +511,13 @@ def get_scene(deviceId):
             '{http://karabo.eu/scene}widget':
             'ImageCrossHairGraph',
             '{http://karabo.eu/scene}keys':
-                ('image_corsshair.ppOutput.schema.data.image,'
-                 'image_corsshair.position')
+                (f'{deviceId}.ppOutput.schema.data.image,'
+                 f'{deviceId}.position')
         },
         height=461.0,
         keys=[
-            'image_corsshair.ppOutput.schema.data.image',
-            'image_corsshair.position'
+            f'{deviceId}.ppOutput.schema.data.image',
+            f'{deviceId}.position'
         ],
         klass='ImageCrossHairGraph',
         parent_component='DisplayComponent',
@@ -555,14 +555,14 @@ def get_scene(deviceId):
                              y=50.0,
                              children=[scene150, scene151])
     scene160 = DisplayListModel(height=31.0,
-                                keys=['image_corsshair.position'],
+                                keys=[f'{deviceId}.position'],
                                 parent_component='DisplayComponent',
                                 width=111.0,
                                 x=850.0,
                                 y=50.0)
     scene161 = DisplayLabelModel(font_size=10,
                                  height=31.0,
-                                 keys=['image_corsshair.rotation'],
+                                 keys=[f'{deviceId}.rotation'],
                                  parent_component='DisplayComponent',
                                  width=111.0,
                                  x=850.0,
@@ -575,13 +575,13 @@ def get_scene(deviceId):
                              children=[scene160, scene161])
     scene170 = EditableListModel(
         height=31.0,
-        keys=['image_corsshair.position'],
+        keys=[f'{deviceId}.position'],
         parent_component='EditableApplyLaterComponent',
         width=123.0,
         x=970.0,
         y=50.0)
     scene171 = IntLineEditModel(height=31.0,
-                                keys=['image_corsshair.rotation'],
+                                keys=[f'{deviceId}.rotation'],
                                 parent_component='EditableApplyLaterComponent',
                                 width=123.0,
                                 x=970.0,
