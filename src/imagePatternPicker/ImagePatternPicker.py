@@ -50,6 +50,8 @@ class ImagePatternPicker(PythonDevice):
         self.last_train_id = {}
         self.last_bad_tid_time = {}
 
+        self.preReconfigure(configuration)  # Apply initial configuration
+
         # Define the first function to be called after the constructor has
         # finished
         self.registerInitialFunction(self.initialization)
@@ -108,6 +110,21 @@ class ImagePatternPicker(PythonDevice):
                 elif not enable and warn_crosshair != 0:
                     # cancel the warning
                     self[f'{node}.warnCrosshair'] = 0
+
+            # Synchronize old and new keys for x-hair position.
+            # For backward compatibility '{node}.crosshair?' prevails.
+            positionX = configuration.get(f'{node}.crosshairX')
+            positionY = configuration.get(f'{node}.crosshairY')
+            if (positionX, positionY) != (None, None):
+                if positionX is None:
+                    positionX = self[f'{node}.crosshairX']
+                if positionY is None:
+                    positionY = self[f'{node}.crosshairY']
+                configuration[f'{node}.position'] = [positionX, positionY]
+            elif f'{node}.position' in configuration:
+                position = configuration[f'{node}.position']
+                configuration[f'{node}.crosshairX'] = position[0]
+                configuration[f'{node}.crosshairY'] = position[1]
 
     def is_valid_train_id(self, train_id, node):
         last_train_id = self.last_train_id.get(node, 0)
@@ -339,17 +356,35 @@ class ImagePatternPicker(PythonDevice):
             .needsAcknowledging(False)
             .commit(),
 
+            # Old property - for backward compatibility
             UINT32_ELEMENT(schema).key(f"{channel}.crosshairX")
             .displayedName("Crosshair X position")
+            .description("The X position of the crosshair.")
             .assignmentOptional().defaultValue(0)
+            .unit(Unit.PIXEL)
             .adminAccess()
             .reconfigurable()
             .commit(),
 
+            # Old property - for backward compatibility
             UINT32_ELEMENT(schema).key(f"{channel}.crosshairY")
             .displayedName("Crosshair Y position")
+            .description("The Y position of the crosshair.")
             .assignmentOptional().defaultValue(0)
             .adminAccess()
+            .unit(Unit.PIXEL)
+            .reconfigurable()
+            .commit(),
+
+            # New property to be used by xhair widget
+            VECTOR_UINT32_ELEMENT(schema).key(f"{channel}.position")
+            .setSpecialDisplayType("crosshair")
+            .displayedName("Crosshair Position")
+            .description("The position of the crosshair: [X, Y].")
+            .assignmentOptional().defaultValue([0, 0])
+            .minSize(2).maxSize(2)
+            .adminAccess()
+            .unit(Unit.PIXEL)
             .reconfigurable()
             .commit(),
 
