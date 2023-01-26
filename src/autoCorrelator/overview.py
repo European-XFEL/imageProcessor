@@ -5,7 +5,9 @@ from karabo.common.scenemodel.api import (
     DoubleLineEditModel, IntLineEditModel, LabelModel, LineModel,
     SceneModel, SceneTargetWindow, write_scene)
 
-KEY_LABEL_FONT = 'Ubuntu,11,-1,5,50,0,0,0,0,0'
+font_label = 'Source Sans Pro,11,-1,5,50,0,0,0,0,0'
+font_log = 'Source Sans Pro,12,-1,5,75,0,0,0,0,0'
+font_title = 'Source Sans Pro,17,-1,5,75,0,0,0,0,0'
 
 
 def generate_scene(device):
@@ -14,7 +16,7 @@ def generate_scene(device):
     device_id = device["deviceId"]
 
     widgets.append(LabelModel(
-        font='Ubuntu,17,-1,5,75,0,0,0,0,0', foreground='#000000',
+        font=font_title, foreground='#000000',
         height=30, width=500, x=350, y=20,
         text=device_id))
 
@@ -23,11 +25,22 @@ def generate_scene(device):
     camera_id = input_node["connectedOutputChannels"]
     if camera_id:
         camera_id = camera_id[0].split(":")[0]
+    output = "output"
+    # check whether cam name does not refer to a camera,
+    # e.g., ImageBackgroundSubtraction, ImageAverager, ...
+    # to get proper output channel name
+    scene_camera_id = camera_id
+    cam = camera_id.split("/")
+    if cam[1] != "CAM":
+        cam[1] = "CAM"
+        scene_camera_id = "/".join(cam)
+        output = "ppOutput"
+
     camera_label = "Camera Scene"
 
     line_x = 580
     widgets.append(DeviceSceneLinkModel(
-        keys=[f"{camera_id}.availableScenes"],
+        keys=[f"{scene_camera_id}.availableScenes"],
         target_window=SceneTargetWindow.Dialog,
         parent_component='DisplayComponent', target='scene',
         text=camera_label,
@@ -40,7 +53,7 @@ def generate_scene(device):
         parent_component='DisplayComponent'))
     widgets.append(DisplayImageModel(
         x=10, y=100, height=320, width=550,
-        keys=[f'{camera_id}.output.schema.data.image'],
+        keys=[f'{camera_id}.{output}.schema.data.image'],
         parent_component='DisplayComponent'))
 
     widgets.append(LineModel(
@@ -100,7 +113,7 @@ def generate_scene(device):
         for key in keys:
             label = keys[key]
             widgets.append(LabelModel(
-                font=KEY_LABEL_FONT, foreground='#000000',
+                font=font_label, foreground='#000000',
                 height=23, width=width, x=x1, y=y,
                 parent_component='DisplayComponent', text=label))
             widgets.append(DisplayLabelModel(
@@ -124,7 +137,7 @@ def generate_scene(device):
             y += 30
 
     widgets.append(LabelModel(
-        font='Ubuntu,12,-1,5,75,0,0,0,0,0', foreground='#000000',
+        font=font_log, foreground='#000000',
         height=38.0, width=width, x=x2, y=540,
         parent_component='DisplayComponent', text='Status'))
     widgets.append(DisplayTextLogModel(
