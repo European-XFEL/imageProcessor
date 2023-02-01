@@ -7,8 +7,8 @@
 import numpy as np
 
 from karabo.middlelayer import (
-    AccessMode, Assignment, Configurable, DaqPolicy, Device, Double, Image,
-    InputChannel, Node, OutputChannel, Slot, State, Unit, VectorString,
+    AccessMode, Assignment, Bool, Configurable, DaqPolicy, Device, Double,
+    Image, InputChannel, Node, OutputChannel, Slot, State, Unit, VectorString,
     get_timestamp)
 
 from processing_utils.rate_calculator import RateCalculator
@@ -71,6 +71,15 @@ class ImageNonLinearCorrection(Device):
                 schema = outputSchema(image.shape, image.dtype)
                 await self.setOutputSchema("output", schema)
 
+                dt = image.dtype
+                self.dtype = dt
+                if dt.kind in ('u', 'i'):
+                    self.is_integer = True
+                    self.a_min = np.iinfo(dt).min
+                    self.a_max = np.iinfo(dt).max
+                else:
+                    self.is_integer = False
+
                 self.state = State.PROCESSING
 
             self.frame_rate.update()
@@ -78,10 +87,20 @@ class ImageNonLinearCorrection(Device):
             if fps:
                 self.frameRate = fps
 
-            a = self.aParameter.value
             b = self.bParameter.value
-            image_out = a * np.power(image, b)
-            self.output.schema.data.image = image_out
+            if self.autoScale.value:
+                # Scale factor to have image_out.max() == image_in.max()
+                a = image.max() ** (1.0 - b)
+            else:
+                a = self.aParameter.value
+
+            image = a * np.power(image, b)
+            if self.is_integer:
+                image = image.clip(self.a_min, self.a_max)  # clip the image
+            if image.dtype != self.dtype:
+                image = image.astype(self.dtype)  # cast to the orginal dtype
+
+            self.output.schema.data.image = image
             await self.output.writeData(timestamp=ts)
 
             self.errorCounter.update_count()  # success
@@ -103,10 +122,18 @@ class ImageNonLinearCorrection(Device):
         if self.state != State.ON:
             self.state = State.ON
 
+    autoScale = Bool(
+        displayedName="Auto-Scale",
+        description="Auto-scale the pixel values so that the output image "
+                    "peak has the same heigth as the input.",
+        defaultValue=True,
+    )
+
     aParameter = Double(
         displayedName="a",
         description="The value for the constant 'a'. The output px values "
-                    "will be: px_out = a * np.power(px_in, b).",
+                    "will be: px_out = a * np.power(px_in, b). "
+                    "This parameter has no effect if you select 'Auto-Scale'.",
         defaultValue=1.,
         minExc=0.,
     )
