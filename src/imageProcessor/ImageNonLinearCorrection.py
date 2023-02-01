@@ -46,7 +46,7 @@ class ImageNonLinearCorrection(Device):
     )
 
     frameRate = Double(
-        displayedName="Input Frame Rate",
+        displayedName="Frame Rate",
         description="Rate of processed images.",
         unitSymbol=Unit.HERTZ,
         accessMode=AccessMode.READONLY,
