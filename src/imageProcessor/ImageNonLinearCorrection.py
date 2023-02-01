@@ -82,8 +82,7 @@ class ImageNonLinearCorrection(Device):
             b = self.bParameter.value
             image_out = a * np.power(image, b)
             self.output.schema.data.image = image_out
-            self.output.schema.data.image.timestamp = ts
-            await self.output.writeData()
+            await self.output.writeData(timestamp=ts)
 
             self.errorCounter.update_count()  # success
             if self.status != "PROCESSING":
