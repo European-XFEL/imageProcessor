@@ -65,6 +65,9 @@ class ImageNonLinearCorrection(Device):
         try:
             ts = get_timestamp(meta.timestamp.timestamp)
             image = data.data.image.pixels.value
+            baseline = 3 * max(
+                image.sum(axis=0).min() / image.shape[0],
+                image.sum(axis=1).min() / image.shape[1])
 
             if self.state != State.PROCESSING:
                 # Set output schema
@@ -94,13 +97,16 @@ class ImageNonLinearCorrection(Device):
             else:
                 a = self.aParameter.value
 
-            image = a * np.power(image, b)
-            if self.is_integer:
-                image = image.clip(self.a_min, self.a_max)  # clip the image
-            if image.dtype != self.dtype:
-                image = image.astype(self.dtype)  # cast to the orginal dtype
-
-            self.output.schema.data.image = image
+            image_out = image.astype(float)  # copy
+            image_out[image > baseline] = a * np.power(
+                image[image > baseline], b)  # reshape peak region
+            if self.is_integer:  # clip the image
+                image_out = image_out.clip(self.a_min, self.a_max)
+            if image_out.dtype != self.dtype:
+                # cast to the orginal dtype
+                self.output.schema.data.image = image_out.astype(self.dtype)
+            else:
+                self.output.schema.data.image = image_out
             await self.output.writeData(timestamp=ts)
 
             self.errorCounter.update_count()  # success
