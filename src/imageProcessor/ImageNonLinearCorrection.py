@@ -65,23 +65,21 @@ class ImageNonLinearCorrection(Device):
         try:
             ts = get_timestamp(meta.timestamp.timestamp)
             image = data.data.image.pixels.value
-            baseline = 3 * max(
-                image.sum(axis=0).min() / image.shape[0],
-                image.sum(axis=1).min() / image.shape[1])
+            d_type = image.dtype
 
             if self.state != State.PROCESSING:
                 # Set output schema
                 schema = outputSchema(image.shape, image.dtype)
                 await self.setOutputSchema("output", schema)
 
-                dt = image.dtype
-                self.dtype = dt
-                if dt.kind in ('u', 'i'):
+                if d_type.kind in ('u', 'i'):
                     self.is_integer = True
-                    self.a_min = np.iinfo(dt).min
-                    self.a_max = np.iinfo(dt).max
+                    self.a_min = np.iinfo(d_type).min
+                    self.a_max = np.iinfo(d_type).max
                 else:
                     self.is_integer = False
+                    self.a_min = None
+                    self.a_max = None
 
                 self.state = State.PROCESSING
 
@@ -90,23 +88,32 @@ class ImageNonLinearCorrection(Device):
             if fps:
                 self.frameRate = fps
 
-            b = self.bParameter.value
-            if self.autoScale.value:
-                # Scale factor to have image_out.max() == image_in.max()
-                a = image.max() ** (1.0 - b)
-            else:
-                a = self.aParameter.value
+            if self.enable:
 
-            image_out = image.astype(float)  # copy
-            image_out[image > baseline] = a * np.power(
-                image[image > baseline], b)  # reshape peak region
-            if self.is_integer:  # clip the image
-                image_out = image_out.clip(self.a_min, self.a_max)
-            if image_out.dtype != self.dtype:
-                # cast to the orginal dtype
-                self.output.schema.data.image = image_out.astype(self.dtype)
-            else:
-                self.output.schema.data.image = image_out
+                baseline = 3 * max(
+                    image.sum(axis=0).min() / image.shape[0],
+                    image.sum(axis=1).min() / image.shape[1])
+                b = self.bParameter.value
+                if self.autoScale.value:
+                    # Scale factor to have image_out.max() == image_in.max()
+                    a = image.max() ** (1.0 - b)
+                else:
+                    a = self.aParameter.value
+
+                image_out = image.astype(float)  # copy
+                image_out[image > baseline] = a * np.power(
+                    image[image > baseline], b)  # reshape peak region
+                if self.is_integer:  # clip the image
+                    image_out = image_out.clip(self.a_min, self.a_max)
+                if image_out.dtype == d_type:
+                    self.output.schema.data.image = image_out
+                else:
+                    # cast to the orginal dtype
+                    self.output.schema.data.image = image_out.astype(d_type)
+
+            else:  # correction is disabled
+                self.output.schema.data.image = image
+
             await self.output.writeData(timestamp=ts)
 
             self.errorCounter.update_count()  # success
@@ -127,6 +134,12 @@ class ImageNonLinearCorrection(Device):
         self.frameRate = 0.
         if self.state != State.ON:
             self.state = State.ON
+
+    enable = Bool(
+        displayedName="Enable Correction",
+        description="Enable the non-linear correction.",
+        defaultValue=True,
+    )
 
     autoScale = Bool(
         displayedName="Auto-Scale",
