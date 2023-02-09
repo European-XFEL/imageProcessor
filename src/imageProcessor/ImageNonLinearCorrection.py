@@ -89,10 +89,10 @@ class ImageNonLinearCorrection(Device):
                 self.frameRate = fps
 
             if self.enable:
-
-                baseline = 3 * max(
-                    image.sum(axis=0).min() / image.shape[0],
-                    image.sum(axis=1).min() / image.shape[1])
+                baseline = max(
+                    2 * image.sum(axis=0).min() / image.shape[0],
+                    2 * image.sum(axis=1).min() / image.shape[1],
+                    0.02 * image.max())
                 b = self.bParameter.value
                 if self.autoScale.value:
                     # Scale factor to have image_out.max() == image_in.max()
