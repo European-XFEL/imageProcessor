@@ -21,7 +21,13 @@ except ImportError:
     from imageProcessor._version import version as deviceVersion
 
 
-def outputSchema(shape=(0, 0), dtype=np.uint16):
+def output_schema(shape=(0, 0), dtype=np.uint16):
+    """Helper function to create the schema of the output channel
+
+    :param shape: the shape of the image
+    :param dtype: the dtype of the image
+    :return: the output node
+    """
     class DataNode(Configurable):
         image = Image(
             shape=shape,
@@ -46,8 +52,8 @@ class ImageNonLinearCorrection(Device):
     )
 
     frameRate = Double(
-        displayedName="Frame Rate",
-        description="Rate of processed images.",
+        displayedName="Processing Rate",
+        description="Rate of the image processing.",
         unitSymbol=Unit.HERTZ,
         accessMode=AccessMode.READONLY,
         defaultValue=0.
@@ -69,10 +75,11 @@ class ImageNonLinearCorrection(Device):
 
             if self.state != State.PROCESSING:
                 # Set output schema
-                schema = outputSchema(image.shape, image.dtype)
+                schema = output_schema(image.shape, image.dtype)
                 await self.setOutputSchema("output", schema)
 
                 if d_type.kind in ('u', 'i'):
+                    # For integer-type images we might need to clip the output
                     self.is_integer = True
                     self.a_min = np.iinfo(d_type).min
                     self.a_max = np.iinfo(d_type).max
@@ -89,26 +96,25 @@ class ImageNonLinearCorrection(Device):
                 self.frameRate = fps
 
             if self.enable:
-                baseline = max(
+                baseline = max(  # estimate the baseline
                     2 * image.sum(axis=0).min() / image.shape[0],
                     2 * image.sum(axis=1).min() / image.shape[1],
                     0.02 * image.max())
                 b = self.bParameter.value
                 if self.autoScale.value:
-                    # Scale factor to have image_out.max() == image_in.max()
+                    # Scale factor to have image_out.max() == image.max()
                     a = image.max() ** (1.0 - b)
                 else:
                     a = self.aParameter.value
 
-                image_out = image.astype(float)  # copy
+                image_out = image.astype(float)  # convert to float
                 image_out[image > baseline] = a * np.power(
                     image[image > baseline], b)  # reshape peak region
                 if self.is_integer:  # clip the image
                     image_out = image_out.clip(self.a_min, self.a_max)
-                if image_out.dtype == d_type:
+                if image_out.dtype == d_type:  # same dtype
                     self.output.schema.data.image = image_out
-                else:
-                    # cast to the orginal dtype
+                else:  # cast to the orginal dtype
                     self.output.schema.data.image = image_out.astype(d_type)
 
             else:  # correction is disabled
@@ -166,7 +172,7 @@ class ImageNonLinearCorrection(Device):
     )
 
     output = OutputChannel(
-        outputSchema(),
+        output_schema(),  # initial schema
         displayedName="Output")
 
     @Slot(displayedName='Reset', description="Reset error count.")
