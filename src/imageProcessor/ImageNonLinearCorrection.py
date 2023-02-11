@@ -111,13 +111,13 @@ class ImageNonLinearCorrection(Device):
                 b = self.constB.value
                 if self.autoScale.value:
                     # Scale factor to have image_out.max() == image.max()
-                    a = image.max() ** (1.0 - b)
+                    a = (image.max() - baseline) ** (1.0 - b)
                 else:
                     a = self.constA.value
 
                 image_out = image.astype(float)  # convert to float
-                image_out[image > baseline] = a * np.power(
-                    image[image > baseline], b)  # reshape peak region
+                image_out[image > baseline] = baseline + a * np.power(
+                    image[image > baseline] - baseline, b)  # reshape peak
                 if self.is_integer:  # clip the image
                     image_out = image_out.clip(self.a_min, self.a_max)
                 if image_out.dtype == d_type:  # same dtype
