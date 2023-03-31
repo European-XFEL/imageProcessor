@@ -1,7 +1,7 @@
 #############################################################################
 # Author: <andrea.parenti@xfel.eu>
 # Created on March 21, 2019
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 from karabo.bound import (
