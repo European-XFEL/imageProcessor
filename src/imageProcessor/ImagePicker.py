@@ -1,7 +1,7 @@
 #############################################################################
 # Author: gabriele.giovanetti@xfel.eu
 # Created on September 7, 2018, 12:00 PM
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 from collections import deque
