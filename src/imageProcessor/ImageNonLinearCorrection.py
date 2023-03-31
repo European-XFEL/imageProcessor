@@ -1,7 +1,7 @@
 #############################################################################
 # Author: parenti
 # Created on Jan 26th, 2023,  4:53 PM
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 import numpy as np

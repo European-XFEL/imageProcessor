@@ -1,7 +1,7 @@
 #############################################################################
 # Author: gabriele.giovanetti@xfel.eu
 # Created on November 1st, 2018, 12:00 PM
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 from karabo.middlelayer import (
