@@ -1,8 +1,9 @@
-"""
-Author: heisenb
-Creation date: January, 2017, 05:21 PM
-Copyright (c) European XFEL GmbH Hamburg. All rights reserved.
-"""
+#############################################################################
+# Author: <andrea.parenti@xfel.eu>
+# Created on October 10, 2013
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
+#############################################################################
+
 import numpy as np
 
 from karabo.bound import (

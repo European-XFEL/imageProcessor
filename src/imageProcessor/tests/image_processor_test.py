@@ -1,3 +1,9 @@
+#############################################################################
+# Author: <andrea.parenti@xfel.eu>
+# Created on October 10, 2013
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
+#############################################################################
+
 import unittest
 
 from karabo.bound import AlarmCondition, Configurator, Hash, PythonDevice
@@ -5,7 +11,7 @@ from karabo.bound import AlarmCondition, Configurator, Hash, PythonDevice
 from ..ImageProcessor import ImageProcessor
 
 
-class ImageProcessor_TestCase(unittest.TestCase):
+class ImageProcessorTestCase(unittest.TestCase):
     def test_proc(self):
         proc = Configurator(PythonDevice).create("ImageProcessor", Hash(
             "Logger.priority", "WARN",

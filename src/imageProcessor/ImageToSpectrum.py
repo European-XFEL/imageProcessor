@@ -1,7 +1,7 @@
 #############################################################################
 # Author: andrea.parenti@xfel.eu
 # Created on June 22, 2018, 12:29 PM
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 import numpy as np
