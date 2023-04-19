@@ -334,7 +334,7 @@ class AutoCorrelator(PythonDevice):
     def find_peak_fwhm(self, image, threshold=0.5):
         """Find x-position of peak in 2-d image, and FWHM along x direction"""
         if not isinstance(image, numpy.ndarray) or image.ndim != 2:
-            return None
+            raise ValueError("Unexpected image format.")
 
         # First work on y distribution #
 
@@ -368,6 +368,11 @@ class AutoCorrelator(PythonDevice):
             raise ValueError(msg)
 
         x_axis = numpy.linspace(0, len(img_x) - 1, len(img_x))
+
+        if not len(img_x) or not len(x_axis):
+            raise ValueError("No image left after cutting away side bands: "
+                             "please check image quality")
+
         # get pedestal if required
         if self["subtractPedestal"]:
             alpha = (
@@ -504,7 +509,7 @@ class AutoCorrelator(PythonDevice):
             self.set(h)
 
         except Exception as e:
-            msg = f"In processImage: {e}"
+            msg = f"In process_image: {e}"
             if self["status"] != f"ERROR: {msg}":
                 self.log.ERROR(msg)
                 self.set("status", f"ERROR: {msg}")
