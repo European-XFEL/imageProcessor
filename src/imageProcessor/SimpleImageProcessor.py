@@ -1,7 +1,7 @@
 #############################################################################
 # Author: <andrea.parenti@xfel.eu>
 # Created on April  6, 2016
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 import math
 import time
