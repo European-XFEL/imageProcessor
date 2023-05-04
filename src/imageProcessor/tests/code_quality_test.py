@@ -31,5 +31,5 @@ def get_python_files():
 
 def test_code_quality_flake8():
     files = get_python_files()
-    command = ['flake8', '--ignore=E131,W503', *[op.abspath(py_file) for py_file in files]]
+    command = ['flake8', *[op.abspath(py_file) for py_file in files]]
     subprocess.check_call(command)
