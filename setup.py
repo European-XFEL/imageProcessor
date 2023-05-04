@@ -34,7 +34,7 @@ setup(name='imageProcessor',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
               'ImagePicker = imageProcessor.ImagePicker:ImagePicker',
               'ImageThumbnail = imageProcessor.ImageThumbnail:ImageThumbnail',
-              'SimpleImageProcessor = simpleImageProcessor.SimpleImageProcessor:SimpleImageProcessor',
+              'SimpleImageProcessor = imageProcessor.SimpleImageProcessor:SimpleImageProcessor',
               'TwoPeakFinder = imageProcessor.TwoPeakFinder:TwoPeakFinder',
           ],
           'karabo.middlelayer_device': [
