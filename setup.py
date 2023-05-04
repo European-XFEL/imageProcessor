@@ -49,7 +49,6 @@ setup(name='imageProcessor',
       )
 
 
-
 # copy to subpaths with Karabo class files
 
 shutil.copy(join(ROOT_FOLDER, '_version.py'),
