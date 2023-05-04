@@ -23,6 +23,7 @@ Contents:
    user_docu_mask
    user_docu_roi
    user_docu_norm_roi
+   user_docu_pattern_picker
    user_docu_picker
    user_docu_spectrum
    user_docu_beam_shape_coarse

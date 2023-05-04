@@ -26,11 +26,13 @@ setup(name='imageProcessor',
       packages=find_packages('src'),
       entry_points={
           'karabo.bound_device': [
+<<<<<<< HEAD
               'ImageApplyMask = imageProcessor.ImageApplyMask:ImageApplyMask',
               'ImageApplyRoi = imageProcessor.ImageApplyRoi:ImageApplyRoi',
               'ImageAverager = imageProcessor.ImageAverager:ImageAverager',
               'ImageBackgroundSubtraction = imageProcessor.ImageBackgroundSubtraction:ImageBackgroundSubtraction',
               'ImageCrosshair = imageProcessor.ImageCrosshair:ImageCrosshair',
+              'ImagePatternPicker = imagePatternPicker.ImagePatternPicker:ImagePatternPicker',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
               'ImagePicker = imageProcessor.ImagePicker:ImagePicker',
               'ImageThumbnail = imageProcessor.ImageThumbnail:ImageThumbnail',
