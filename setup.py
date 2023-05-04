@@ -15,7 +15,6 @@ except ImportError:
     scm_version = {'write_to': VERSION_FILE_PATH}
 
 
-
 setup(name='imageProcessor',
       use_scm_version=scm_version,
       author='',
@@ -35,6 +34,7 @@ setup(name='imageProcessor',
               'ImageProcessor = imageProcessor.ImageProcessor:ImageProcessor',
               'ImagePicker = imageProcessor.ImagePicker:ImagePicker',
               'ImageThumbnail = imageProcessor.ImageThumbnail:ImageThumbnail',
+              'SimpleImageProcessor = simpleImageProcessor.SimpleImageProcessor:SimpleImageProcessor',
               'TwoPeakFinder = imageProcessor.TwoPeakFinder:TwoPeakFinder',
           ],
           'karabo.middlelayer_device': [

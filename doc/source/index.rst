@@ -17,6 +17,7 @@ Contents:
 
 .. toctree::
    user_docu_processor
+   user_docu_simple_processor
    user_docu_avg
    user_docu_bkg
    user_docu_mask
