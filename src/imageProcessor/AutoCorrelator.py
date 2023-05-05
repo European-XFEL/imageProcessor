@@ -1,7 +1,7 @@
 #############################################################################
 # Author: <andrea.parenti@xfel.eu>
 # Created on May  9, 2014
-# Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
 import math
@@ -19,7 +19,7 @@ from karabo.bound import (
 )
 
 from image_processing import image_processing
-from .overview import generate_scene
+from .autocorrelator_overview import generate_scene
 from ._version import version
 
 DEVICE_SCENES = {

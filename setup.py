@@ -26,7 +26,7 @@ setup(name='imageProcessor',
       packages=find_packages('src'),
       entry_points={
           'karabo.bound_device': [
-              'AutoCorrelator = autoCorrelator.AutoCorrelator:AutoCorrelator',
+              'AutoCorrelator = imageProcessor.AutoCorrelator:AutoCorrelator',
               'ImageApplyMask = imageProcessor.ImageApplyMask:ImageApplyMask',
               'ImageApplyRoi = imageProcessor.ImageApplyRoi:ImageApplyRoi',
               'ImageAverager = imageProcessor.ImageAverager:ImageAverager',
