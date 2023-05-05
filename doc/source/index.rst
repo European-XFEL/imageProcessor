@@ -16,10 +16,7 @@ Incoming data will be sought for images in the ``data.image`` key.
 Contents:
 
 .. toctree::
-   introduction
-   calibration
-   scenes
-   troubleshooting
+   user_docu_correlator
    user_docu_processor
    user_docu_simple_processor
    user_docu_avg
