@@ -4,22 +4,19 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
-from karabo.middlelayer import (
-    AccessMode, Assignment, DaqPolicy, Device, Double, get_timestamp,
-    InputChannel, Node, QuantityValue, Slot, State, UInt32, Unit, VectorString
-)
-
 from image_processing.image_processing import (
-    imageSumAlongX, imageSumAlongY, peakParametersEval
-)
+    imageSumAlongX, imageSumAlongY, peakParametersEval)
+from karabo.middlelayer import (
+    AccessMode, Assignment, DaqPolicy, Device, Double, InputChannel, Node,
+    QuantityValue, Slot, State, UInt32, Unit, VectorString, get_timestamp)
 from processing_utils.rate_calculator import RateCalculator
 
 try:
-    from .common_mdl import ErrorNode
     from ._version import version as deviceVersion
+    from .common_mdl import ErrorNode
 except ImportError:
-    from imageProcessor.common_mdl import ErrorNode
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.common_mdl import ErrorNode
 
 
 class BeamShapeCoarse(Device):

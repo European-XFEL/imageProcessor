@@ -8,11 +8,10 @@ import unittest
 
 import numpy as np
 
+from image_processing.image_processing import gauss1d
 from karabo.bound import Configurator, Hash, PythonDevice
 
-from image_processing.image_processing import gauss1d
-
-from ..TwoPeakFinder import find_peaks, TwoPeakFinder
+from ..TwoPeakFinder import TwoPeakFinder, find_peaks
 
 
 class TwoPeakFinder_TestCase(unittest.TestCase):

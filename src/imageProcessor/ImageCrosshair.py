@@ -4,12 +4,11 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
+from image_processing import crosshair, marker
 from karabo.bound import (
     BOOL_ELEMENT, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
     STRING_ELEMENT, UINT32_ELEMENT, VECTOR_STRING_ELEMENT,
     VECTOR_UINT32_ELEMENT, Hash, ImageData, State, Timestamp, Unit)
-
-from image_processing import crosshair, marker
 
 try:
     from ._version import version as deviceVersion

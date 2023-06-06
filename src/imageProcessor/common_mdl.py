@@ -5,8 +5,7 @@
 #############################################################################
 
 from karabo.middlelayer import (
-    AccessLevel, AccessMode, Configurable, Double, UInt32, Unit
-)
+    AccessLevel, AccessMode, Configurable, Double, UInt32, Unit)
 
 try:
     from .common import ErrorCounter

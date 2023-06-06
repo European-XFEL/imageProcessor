@@ -6,25 +6,22 @@
 
 import numpy as np
 
-from karabo.bound import (
-    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, SLOT_ELEMENT, State,
-    STRING_ELEMENT, Timestamp, UINT32_ELEMENT, Unit
-)
-
 from image_processing.image_exp_running_average import (
-    ImageExponentialRunnningAverage
-)
+    ImageExponentialRunnningAverage)
 from image_processing.image_running_mean import ImageRunningMean
 from image_processing.image_standard_mean import ImageStandardMean
+from karabo.bound import (
+    BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, STRING_ELEMENT,
+    UINT32_ELEMENT, ImageData, State, Timestamp, Unit)
 
 try:
+    from ._version import version as deviceVersion
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
-    from ._version import version as deviceVersion
 except ImportError:
+    from imageProcessor._version import version as deviceVersion
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
-    from imageProcessor._version import version as deviceVersion
 
 
 @KARABO_CLASSINFO('ImageAverager', deviceVersion)
