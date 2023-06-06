@@ -1,9 +1,8 @@
 from karabo.common.scenemodel.api import (
-    CheckBoxModel, ComboBoxModel, DisplayCommandModel,
-    DisplayImageModel, DisplayLabelModel, DeviceSceneLinkModel,
-    DisplayPlotModel, DisplayTextLogModel,
-    DoubleLineEditModel, IntLineEditModel, LabelModel, LineModel,
-    SceneModel, SceneTargetWindow, write_scene)
+    CheckBoxModel, ComboBoxModel, DeviceSceneLinkModel, DisplayCommandModel,
+    DisplayImageModel, DisplayLabelModel, DisplayPlotModel,
+    DisplayTextLogModel, DoubleLineEditModel, IntLineEditModel, LabelModel,
+    LineModel, SceneModel, SceneTargetWindow, write_scene)
 
 font_label = 'Source Sans Pro,11,-1,5,50,0,0,0,0,0'
 font_log = 'Source Sans Pro,12,-1,5,75,0,0,0,0,0'

@@ -9,17 +9,16 @@ from threading import Lock
 
 from karabo.bound import (
     BOOL_ELEMENT, INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO,
-    OVERWRITE_ELEMENT, Schema, State, Timestamp, UINT32_ELEMENT
-)
+    OVERWRITE_ELEMENT, UINT32_ELEMENT, Schema, State, Timestamp)
 
 try:
+    from ._version import version as deviceVersion
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
-    from ._version import version as deviceVersion
 except ImportError:
+    from imageProcessor._version import version as deviceVersion
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
-    from imageProcessor._version import version as deviceVersion
 
 
 @KARABO_CLASSINFO("ImagePicker", deviceVersion)

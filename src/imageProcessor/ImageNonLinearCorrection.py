@@ -10,15 +10,14 @@ from karabo.middlelayer import (
     AccessMode, Assignment, Bool, Configurable, DaqPolicy, Device, Double,
     Image, InputChannel, Node, OutputChannel, Slot, State, Unit, VectorString,
     get_timestamp)
-
 from processing_utils.rate_calculator import RateCalculator
 
 try:
-    from .common_mdl import ErrorNode
     from ._version import version as deviceVersion
+    from .common_mdl import ErrorNode
 except ImportError:
-    from imageProcessor.common_mdl import ErrorNode
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.common_mdl import ErrorNode
 
 
 def create_output_schema(shape=(0, 0), dtype=np.uint16):
