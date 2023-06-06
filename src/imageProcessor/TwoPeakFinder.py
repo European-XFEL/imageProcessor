@@ -4,21 +4,18 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
-from karabo.bound import (
-    DOUBLE_ELEMENT, Hash, KARABO_CLASSINFO, State, Timestamp, UINT32_ELEMENT,
-    Unit, VECTOR_UINT32_ELEMENT
-)
-
 from image_processing.image_processing import (
-    imageSumAlongY, peakParametersEval
-)
+    imageSumAlongY, peakParametersEval)
+from karabo.bound import (
+    DOUBLE_ELEMENT, KARABO_CLASSINFO, UINT32_ELEMENT, VECTOR_UINT32_ELEMENT,
+    Hash, State, Timestamp, Unit)
 
 try:
-    from .ImageProcessorBase import ImageProcessorBase
     from ._version import version as deviceVersion
+    from .ImageProcessorBase import ImageProcessorBase
 except ImportError:
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
 def find_peaks(img_x, zero_point):

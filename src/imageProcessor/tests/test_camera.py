@@ -7,10 +7,9 @@
 import numpy as np
 
 from karabo.bound import (
-    BOOL_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT, KARABO_CLASSINFO,
-    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, PythonDevice,
-    Schema, SLOT_ELEMENT, State, Worker
-)
+    BOOL_ELEMENT, IMAGEDATA_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
+    OUTPUT_CHANNEL, OVERWRITE_ELEMENT, SLOT_ELEMENT, Hash, ImageData,
+    PythonDevice, Schema, State, Worker)
 
 
 @KARABO_CLASSINFO("TestCamera", "2.2")

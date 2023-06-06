@@ -10,21 +10,19 @@ import time
 import numpy as np
 from scipy.signal import savgol_filter
 
-from karabo.bound import (
-    BOOL_ELEMENT, DaqDataType, Dims, DOUBLE_ELEMENT, FLOAT_ELEMENT, Hash,
-    ImageData, INT32_ELEMENT, KARABO_CLASSINFO, MetricPrefix, NODE_ELEMENT,
-    OUTPUT_CHANNEL, Schema, SLOT_ELEMENT, State, STRING_ELEMENT, Timestamp,
-    Unit, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT
-)
-
 from image_processing import image_processing
+from karabo.bound import (
+    BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, INT32_ELEMENT,
+    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, SLOT_ELEMENT,
+    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, DaqDataType,
+    Dims, Hash, ImageData, MetricPrefix, Schema, State, Timestamp, Unit)
 
 try:
-    from .ImageProcessorBase import ImageProcessorBase
     from ._version import version as deviceVersion
+    from .ImageProcessorBase import ImageProcessorBase
 except ImportError:
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.ImageProcessorBase import ImageProcessorBase
 
 
 class Average():

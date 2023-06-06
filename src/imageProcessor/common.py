@@ -9,10 +9,8 @@ from queue import Queue
 import numpy as np
 
 from karabo.bound import (
-    DaqDataType, DOUBLE_ELEMENT, Hash, ImageData, IMAGEDATA_ELEMENT,
-    NDARRAY_ELEMENT, NODE_ELEMENT, NoFsm, OUTPUT_CHANNEL, Schema, Types, Unit
-)
-
+    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, NDARRAY_ELEMENT, NODE_ELEMENT,
+    OUTPUT_CHANNEL, DaqDataType, Hash, ImageData, NoFsm, Schema, Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 

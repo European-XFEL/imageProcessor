@@ -9,21 +9,19 @@ import os.path
 import numpy as np
 from PIL import Image
 
-from karabo.bound import (
-    BOOL_ELEMENT, ImageData, KARABO_CLASSINFO, PATH_ELEMENT, SLOT_ELEMENT,
-    State, STRING_ELEMENT, Timestamp, Unit, VECTOR_INT32_ELEMENT
-)
-
 from image_processing.image_processing import imageApplyMask, imageSelectRegion
+from karabo.bound import (
+    BOOL_ELEMENT, KARABO_CLASSINFO, PATH_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
+    VECTOR_INT32_ELEMENT, ImageData, State, Timestamp, Unit)
 
 try:
+    from ._version import version as deviceVersion
     from .common import ImageProcOutputInterface
     from .ImageProcessorBase import ImageProcessorBase
-    from ._version import version as deviceVersion
 except ImportError:
+    from imageProcessor._version import version as deviceVersion
     from imageProcessor.common import ImageProcOutputInterface
     from imageProcessor.ImageProcessorBase import ImageProcessorBase
-    from imageProcessor._version import version as deviceVersion
 
 
 @KARABO_CLASSINFO("ImageApplyMask", deviceVersion)

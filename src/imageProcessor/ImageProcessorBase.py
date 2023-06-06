@@ -5,19 +5,17 @@
 #############################################################################
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, Hash, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
-    NODE_ELEMENT, OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT,
-    State, UINT32_ELEMENT, Unit, VECTOR_STRING_ELEMENT
-)
-
+    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
+    NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, UINT32_ELEMENT,
+    VECTOR_STRING_ELEMENT, Hash, PythonDevice, Schema, State, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 try:
-    from .common import ErrorCounter
     from ._version import version as deviceVersion
+    from .common import ErrorCounter
 except ImportError:
-    from imageProcessor.common import ErrorCounter
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.common import ErrorCounter
 
 
 @KARABO_CLASSINFO("ImageProcessorBase", deviceVersion)

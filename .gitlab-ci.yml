@@ -1,6 +1,3 @@
-variables:
-  USE_ISORT: "false"
-
 include:
   - project: karabo/gitlabci
     file: .python-ci.yml

@@ -7,10 +7,9 @@
 from contextlib import contextmanager
 from uuid import uuid4
 
-from karabo.middlelayer import AlarmCondition, getDevice, sleep
-from karabo.middlelayer_api.tests.eventloop import async_tst, DeviceTest
-
 from imageProcessor.BeamShapeCoarse import BeamShapeCoarse
+from karabo.middlelayer import AlarmCondition, getDevice, sleep
+from karabo.middlelayer.testing import DeviceTest, async_tst
 
 device_id = f"TestProc{uuid4()}"
 conf = {

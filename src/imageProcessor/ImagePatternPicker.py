@@ -6,15 +6,13 @@
 
 import time
 
+from image_processing import crosshair, imageArbitraryRotation
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
     STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, VECTOR_UINT32_ELEMENT,
     DaqDataType, DeviceClient, Hash, ImageData, PythonDevice, Schema, State,
-    Timestamp, Types, Unit
-)
-
-from image_processing import crosshair, imageArbitraryRotation
+    Timestamp, Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion

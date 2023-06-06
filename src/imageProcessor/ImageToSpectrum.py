@@ -6,21 +6,19 @@
 
 import numpy as np
 
+from image_processing.image_processing import imageSumAlongX, imageSumAlongY
 from karabo.middlelayer import (
     AccessMode, Assignment, Bool, Configurable, DaqDataType, DaqPolicy, Device,
-    Double, get_timestamp, InputChannel, Node, OutputChannel, QuantityValue,
-    Slot, State, Type, Unit, VectorDouble, VectorInt32, VectorString
-)
-
-from image_processing.image_processing import imageSumAlongX, imageSumAlongY
+    Double, InputChannel, Node, OutputChannel, QuantityValue, Slot, State,
+    Type, Unit, VectorDouble, VectorInt32, VectorString, get_timestamp)
 from processing_utils.rate_calculator import RateCalculator
 
 try:
-    from .common_mdl import ErrorNode
     from ._version import version as deviceVersion
+    from .common_mdl import ErrorNode
 except ImportError:
-    from imageProcessor.common_mdl import ErrorNode
     from imageProcessor._version import version as deviceVersion
+    from imageProcessor.common_mdl import ErrorNode
 
 
 class DataNode(Configurable):

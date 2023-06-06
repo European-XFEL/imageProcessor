@@ -5,8 +5,8 @@
 #############################################################################
 
 from karabo.common.scenemodel.api import (
-    BoxLayoutModel, CheckBoxModel, DisplayLabelModel, DisplayListModel,
-    DisplayStateColorModel, ComboBoxModel, EditableListModel,
+    BoxLayoutModel, CheckBoxModel, ComboBoxModel, DisplayLabelModel,
+    DisplayListModel, DisplayStateColorModel, EditableListModel,
     IntLineEditModel, LabelModel, LineModel, RectangleModel, SceneModel,
     UnknownWidgetDataModel, write_scene)
 

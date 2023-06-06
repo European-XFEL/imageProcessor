@@ -4,8 +4,9 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
-import unittest
 import time
+import unittest
+
 from karabo.bound import Configurator, Hash, PythonDevice
 
 from ..ImageAverager import ImageAverager
