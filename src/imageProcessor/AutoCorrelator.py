@@ -5,22 +5,21 @@
 #############################################################################
 
 import math
+
 import numpy
 import scipy.constants
 
+from image_processing import image_processing
+from karabo.bound import (
+    BOOL_ELEMENT, DOUBLE_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
+    NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT, SLOT_ELEMENT,
+    STRING_ELEMENT, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT,
+    VECTOR_STRING_ELEMENT, DaqDataType, Hash, MetricPrefix, PythonDevice,
+    Schema, State, Unit)
 from karabo.common.api import KARABO_SCHEMA_DISPLAY_TYPE_SCENES as DT_SCENES
 
-from karabo.bound import (
-    BOOL_ELEMENT, DaqDataType, DOUBLE_ELEMENT, Hash, INPUT_CHANNEL,
-    KARABO_CLASSINFO, MetricPrefix, NODE_ELEMENT, OUTPUT_CHANNEL,
-    OVERWRITE_ELEMENT, PythonDevice, Schema, SLOT_ELEMENT, State,
-    STRING_ELEMENT, UINT32_ELEMENT, Unit, VECTOR_DOUBLE_ELEMENT,
-    VECTOR_STRING_ELEMENT
-)
-
-from image_processing import image_processing
-from .autocorrelator_overview import generate_scene
 from ._version import version
+from .autocorrelator_overview import generate_scene
 
 DEVICE_SCENES = {
     "scene": generate_scene}
