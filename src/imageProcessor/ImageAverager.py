@@ -35,15 +35,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             .description('Reset averaged image.')
             .commit(),
 
-            STRING_ELEMENT(expected).key("imagePath")
-            .displayedName("Image Path")
-            .description("The path within the channel, where the data is, such"
-                         " as data.image, digitizer.channel_1_A.raw.samples")
-            .assignmentOptional().defaultValue("data.image")
-            .expertAccess()
-            .init()
-            .commit(),
-
             UINT32_ELEMENT(expected).key('nImages')
             .displayedName('Number of Images')
             .description('Number of images to be averaged.')
