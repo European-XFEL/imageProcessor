@@ -6,8 +6,9 @@
 
 from karabo.bound import (
     DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
-    NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, UINT32_ELEMENT,
-    VECTOR_STRING_ELEMENT, Hash, PythonDevice, Schema, State, Unit)
+    NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
+    UINT32_ELEMENT, VECTOR_STRING_ELEMENT, Hash, PythonDevice, Schema, State,
+    Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 try:
@@ -30,6 +31,14 @@ class ImageProcessorBase(PythonDevice):
             OVERWRITE_ELEMENT(expected).key('state')
             .setNewOptions(State.ON, State.PROCESSING, State.ERROR)
             .setNewDefaultValue(State.ON)
+            .commit(),
+
+            STRING_ELEMENT(expected).key("imagePath")
+            .displayedName("Image Path")
+            .description("Input image path.")
+            .assignmentOptional().defaultValue("data.image")
+            .expertAccess()
+            .init()
             .commit(),
 
             VECTOR_STRING_ELEMENT(expected).key("interfaces")

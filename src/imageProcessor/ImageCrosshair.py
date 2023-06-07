@@ -265,9 +265,15 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             first_image = True
 
         try:
+            image_path = self['imagePath']
+            if data.has(image_path):
+                image_data = data[image_path]
+            else:
+                self.log.DEBUG(f"data does not have any image in {image_path}")
+                return
+
             ts = Timestamp.fromHashAttributes(
                 metaData.getAttributes('timestamp'))
-            image_data = data['data.image']
             image = image_data.getData()  # np.ndarray
 
             self.refresh_frame_rate_in()
