@@ -167,12 +167,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             self.updateState(State.PROCESSING)
 
         try:
-            if data.has('data.image'):
-                image_data = data['data.image']
-            elif data.has('image'):
-                # To ensure backward compatibility
-                # with older versions of cameras
-                image_data = data['image']
+            image_path = self['imagePath']
+            if data.has(image_path):
+                image_data = data[image_path]
             else:
                 raise RuntimeError("data does not contain any image")
         except Exception as e:
