@@ -65,14 +65,6 @@ class ImageProcessor(ImageProcessorBase):
             .description("Use the current image as background image.")
             .commit(),
 
-            STRING_ELEMENT(expected).key("imagePath")
-            .displayedName("Image Path")
-            .description("Input image path.")
-            .assignmentOptional().defaultValue("data.image")
-            .expertAccess()
-            .init()
-            .commit(),
-
             # General Settings
 
             BOOL_ELEMENT(expected).key("warnOnFitOutOfBounds")
