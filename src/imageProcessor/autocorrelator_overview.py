@@ -1,3 +1,7 @@
+#############################################################################
+# Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
+#############################################################################
+
 from karabo.common.scenemodel.api import (
     CheckBoxModel, ComboBoxModel, DeviceSceneLinkModel, DisplayCommandModel,
     DisplayImageModel, DisplayLabelModel, DisplayPlotModel,
