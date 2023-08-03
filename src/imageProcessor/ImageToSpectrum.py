@@ -8,17 +8,15 @@ import numpy as np
 
 from image_processing.image_processing import imageSumAlongX, imageSumAlongY
 from karabo.middlelayer import (
-    AccessMode, Assignment, Bool, Configurable, DaqDataType, DaqPolicy, Device,
-    Double, InputChannel, Node, OutputChannel, QuantityValue, Slot, State,
-    Type, Unit, VectorDouble, VectorInt32, VectorString, get_timestamp)
-from processing_utils.rate_calculator import RateCalculator
+    AccessMode, Bool, Configurable, DaqDataType, Double, Node, OutputChannel,
+    QuantityValue, VectorDouble, VectorInt32)
 
 try:
     from ._version import version as deviceVersion
-    from .common_mdl import ErrorNode
+    from .common_mdl import ImageProcessorBase
 except ImportError:
     from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common_mdl import ErrorNode
+    from imageProcessor.common_mdl import ImageProcessorBase
 
 
 class DataNode(Configurable):
@@ -33,7 +31,7 @@ class ChannelNode(Configurable):
     data = Node(DataNode)
 
 
-class ImageToSpectrum(Device):
+class ImageToSpectrum(ImageProcessorBase):
     # provide version for classVersion property
     __version__ = deviceVersion
 
@@ -45,51 +43,10 @@ class ImageToSpectrum(Device):
         else:
             self.calculate_spectrum = imageSumAlongY
 
-    # TODO base class for MDL: interfaces, frameRate, errorCounter, input
-
-    interfaces = VectorString(
-        displayedName="Interfaces",
-        defaultValue=["Processor"],
-        accessMode=AccessMode.READONLY,
-        daqPolicy=DaqPolicy.OMIT
-    )
-
-    frameRate = Double(
-        displayedName="Input Frame Rate",
-        description="Rate of processed images.",
-        unitSymbol=Unit.HERTZ,
-        accessMode=AccessMode.READONLY,
-        defaultValue=0.
-    )
-
-    errorCounter = Node(ErrorNode)
-
-    @InputChannel(
-        raw=True,
-        displayedName="Input",
-        accessMode=AccessMode.INITONLY,
-        assignment=Assignment.MANDATORY
-    )
-    async def input(self, data, meta):
-        if self.state != State.PROCESSING:
-            self.state = State.PROCESSING
-
+    async def process_image(self, image, ts):
         try:
-            ts = get_timestamp(meta.timestamp.timestamp)
-            img_raw = data["data.image.pixels"]
-            img_type = img_raw["type"]
-            dtype = np.dtype(Type.types[img_type].numpy)
-            shape = img_raw["shape"]
-
-            # Convert bare Hash to NDArray
-            image = np.frombuffer(img_raw["data"], dtype=dtype).reshape(shape)
-            image_height = shape[0]
-            image_width = shape[1]
-
-            self.frame_rate.update()
-            fps = self.frame_rate.refresh()
-            if fps:
-                self.frameRate = fps
+            image_height = image.shape[0]
+            image_width = image.shape[1]
 
             low_x = np.maximum(self.roi[0], 0)
             high_x = np.minimum(self.roi[1], image_width)
@@ -98,7 +55,7 @@ class ImageToSpectrum(Device):
 
             # Apply ROI
             if low_x == 0 and high_x == 0 and low_y == 0 and high_y == 0:
-                # In case of [0, 0, 0 , 0] no ROI is applied
+                # In case of [0, 0, 0, 0] no ROI is applied
                 cropped_image = image
             else:
                 cropped_image = image[int(low_y):int(high_y),
@@ -111,30 +68,17 @@ class ImageToSpectrum(Device):
             self.spectrumIntegral = QuantityValue(spectrum.sum(),
                                                   timestamp=ts)
 
-            self.errorCounter.update_count()  # success
-            if self.status != "PROCESSING":
-                self.status = "PROCESSING"
-        except Exception as e:
+        except Exception:
             spectrum = np.full((1,), np.nan)
             self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
-            msg = f"Exception while processing input image: {e}"
-            if self.errorCounter.warnCondition == 0:
-                # Only update if not yet in WARN
-                self.status = msg
-                self.log.ERROR(msg)
-            self.errorCounter.update_count(True)
+            raise
 
-        # Write spectrum to output channel
-        self.output.schema.data.spectrum = spectrum.astype('double').tolist()
+        finally:
+            # Write spectrum to output channel
+            self.output.schema.data.spectrum = spectrum.astype(
+                'double').tolist()
 
-        await self.output.writeData(timestamp=ts)
-
-    @input.endOfStream
-    def input(self, name):
-        self.frameRate = 0.
-        if self.state != State.ON:
-            self.state = State.ON
-        # TODO: send EOS to output (not possible in 2.2.4 yet)
+            await self.output.writeData(timestamp=ts)
 
     roi_default = [0, 0, 0, 0]
 
@@ -176,20 +120,7 @@ class ImageToSpectrum(Device):
         accessMode=AccessMode.READONLY,
     )
 
-    @Slot(displayedName='Reset', description="Reset error count.")
-    async def resetError(self):
-        self.errorCounter.error_counter.clear()
-        self.errorCounter.evaluate_warn()
-        if self.state != State.ON:
-            self.state = State.ON
-
     def valid_roi(self, roi):
         if any([roi[0] < 0, roi[1] < roi[0], roi[2] < 0, roi[3] < roi[2]]):
             return False
         return True
-
-    async def onInitialization(self):
-        """ This method will be called when the device starts.
-        """
-        self.frame_rate = RateCalculator(refresh_interval=1.0)
-        self.state = State.ON

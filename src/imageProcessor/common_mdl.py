@@ -5,11 +5,16 @@
 #############################################################################
 
 from karabo.middlelayer import (
-    AccessLevel, AccessMode, Configurable, Double, UInt32, Unit)
+    AccessLevel, AccessMode, Assignment, Configurable, DaqPolicy, Device,
+    Double, InputChannel, Node, Slot, State, String, UInt32, Unit,
+    VectorString, get_timestamp)
+from processing_utils.rate_calculator import RateCalculator
 
 try:
+    from ._version import version as deviceVersion
     from .common import ErrorCounter
 except ImportError:
+    from imageProcessor._version import version as deviceVersion
     from imageProcessor.common import ErrorCounter
 
 
@@ -109,3 +114,97 @@ class ErrorNode(Configurable):
         if self.warnCondition != self.error_counter.warn:
             # Update in device only if changed
             self.warnCondition = self.error_counter.warn
+
+
+class ImageProcessorBase(Device):
+    # provide version for classVersion property
+    __version__ = deviceVersion
+
+    imagePath = String(
+        displayedName="Image Path",
+        description="Input image path.",
+        defaultValue="data.image",
+        requiredAccessLevel=AccessLevel.EXPERT,
+        accessMode=AccessMode.INITONLY,
+    )
+
+    interfaces = VectorString(
+        displayedName="Interfaces",
+        defaultValue=["Processor"],
+        accessMode=AccessMode.READONLY,
+        daqPolicy=DaqPolicy.OMIT
+    )
+
+    frameRate = Double(
+        displayedName="Input Frame Rate",
+        description="Rate of processed images.",
+        unitSymbol=Unit.HERTZ,
+        accessMode=AccessMode.READONLY,
+        defaultValue=0.
+    )
+
+    errorCounter = Node(
+        ErrorNode,
+        displayedName="Error Count",
+        description="This node provides a count of the processing errors, "
+                    "a warn condition if the error fraction exceeds some "
+                    "settable threshold, ad more.")
+
+    @InputChannel(
+        raw=False,
+        displayedName="Input",
+        accessMode=AccessMode.INITONLY,
+        assignment=Assignment.MANDATORY)
+    async def input(self, data, meta):
+        try:
+            image = data
+            for key in self.imagePath.value.split("."):
+                image = getattr(image, key)
+            image = image.pixels.value
+
+            self.frame_rate.update()
+            fps = self.frame_rate.refresh()
+            if fps:
+                self.frameRate = fps
+
+            ts = get_timestamp(meta.timestamp.timestamp)
+            await self.process_image(image, ts)
+
+            self.errorCounter.update_count()  # success
+
+            if self.state != State.PROCESSING:
+                self.state = State.PROCESSING
+                self.status = "PROCESSING"
+
+        except Exception as e:
+            if self.errorCounter.warnCondition == 0:
+                # Only update if not yet in WARN
+                msg = f"Exception while processing input image: {e}"
+                self.status = msg
+                self.log.ERROR(msg)
+            self.errorCounter.update_count(True)
+
+    async def process_image(self, image, ts):
+        raise NotImplementedError(
+            "This function must be overridden in the derived class.")
+
+    @input.endOfStream
+    def input(self, name):
+        self.frameRate = 0.
+        if self.state != State.ON:
+            self.state = State.ON
+            self.status = "IDLE"
+
+    @Slot(displayedName='Reset', description="Reset error count.")
+    async def resetError(self):
+        self.errorCounter.error_counter.clear()
+        self.errorCounter.evaluate_warn()
+        if self.state != State.ON:
+            self.state = State.ON
+
+    async def onInitialization(self):
+        """ This method will be called when the device starts.
+        """
+        self.frame_rate = RateCalculator(refresh_interval=1.0)
+        self.status = "IDLE"
+        self.state = State.ON
