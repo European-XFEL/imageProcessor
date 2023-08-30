@@ -93,7 +93,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     def preReconfigure(self, incomingReconfiguration):
         # always call ImageProcessorBase preReconfigure first!
-        super(ImageAverager, self).preReconfigure(incomingReconfiguration)
+        super().preReconfigure(incomingReconfiguration)
 
         if incomingReconfiguration.has('runningAverage') or \
                 incomingReconfiguration.has('runningAvgMethod'):

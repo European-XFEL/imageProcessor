@@ -61,7 +61,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
     def preReconfigure(self, incomingReconfiguration):
         # always call ImageProcessorBase preReconfigure first!
-        super(ImageApplyRoi, self).preReconfigure(incomingReconfiguration)
+        super().preReconfigure(incomingReconfiguration)
 
         if incomingReconfiguration.has('roi'):
             roi = incomingReconfiguration['roi']

@@ -135,6 +135,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             configuration['imageFilename'] = fname
 
     def preReconfigure(self, incomingReconfiguration):
+        # always call ImageProcessorBase preReconfigure first!
+        super().preReconfigure(incomingReconfiguration)
+
         if 'nImages' in incomingReconfiguration:
             self.reset_background()
 
