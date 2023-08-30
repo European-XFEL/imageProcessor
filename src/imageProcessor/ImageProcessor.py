@@ -4,8 +4,10 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
+import copy
 import math
 import time
+from threading import Lock
 
 import numpy as np
 from scipy.signal import savgol_filter
@@ -13,9 +15,10 @@ from scipy.signal import savgol_filter
 from image_processing import image_processing
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, INT32_ELEMENT,
-    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, SLOT_ELEMENT,
-    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, DaqDataType,
-    Dims, Hash, ImageData, MetricPrefix, Schema, State, Timestamp, Unit)
+    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
+    SLOT_ELEMENT, STRING_ELEMENT, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT,
+    VECTOR_INT32_ELEMENT, DaqDataType, Dims, Hash, ImageData, MetricPrefix,
+    Schema, State, Timestamp, Unit)
 
 try:
     from ._version import version as deviceVersion
@@ -55,14 +58,26 @@ class ImageProcessor(ImageProcessorBase):
     def expectedParameters(expected):
         output_data = Schema()
         (
+            OVERWRITE_ELEMENT(expected).key('state')
+            .setNewOptions(
+                State.ON, State.PROCESSING, State.ACQUIRING, State.ERROR)
+            .commit(),
+
             SLOT_ELEMENT(expected).key("reset")
             .displayedName("Reset Output")
             .description("Resets the processor output values.")
             .commit(),
 
-            SLOT_ELEMENT(expected).key("useAsBackgroundImage")
-            .displayedName("Current Image as Background")
-            .description("Use the current image as background image.")
+            SLOT_ELEMENT(expected).key('useAsBackgroundImage')
+            .displayedName("Current Image(s) as Background")
+            .description("Use the average of 'nImages' for the background "
+                         "subtraction.")
+            .allowedStates(State.ON, State.PROCESSING)
+            .commit(),
+
+            SLOT_ELEMENT(expected).key('resetBackgroundImage')
+            .displayedName("Reset Background Image")
+            .description("Reset background image.")
             .commit(),
 
             # General Settings
@@ -106,6 +121,15 @@ class ImageProcessor(ImageProcessorBase):
             .displayedName("Subtract Background Image")
             .description("Subtract the loaded background image.")
             .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            UINT32_ELEMENT(expected).key('nImages')
+            .displayedName('Number of Background Images')
+            .description('Number of background images to be averaged.')
+            .unit(Unit.NUMBER)
+            .assignmentOptional().defaultValue(10)
+            .minInc(1).maxInc(100)
             .reconfigurable()
             .commit(),
 
@@ -813,9 +837,15 @@ class ImageProcessor(ImageProcessorBase):
         # Background image
         self.bkg_image = None
 
+        self.avg_bkg_image = None  # Background average
+        self.n_images = 0
+        self.update_avg = False  # Average needs update
+        self.avg_lock = Lock()  # Lock for bkg image and avg
+
         # Register additional slots
         self.KARABO_SLOT(self.reset)
         self.KARABO_SLOT(self.useAsBackgroundImage)
+        self.KARABO_SLOT(self.resetBackgroundImage)
         # TODO: save/load bkg image slots
 
         # Processing time averages
@@ -853,7 +883,7 @@ class ImageProcessor(ImageProcessorBase):
         # always call ImageProcessorBase preReconfigure first!
         super(ImageProcessor, self).preReconfigure(incomingReconfiguration)
 
-        if incomingReconfiguration.has("userDefinedRange"):
+        if 'userDefinedRange' in incomingReconfiguration:
             udr = incomingReconfiguration["userDefinedRange"]
             if not self.is_user_range_valid(udr):
                 del incomingReconfiguration["userDefinedRange"]
@@ -861,13 +891,28 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.WARN(msg)
                 self["status"] = msg
 
+        if 'nImages' in incomingReconfiguration:
+            self.reset_background()
+
+    # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
+    def reset_background(self, recalculate=True):
+        with self.avg_lock:
+            self.update_avg = recalculate  # Recalculate average
+            self.n_images = 0
+            self.avg_bkg_image = None
+            self.bkg_image = None
+
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
 
+    # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
     def useAsBackgroundImage(self):
-        self.log.INFO("Use current image as background.")
-        # Copy current image to background image
-        self.bkg_image = np.array(self.current_image)
+        self.log.INFO("Use current image(s) as background")
+        self.reset_background()
+
+    def resetBackgroundImage(self):
+        self.log.INFO("Reset background image")
+        self.reset_background(recalculate=False)
 
     def reset(self):
         h = Hash()
@@ -925,11 +970,24 @@ class ImageProcessor(ImageProcessorBase):
         self.set(h)
 
     def onData(self, data, metaData):
+        # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
         first_image = False
-        if self.get("state") == State.ON:
+        if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
+            if self.update_avg:
+                # Calculating background average
+                self.updateState(State.ACQUIRING)
+                self["status"] = "Acquiring background images"
+            else:
+                self.updateState(State.PROCESSING)
             first_image = True
+        elif self['state'] == State.PROCESSING and self.update_avg:
+            # Calculating background average
+            self.updateState(State.ACQUIRING)
+            self["status"] = "Acquiring background images"
+        elif self['state'] == State.ACQUIRING and not self.update_avg:
+            # Background average is now available
+            self.updateState(State.PROCESSING)
 
         try:
             image_path = self['imagePath']
@@ -998,12 +1056,6 @@ class ImageProcessor(ImageProcessorBase):
         self.refresh_frame_rate_in()
 
         try:
-            pixel_size = self.get("pixelSize")
-        except Exception:
-            # No pixel size
-            pixel_size = None
-
-        try:
             dims = imageData.getDimensions()
             if len(dims) == 2:
                 image_height = dims[0]
@@ -1059,6 +1111,32 @@ class ImageProcessor(ImageProcessorBase):
             msg = f"Exception when opening image: {e}"
             self.update_count(error=True, status=msg)
             return
+
+        try:
+            pixel_size = self.get("pixelSize")
+        except Exception:
+            # No pixel size
+            pixel_size = None
+
+        # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
+        with self.avg_lock:
+            if self.update_avg:
+                # Calculate background image average
+                n_images = self['nImages']
+                if self.n_images == 0:
+                    self.avg_bkg_image = copy.deepcopy(img)
+                    self.n_images = 1
+                elif self.n_images < n_images:
+                    self.avg_bkg_image += img
+                    self.n_images += 1
+
+                if self.n_images == n_images:
+                    self.update_avg = False
+                    self.avg_bkg_image = self.avg_bkg_image / n_images
+                    self.bkg_image = self.avg_bkg_image.astype(img.dtype)
+                else:
+                    self.log.DEBUG("Calculating background...")
+                    return
 
         # Filter by Threshold
         if filter_images_by_threshold:
