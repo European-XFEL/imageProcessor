@@ -156,12 +156,14 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             if self.update_avg:
                 # Calculating background average
                 self.updateState(State.ACQUIRING)
+                self["status"] = "Acquiring background images"
             else:
                 self.updateState(State.PROCESSING)
             first_image = True
         elif self['state'] == State.PROCESSING and self.update_avg:
             # Calculating background average
             self.updateState(State.ACQUIRING)
+            self["status"] = "Acquiring background images"
         elif self['state'] == State.ACQUIRING and not self.update_avg:
             # Background average is now available
             self.updateState(State.PROCESSING)
@@ -217,8 +219,8 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
 
                     if self.n_images == n_images:
                         self.update_avg = False
-                        self.avg_bkg_image /= n_images
-                        self.bkg_image = self.avg_bkg_image
+                        self.avg_bkg_image = self.avg_bkg_image / n_images
+                        self.bkg_image = self.avg_bkg_image.astype(img.dtype)
                     else:
                         self.log.DEBUG("Calculating background...")
                         return
