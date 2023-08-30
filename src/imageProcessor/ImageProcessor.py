@@ -881,7 +881,7 @@ class ImageProcessor(ImageProcessorBase):
 
     def preReconfigure(self, incomingReconfiguration):
         # always call ImageProcessorBase preReconfigure first!
-        super(ImageProcessor, self).preReconfigure(incomingReconfiguration)
+        super().preReconfigure(incomingReconfiguration)
 
         if 'userDefinedRange' in incomingReconfiguration:
             udr = incomingReconfiguration["userDefinedRange"]
