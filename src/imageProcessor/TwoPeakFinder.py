@@ -10,12 +10,8 @@ from karabo.bound import (
     DOUBLE_ELEMENT, KARABO_CLASSINFO, UINT32_ELEMENT, VECTOR_UINT32_ELEMENT,
     Hash, State, Timestamp, Unit)
 
-try:
-    from ._version import version as deviceVersion
-    from .ImageProcessorBase import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
+from ._version import version as deviceVersion
+from .ImageProcessorBase import ImageProcessorBase
 
 
 def find_peaks(img_x, zero_point):

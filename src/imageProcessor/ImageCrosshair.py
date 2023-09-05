@@ -10,16 +10,10 @@ from karabo.bound import (
     STRING_ELEMENT, UINT32_ELEMENT, VECTOR_STRING_ELEMENT,
     VECTOR_UINT32_ELEMENT, Hash, ImageData, State, Timestamp, Unit)
 
-try:
-    from ._version import version as deviceVersion
-    from .common import ImageProcOutputInterface
-    from .ImageProcessorBase import ImageProcessorBase
-    from .scenes import get_scene
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common import ImageProcOutputInterface
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
-    from imageProcessor.scenes import get_scene
+from ._version import version as deviceVersion
+from .common import ImageProcOutputInterface
+from .ImageProcessorBase import ImageProcessorBase
+from .scenes import get_scene
 
 
 @KARABO_CLASSINFO("ImageCrosshair", deviceVersion)

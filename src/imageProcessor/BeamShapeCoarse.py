@@ -8,12 +8,8 @@ from image_processing.image_processing import (
     imageSumAlongX, imageSumAlongY, peakParametersEval)
 from karabo.middlelayer import AccessMode, QuantityValue, UInt32, Unit
 
-try:
-    from ._version import version as deviceVersion
-    from .common_mdl import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common_mdl import ImageProcessorBase
+from ._version import version as deviceVersion
+from .common_mdl import ImageProcessorBase
 
 
 class BeamShapeCoarse(ImageProcessorBase):
