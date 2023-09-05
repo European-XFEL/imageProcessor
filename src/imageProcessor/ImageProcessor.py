@@ -4,10 +4,8 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
-import copy
 import math
 import time
-from threading import Lock
 
 import numpy as np
 from scipy.signal import savgol_filter
@@ -15,17 +13,12 @@ from scipy.signal import savgol_filter
 from image_processing import image_processing
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, INT32_ELEMENT,
-    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
-    SLOT_ELEMENT, STRING_ELEMENT, UINT32_ELEMENT, VECTOR_DOUBLE_ELEMENT,
-    VECTOR_INT32_ELEMENT, DaqDataType, Dims, Hash, ImageData, MetricPrefix,
-    Schema, State, Timestamp, Unit)
+    KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, SLOT_ELEMENT,
+    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, DaqDataType,
+    Hash, MetricPrefix, Schema, Unit)
 
-try:
-    from ._version import version as deviceVersion
-    from .ImageProcessorBase import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
+from ._version import version as deviceVersion
+from .ImageBackgroundSubtractionBase import ImageBackgroundSubtractionBase
 
 
 class Average():
@@ -48,7 +41,7 @@ class Average():
 
 
 @KARABO_CLASSINFO("ImageProcessor", deviceVersion)
-class ImageProcessor(ImageProcessorBase):
+class ImageProcessor(ImageBackgroundSubtractionBase):
     # Numerical factor to convert gaussian standard deviation to beam size
     std_dev_2_beam_size = 4.0
     gauss_2_fwhm = 2 * math.sqrt(2 * math.log(2))
@@ -58,26 +51,9 @@ class ImageProcessor(ImageProcessorBase):
     def expectedParameters(expected):
         output_data = Schema()
         (
-            OVERWRITE_ELEMENT(expected).key('state')
-            .setNewOptions(
-                State.ON, State.PROCESSING, State.ACQUIRING, State.ERROR)
-            .commit(),
-
             SLOT_ELEMENT(expected).key("reset")
             .displayedName("Reset Output")
             .description("Resets the processor output values.")
-            .commit(),
-
-            SLOT_ELEMENT(expected).key('useAsBackgroundImage')
-            .displayedName("Current Image(s) as Background")
-            .description("Use the average of 'nImages' for the background "
-                         "subtraction.")
-            .allowedStates(State.ON, State.PROCESSING)
-            .commit(),
-
-            SLOT_ELEMENT(expected).key('resetBackgroundImage')
-            .displayedName("Reset Background Image")
-            .description("Reset background image.")
             .commit(),
 
             # General Settings
@@ -121,15 +97,6 @@ class ImageProcessor(ImageProcessorBase):
             .displayedName("Subtract Background Image")
             .description("Subtract the loaded background image.")
             .assignmentOptional().defaultValue(False)
-            .reconfigurable()
-            .commit(),
-
-            UINT32_ELEMENT(expected).key('nImages')
-            .displayedName('Number of Background Images')
-            .description('Number of background images to be averaged.')
-            .unit(Unit.NUMBER)
-            .assignmentOptional().defaultValue(10)
-            .minInc(1).maxInc(100)
             .reconfigurable()
             .commit(),
 
@@ -831,22 +798,8 @@ class ImageProcessor(ImageProcessorBase):
         self.y_min = None
         self.y_max = None
 
-        # Current image
-        self.current_image = None
-
-        # Background image
-        self.bkg_image = None
-
-        self.avg_bkg_image = None  # Background average
-        self.n_images = 0
-        self.update_avg = False  # Average needs update
-        self.avg_lock = Lock()  # Lock for bkg image and avg
-
         # Register additional slots
         self.KARABO_SLOT(self.reset)
-        self.KARABO_SLOT(self.useAsBackgroundImage)
-        self.KARABO_SLOT(self.resetBackgroundImage)
-        # TODO: save/load bkg image slots
 
         # Processing time averages
         self.last_update_time = time.time()
@@ -861,10 +814,6 @@ class ImageProcessor(ImageProcessorBase):
                           'fitTime': Average(),
                           'integrationTime': Average()
                           }
-
-        # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         self.registerInitialFunction(self.initialization)
 
@@ -891,28 +840,13 @@ class ImageProcessor(ImageProcessorBase):
                 self.log.WARN(msg)
                 self["status"] = msg
 
-        if 'nImages' in incomingReconfiguration:
-            self.reset_background()
-
-    # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
-    def reset_background(self, recalculate=True):
-        with self.avg_lock:
-            self.update_avg = recalculate  # Recalculate average
-            self.n_images = 0
-            self.avg_bkg_image = None
-            self.bkg_image = None
+        if 'subtractBkgImage' in incomingReconfiguration:
+            is_enabled = incomingReconfiguration['subtractBkgImage']
+            text = "enabled" if is_enabled else "disabled"
+            self.log.INFO(f"Background subtraction is {text}")
 
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
-
-    # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
-    def useAsBackgroundImage(self):
-        self.log.INFO("Use current image(s) as background")
-        self.reset_background()
-
-    def resetBackgroundImage(self):
-        self.log.INFO("Reset background image")
-        self.reset_background(recalculate=False)
 
     def reset(self):
         h = Hash()
@@ -969,72 +903,12 @@ class ImageProcessor(ImageProcessorBase):
         # Reset device parameters (all at once)
         self.set(h)
 
-    def onData(self, data, metaData):
-        # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
-        first_image = False
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            if self.update_avg:
-                # Calculating background average
-                self.updateState(State.ACQUIRING)
-                self["status"] = "Acquiring background images"
-            else:
-                self.updateState(State.PROCESSING)
-            first_image = True
-        elif self['state'] == State.PROCESSING and self.update_avg:
-            # Calculating background average
-            self.updateState(State.ACQUIRING)
-            self["status"] = "Acquiring background images"
-        elif self['state'] == State.ACQUIRING and not self.update_avg:
-            # Background average is now available
-            self.updateState(State.PROCESSING)
-
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                self.log.DEBUG(f"data does not have any image in {image_path}")
-                return
-
-            if isinstance(image_data, list):
-                # Convert to ImageData
-                data = np.asarray(image_data)
-                dims = Dims(len(image_data))
-                image_data = ImageData(data, dims)
-
-            if first_image:
-                # Update warning levels
-                dims = image_data.getDimensions()
-                if len(dims) == 2:  # 2d
-                    image_height = dims[0]
-                    image_width = dims[1]
-                elif len(dims) == 1:  # 1d
-                    image_height = 1
-                    image_width = dims[0]
-                if self["warnOnFitOutOfBounds"]:
-                    self.update_warn_levels(0, image_height, 0, image_width)
-
-                bpp = image_data.getBitsPerPixel()
-                self.update_output_schema(image_height, image_width, bpp)
-
-            ts = Timestamp.fromHashAttributes(
-                metaData.getAttributes('timestamp'))
-            self.process_image(image_data, ts)  # Process image
-
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream")
-        self['inFrameRate'] = 0.
+        super().onEndOfStream(inputChannel)
         # Signals end of stream
         self.signalEndOfStream("output")
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
 
-    def process_image(self, imageData, ts):
+    def process_image(self, image_data, ts, first_image):
 
         def set_property(h, key, value):
             if self[key] != value:
@@ -1056,7 +930,7 @@ class ImageProcessor(ImageProcessorBase):
         self.refresh_frame_rate_in()
 
         try:
-            dims = imageData.getDimensions()
+            dims = image_data.getDimensions()
             if len(dims) == 2:
                 image_height = dims[0]
                 image_width = dims[1]
@@ -1068,12 +942,20 @@ class ImageProcessor(ImageProcessorBase):
             else:
                 self.log.DEBUG(f"Neither image nor spectrum: dims={dims}")
 
+            if first_image:
+                # Update warning levels
+                if self["warnOnFitOutOfBounds"]:
+                    self.update_warn_levels(0, image_height, 0, image_width)
+
+                bpp = image_data.getBitsPerPixel()
+                self.update_output_schema(image_height, image_width, bpp)
+
             if image_width != self.get("imageWidth"):
                 h.set("imageWidth", image_width)
             if image_height != self.get("imageHeight"):
                 h.set("imageHeight", image_height)
 
-            roi_offsets = imageData.getROIOffsets()
+            roi_offsets = image_data.getROIOffsets()
             if is_2d_image:
                 image_offset_y = roi_offsets[0]
                 image_offset_x = roi_offsets[1]
@@ -1085,7 +967,7 @@ class ImageProcessor(ImageProcessorBase):
             if image_offset_y != self.get("imageOffsetY"):
                 h.set("imageOffsetY", image_offset_y)
 
-            image_binning = imageData.getBinning()
+            image_binning = image_data.getBinning()
             if is_2d_image:
                 image_binning_y = image_binning[0]
                 image_binning_x = image_binning[1]
@@ -1098,7 +980,7 @@ class ImageProcessor(ImageProcessorBase):
             if image_binning_y != self.get("imageBinningY"):
                 h.set("imageBinningY", image_binning_y)
 
-            self.current_image = imageData.getData()  # np.ndarray
+            self.current_image = image_data.getData()  # np.ndarray
             img = self.current_image  # Shallow copy
             if img.ndim == 3 and img.shape[2] == 1:
                 # Image has 3rd dimension (channel), but it's 1
@@ -1118,25 +1000,10 @@ class ImageProcessor(ImageProcessorBase):
             # No pixel size
             pixel_size = None
 
-        # XXX Copy-paste from ImageBackgroundSubtraction -> factor out
-        with self.avg_lock:
-            if self.update_avg:
-                # Calculate background image average
-                n_images = self['nImages']
-                if self.n_images == 0:
-                    self.avg_bkg_image = copy.deepcopy(img)
-                    self.n_images = 1
-                elif self.n_images < n_images:
-                    self.avg_bkg_image += img
-                    self.n_images += 1
-
-                if self.n_images == n_images:
-                    self.update_avg = False
-                    self.avg_bkg_image = self.avg_bkg_image / n_images
-                    self.bkg_image = self.avg_bkg_image.astype(img.dtype)
-                else:
-                    self.log.DEBUG("Calculating background...")
-                    return
+        if self.update_avg:
+            # Add image to average background
+            self.calculate_background(img)
+            return
 
         # Filter by Threshold
         if filter_images_by_threshold:
@@ -1166,31 +1033,33 @@ class ImageProcessor(ImageProcessorBase):
 
         # Background image subtraction
         if self.get("subtractBkgImage"):
-            t0 = time.time()
-            try:
-                if (self.bkg_image is not None
-                        and self.bkg_image.shape == img.shape):
+            with self.avg_lock:
+                t0 = time.time()
+                try:
+                    if (self.bkg_image is not None
+                            and self.bkg_image.shape == img.shape):
 
-                    if self.current_image is img:
-                        # Must copy, or self.currentImage will be modified
-                        self.current_image = img.copy()
+                        if self.current_image is img:
+                            # Must copy, or self.currentImage will be modified
+                            self.current_image = img.copy()
 
-                    # Subtract background image
-                    m = (img > self.bkg_image)  # img is above bkg
-                    n = (img <= self.bkg_image)  # image is below bkg
+                        # Subtract background image
+                        m = (img > self.bkg_image)  # img is above bkg
+                        n = (img <= self.bkg_image)  # image is below bkg
 
-                    # subtract bkg from img, where img is above bkg
-                    img[m] -= self.bkg_image[m]
-                    img[n] = 0  # zero img, where its is below bkg
+                        # subtract bkg from img, where img is above bkg
+                        img[m] -= self.bkg_image[m]
+                        img[n] = 0  # zero img, where its is below bkg
 
-            except Exception as e:
-                msg = f"Exception caught during background subtraction: {e}"
-                self.update_count(error=True, status=msg)
-                return
+                except Exception as e:
+                    msg = (
+                        f"Exception caught during background subtraction: {e}")
+                    self.update_count(error=True, status=msg)
+                    return
 
-            t1 = time.time()
-            self.averagers["subtractBkgImageTime"].append(t1 - t0)
-            self.log.DEBUG("Background image subtraction: done!")
+                t1 = time.time()
+                self.averagers["subtractBkgImageTime"].append(t1 - t0)
+                self.log.DEBUG("Background image subtraction: done!")
 
         # Pedestal subtraction
         if self.get("subtractImagePedestal"):  # was "doBackground"

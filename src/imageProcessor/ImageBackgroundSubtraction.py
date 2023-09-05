@@ -4,38 +4,27 @@
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
 
-import copy
 import os.path
-from threading import Lock
 
 import numpy as np
 from PIL import Image
 
 from karabo.bound import (
-    BOOL_ELEMENT, KARABO_CLASSINFO, OVERWRITE_ELEMENT, SLOT_ELEMENT,
-    STRING_ELEMENT, UINT32_ELEMENT, State, Timestamp, Unit)
+    BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, STRING_ELEMENT,
+    UINT32_ELEMENT, State)
 
-try:
-    from ._version import version as deviceVersion
-    from .common import ImageProcOutputInterface
-    from .ImageProcessorBase import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common import ImageProcOutputInterface
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
+from ._version import version as deviceVersion
+from .common import ImageProcOutputInterface
+from .ImageBackgroundSubtractionBase import ImageBackgroundSubtractionBase
 
 
 @KARABO_CLASSINFO("ImageBackgroundSubtraction", deviceVersion)
-class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
+class ImageBackgroundSubtraction(
+        ImageBackgroundSubtractionBase, ImageProcOutputInterface):
 
     @staticmethod
     def expectedParameters(expected):
         (
-            OVERWRITE_ELEMENT(expected).key('state')
-            .setNewOptions(
-                State.ON, State.PROCESSING, State.ACQUIRING, State.ERROR)
-            .commit(),
-
             BOOL_ELEMENT(expected).key('disable')
             .displayedName("Disable")
             .description("Disable background subtraction.")
@@ -43,6 +32,7 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
+            # XXX Possibly rename and move to base class
             STRING_ELEMENT(expected).key('imageFilename')
             .displayedName("Image Filename")
             .description("The full filename to the background image. "
@@ -51,27 +41,17 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
-            SLOT_ELEMENT(expected).key('resetBackgroundImage')
-            .displayedName("Reset Background Image")
-            .description("Reset background image.")
-            .commit(),
-
+            # XXX Possibly rename and move to base class
             SLOT_ELEMENT(expected).key('save')
             .displayedName("Save Background Image")
             .description("Save to file the current image.")
             .allowedStates(State.ON, State.PROCESSING)
             .commit(),
 
+            # Possibly rename and move to base class
             SLOT_ELEMENT(expected).key('load')
             .displayedName("Load Background Image")
             .description("Load a background image from file.")
-            .allowedStates(State.ON, State.PROCESSING)
-            .commit(),
-
-            SLOT_ELEMENT(expected).key('useAsBackgroundImage')
-            .displayedName("Current Image(s) as Background")
-            .description("Use the average of 'nImages' for the background "
-                         "subtraction.")
             .allowedStates(State.ON, State.PROCESSING)
             .commit(),
 
@@ -80,15 +60,6 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             .description("The offset to be added to the input image, before "
                          "doing the background subtraction.")
             .assignmentOptional().defaultValue(100)
-            .reconfigurable()
-            .commit(),
-
-            UINT32_ELEMENT(expected).key('nImages')
-            .displayedName('Number of Background Images')
-            .description('Number of background images to be averaged.')
-            .unit(Unit.NUMBER)
-            .assignmentOptional().defaultValue(10)
-            .minInc(1).maxInc(100)
             .reconfigurable()
             .commit(),
 
@@ -107,26 +78,9 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         # always call superclass constructor first!
         super().__init__(configuration)
 
-        # Current image
-        self.current_image = None
-
-        # Background image
-        self.bkg_image = None
-
-        self.avg_bkg_image = None  # Background average
-        self.n_images = 0
-        self.update_avg = False  # Average needs update
-        self.avg_lock = Lock()  # Lock for bkg image and avg
-
-        # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
         # Register additional slots
-        self.KARABO_SLOT(self.resetBackgroundImage)
         self.KARABO_SLOT(self.save)
         self.KARABO_SLOT(self.load)
-        self.KARABO_SLOT(self.useAsBackgroundImage)
 
         if 'imageFilename' not in configuration:
             device_id = self['deviceId']
@@ -138,62 +92,19 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
         # always call ImageProcessorBase preReconfigure first!
         super().preReconfigure(incomingReconfiguration)
 
-        if 'nImages' in incomingReconfiguration:
-            self.reset_background()
-
-    def reset_background(self, recalculate=True):
-        with self.avg_lock:
-            self.update_avg = recalculate  # Recalculate average
-            self.n_images = 0
-            self.avg_bkg_image = None
-            self.bkg_image = None
+        if 'disable' in incomingReconfiguration:
+            is_disabled = incomingReconfiguration['disable']
+            text = "disabled" if is_disabled else "enabled"
+            self.log.INFO(f"Background subtraction is {text}")
 
     ##############################################
     #   Implementation of Callbacks              #
     ##############################################
 
-    def onData(self, data, metaData):
-        first_image = False
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            if self.update_avg:
-                # Calculating background average
-                self.updateState(State.ACQUIRING)
-                self["status"] = "Acquiring background images"
-            else:
-                self.updateState(State.PROCESSING)
-            first_image = True
-        elif self['state'] == State.PROCESSING and self.update_avg:
-            # Calculating background average
-            self.updateState(State.ACQUIRING)
-            self["status"] = "Acquiring background images"
-        elif self['state'] == State.ACQUIRING and not self.update_avg:
-            # Background average is now available
-            self.updateState(State.PROCESSING)
-
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                raise RuntimeError("data does not contain any image")
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-            return
-
-        ts = Timestamp.fromHashAttributes(
-            metaData.getAttributes('timestamp'))
-
-        self.process_image(image_data, ts, first_image)
-
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("onEndOfStream called")
-        self['inFrameRate'] = 0.
-        # Signals end of stream
+        super().onEndOfStream(inputChannel)
+        # Signals end of streams
         self.signalEndOfStreams()
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts, first_image):
         self.refresh_frame_rate_in()
@@ -209,27 +120,13 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             else:
                 out_dtype = in_dtype
 
+            if self.update_avg:
+                # Add image to average background
+                self.calculate_background(img)
+                return
+
             with self.avg_lock:
-                if self.update_avg:
-                    # Calculate background image average
-                    n_images = self['nImages']
-                    if self.n_images == 0:
-                        self.avg_bkg_image = copy.deepcopy(img)
-                        self.n_images = 1
-                    elif self.n_images < n_images:
-                        self.avg_bkg_image += img
-                        self.n_images += 1
-
-                    if self.n_images == n_images:
-                        self.update_avg = False
-                        self.avg_bkg_image = self.avg_bkg_image / n_images
-                        self.bkg_image = self.avg_bkg_image.astype(img.dtype)
-                    else:
-                        self.log.DEBUG("Calculating background...")
-                        return
-
-                disable = self['disable']
-                if disable:
+                if self['disable']:
                     status = (
                         "Bkg subtraction disabled: original image copied to "
                         "output channel")
@@ -307,10 +204,6 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
     ##############################################
     #   Implementation of Slots                  #
     ##############################################
-
-    def resetBackgroundImage(self):
-        self.log.INFO("Reset background image")
-        self.reset_background(recalculate=False)
 
     def save(self):
         self.log.DEBUG("Save background image to file")
@@ -397,7 +290,3 @@ class ImageBackgroundSubtraction(ImageProcessorBase, ImageProcOutputInterface):
             if self['state'] != State.ERROR:
                 self.updateState(State.ERROR)
             raise
-
-    def useAsBackgroundImage(self):
-        self.log.INFO("Use current image(s) as background")
-        self.reset_background()

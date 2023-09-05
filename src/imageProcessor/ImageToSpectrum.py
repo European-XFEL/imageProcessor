@@ -11,12 +11,8 @@ from karabo.middlelayer import (
     AccessMode, Bool, Configurable, DaqDataType, Double, Node, OutputChannel,
     QuantityValue, VectorDouble, VectorInt32)
 
-try:
-    from ._version import version as deviceVersion
-    from .common_mdl import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common_mdl import ImageProcessorBase
+from ._version import version as deviceVersion
+from .common_mdl import ImageProcessorBase
 
 
 class DataNode(Configurable):

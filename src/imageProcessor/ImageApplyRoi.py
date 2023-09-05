@@ -8,14 +8,9 @@ from karabo.bound import (
     BOOL_ELEMENT, KARABO_CLASSINFO, VECTOR_INT32_ELEMENT, ImageData, State,
     Timestamp)
 
-try:
-    from ._version import version as deviceVersion
-    from .common import ImageProcOutputInterface
-    from .ImageProcessorBase import ImageProcessorBase
-except ImportError:
-    from imageProcessor._version import version as deviceVersion
-    from imageProcessor.common import ImageProcOutputInterface
-    from imageProcessor.ImageProcessorBase import ImageProcessorBase
+from ._version import version as deviceVersion
+from .common import ImageProcOutputInterface
+from .ImageProcessorBase import ImageProcessorBase
 
 
 @KARABO_CLASSINFO("ImageApplyRoi", deviceVersion)
