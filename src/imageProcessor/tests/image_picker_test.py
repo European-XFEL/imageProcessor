@@ -13,7 +13,7 @@ from ..ImagePicker import ImagePicker
 
 class ImagePicker_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("ImagePicker", Hash(
+        proc = Configurator(PythonDevice).create(ImagePicker.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImagePicker_0"))
         proc.startFsm()

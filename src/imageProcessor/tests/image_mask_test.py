@@ -13,7 +13,7 @@ from ..ImageApplyMask import ImageApplyMask
 
 class ImageMask_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("ImageApplyMask", Hash(
+        proc = Configurator(PythonDevice).create(ImageApplyMask.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImageMask_0"))
         proc.startFsm()

@@ -13,7 +13,7 @@ from ..ImageApplyRoi import ImageApplyRoi
 
 class ImageRoi_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("ImageApplyRoi", Hash(
+        proc = Configurator(PythonDevice).create(ImageApplyRoi.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImageRoi_0"))
         proc.startFsm()

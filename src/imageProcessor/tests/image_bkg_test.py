@@ -14,7 +14,7 @@ from ..ImageBackgroundSubtraction import ImageBackgroundSubtraction
 class ImageBackgroundSubtraction_TestCase(unittest.TestCase):
     def test_proc(self):
         proc = Configurator(PythonDevice).create(
-            "ImageBackgroundSubtraction",
+            ImageBackgroundSubtraction.__name__,
             Hash("Logger.priority", "WARN", "deviceId",
                  "ImageBackgroundSubtraction_0"))
         proc.startFsm()

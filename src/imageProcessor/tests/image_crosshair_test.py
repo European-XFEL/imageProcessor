@@ -13,7 +13,7 @@ from ..ImageCrosshair import ImageCrosshair
 
 class ImageCrosshair_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("ImageCrosshair", Hash(
+        proc = Configurator(PythonDevice).create(ImageCrosshair.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImageCrosshair_0"))
         proc.startFsm()
