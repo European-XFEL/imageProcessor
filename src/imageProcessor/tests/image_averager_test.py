@@ -14,7 +14,7 @@ from ..ImageAverager import ImageAverager
 
 class ImageAverages_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("ImageAverager", Hash(
+        proc = Configurator(PythonDevice).create(ImageAverager.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImageAverages_0"))
         proc.startFsm()

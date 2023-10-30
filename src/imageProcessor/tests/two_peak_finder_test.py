@@ -16,7 +16,7 @@ from ..TwoPeakFinder import TwoPeakFinder, find_peaks
 
 class TwoPeakFinder_TestCase(unittest.TestCase):
     def test_proc(self):
-        proc = Configurator(PythonDevice).create("TwoPeakFinder", Hash(
+        proc = Configurator(PythonDevice).create(TwoPeakFinder.__name__, Hash(
             "Logger.priority", "WARN",
             "deviceId", "ImageRoi_0"))
         proc.startFsm()

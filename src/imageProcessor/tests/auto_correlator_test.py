@@ -12,7 +12,7 @@ from ..AutoCorrelator import AutoCorrelator
 class AutoCorrelator_TestCase(unittest.TestCase):
     def test_autocorrelator(self):
         autocorrelator = Configurator(PythonDevice).create(
-            "AutoCorrelator", Hash(
+            AutoCorrelator.__name__, Hash(
                 "Logger.priority", "WARN", "deviceId", "AutoCorrelator_0"
             )
         )
