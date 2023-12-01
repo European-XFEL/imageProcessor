@@ -6,7 +6,7 @@
 
 import unittest
 
-from karabo.bound import AlarmCondition, Configurator, Hash, PythonDevice
+from karabo.bound import Configurator, Hash, PythonDevice
 
 from ..ImageProcessor import ImageProcessor
 
@@ -29,17 +29,14 @@ class ImageProcessorTestCase(unittest.TestCase):
 
         # error fraction == threshold == 0.10 -> no warn yet
         self.assertEqual(proc['errorCounter.warnCondition'], 0)
-        self.assertEqual(proc['alarmCondition'], AlarmCondition.NONE)
 
         # lower threshold -> warn
         proc.preReconfigure(Hash('errorCounter.threshold', 0.05))
         self.assertEqual(proc['errorCounter.warnCondition'], 1)
-        self.assertEqual(proc['alarmCondition'], AlarmCondition.WARN)
 
         # call 'resetError'
         proc.resetError()
         self.assertEqual(proc['errorCounter.warnCondition'], 0)
-        self.assertEqual(proc['alarmCondition'], AlarmCondition.NONE)
 
     def test_auto_fit_range(self):
         res = ImageProcessor.auto_fit_range(x0=5, y0=5, sx=2, sy=2, sigmas=1,
