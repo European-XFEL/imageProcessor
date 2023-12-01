@@ -81,8 +81,7 @@ class ErrorNode(Configurable):
                     "threshold.",
         accessMode=AccessMode.READONLY,
         defaultValue=0,
-        warnHigh=0,
-        alarmNeedsAck_warnHigh=False
+        warnHigh=0
     )
 
     def __init__(self, configuration):

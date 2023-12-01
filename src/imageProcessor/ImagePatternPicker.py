@@ -11,8 +11,8 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
     STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, VECTOR_UINT32_ELEMENT,
-    DaqDataType, DeviceClient, Hash, ImageData, PythonDevice, Schema, State,
-    Timestamp, Types, Unit)
+    AlarmCondition, DaqDataType, DeviceClient, Hash, ImageData, PythonDevice,
+    Schema, State, Timestamp, Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -96,18 +96,12 @@ class ImagePatternPicker(PythonDevice):
             except Exception as e:
                 self.log.ERROR(f"Error Exception: {e}")
 
+        # Set alarm condition according to the initial settings
+        self.check_alarm_conditions()
+
     def preReconfigure(self, configuration):
         for idx in range(NR_OF_CHANNELS):
             node = f"chan_{idx}"
-            if f'{node}.enableCrosshair' in configuration:
-                enable = configuration[f'{node}.enableCrosshair']
-                warn_crosshair = self[f'{node}.warnCrosshair']
-                if enable and warn_crosshair == 0:
-                    # raise the warning
-                    self[f'{node}.warnCrosshair'] = 1
-                elif not enable and warn_crosshair != 0:
-                    # cancel the warning
-                    self[f'{node}.warnCrosshair'] = 0
 
             # Synchronize old and new keys for x-hair position.
             # For backward compatibility '{node}.crosshair?' prevails.
@@ -124,23 +118,42 @@ class ImagePatternPicker(PythonDevice):
                 configuration[f'{node}.crosshairX'] = position[0]
                 configuration[f'{node}.crosshairY'] = position[1]
 
+    def postReconfigure(self):
+        # Update alarm conditions according to the current settings
+        self.check_alarm_conditions()
+
+    def check_alarm_conditions(self):
+        alarm_condition = self['alarmCondition']
+        is_enabled = False
+        invalid_trainid = False
+        for idx in range(NR_OF_CHANNELS):
+            node = f"chan_{idx}"
+            is_enabled |= self[f'{node}.enableCrosshair']
+            invalid_trainid |= self[f'{node}.invalidTrainId']
+        alarm = is_enabled or invalid_trainid
+
+        if alarm and alarm_condition == AlarmCondition.NONE:
+            self.setAlarmCondition(AlarmCondition.WARN)
+        elif not alarm and alarm_condition == AlarmCondition.WARN:
+            self.setAlarmCondition(AlarmCondition.NONE)
+
     def is_valid_train_id(self, train_id, node):
         last_train_id = self.last_train_id.get(node, 0)
         last_bad_tid_time = self.last_bad_tid_time.get(node, 0.)
         self.last_train_id[node] = train_id
-        warn_train_id = self[f"{node}.warnTrainId"]
+        invalid_train_id = self[f"{node}.invalidTrainId"]
 
         if train_id > last_train_id:
-            if warn_train_id != 0 and time.time() - last_bad_tid_time > 1.:
+            if invalid_train_id and time.time() - last_bad_tid_time > 1.:
                 # no "bad" trainId received in the past 1 s
-                self[f"{node}.warnTrainId"] = 0  # remove warning
+                self[f"{node}.invalidTrainId"] = False  # reset "invalid" flag
             status = "Processing"
             is_valid = True
         else:
             self.last_bad_tid_time[node] = time.time()
 
-            if warn_train_id == 0:
-                self[f"{node}.warnTrainId"] = 1  # raise warning
+            if not invalid_train_id:
+                self[f"{node}.invalidTrainId"] = True  # set "invalid" flag
 
             status = "Invalid trainId"
             if train_id == 0:
@@ -154,6 +167,9 @@ class ImagePatternPicker(PythonDevice):
 
         if self[f"{node}.status"] != status:
             self[f"{node}.status"] = status
+
+        # Set alarm conditions according to train ID
+        self.check_alarm_conditions()
 
         return is_valid
 
@@ -335,23 +351,11 @@ class ImagePatternPicker(PythonDevice):
             .readOnly().initialValue("")
             .commit(),
 
-            UINT32_ELEMENT(schema).key(f"{channel}.warnCrosshair")
-            .displayedName("Crosshair Warning")
-            .description("Raise a warning when cross-hair is enabled.")
-            .readOnly().initialValue(0)
-            .warnHigh(0).info("Cross-hair is enabled! Disable before saving "
-                              "images to DAQ or use them for processing.")
-            .needsAcknowledging(False)
-            .commit(),
-
-            UINT32_ELEMENT(schema).key(f"{channel}.warnTrainId")
+            BOOL_ELEMENT(schema).key(f"{channel}.invalidTrainId")
             .displayedName("Invalid TrainId")
-            .description("Raise a warning when image's trainId is invalid: 0, "
-                         "decreasing or not increasing.")
-            .readOnly().initialValue(0)
-            .warnHigh(0).info("Image's trainId is invalid! It is 0, "
-                              "decreasing or not increasing.")
-            .needsAcknowledging(False)
+            .description("True if the TrainId is invalid: 0, decreasing or "
+                         "not increasing.")
+            .readOnly().initialValue(False)
             .commit(),
 
             # Old property - for backward compatibility

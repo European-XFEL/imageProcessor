@@ -92,8 +92,8 @@ class ImageProcessorBase(PythonDevice):
             .description("Threshold on the ratio errors/total counts, "
                          "for setting the warn condition.")
             .unit(Unit.NUMBER)
-            .assignmentOptional().defaultValue(1.1)
-            .minInc(0.001).maxInc(1.1)
+            .assignmentOptional().defaultValue(0.1)
+            .minInc(0.001).maxInc(1.0)
             .reconfigurable()
             .commit(),
 

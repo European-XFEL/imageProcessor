@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from uuid import uuid4
 
 from imageProcessor.BeamShapeCoarse import BeamShapeCoarse
-from karabo.middlelayer import AlarmCondition, getDevice, sleep
+from karabo.middlelayer import getDevice, sleep
 from karabo.middlelayer.testing import DeviceTest, async_tst
 
 device_id = f"TestProc{uuid4()}"
@@ -37,15 +37,12 @@ class BeamShapeTestCase(DeviceTest):
 
             # error fraction == threshold == 0.10 -> no warn yet
             self.assertEqual(self.dev.errorCounter.warnCondition, 0)
-            self.assertEqual(self.dev.alarmCondition, AlarmCondition.NONE)
 
             # lower threshold -> warn
             proc.errorCounter.threshold = 0.05  # call setter function
             await sleep(0.01)  # wait for setter function
             self.assertEqual(self.dev.errorCounter.warnCondition, 1)
-            self.assertEqual(self.dev.alarmCondition, AlarmCondition.WARN)
 
             # call 'resetError'
             await self.dev.resetError()
             self.assertEqual(self.dev.errorCounter.warnCondition, 0)
-            self.assertEqual(self.dev.alarmCondition, AlarmCondition.NONE)
