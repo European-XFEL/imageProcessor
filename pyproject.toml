@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=42", "setuptools-scm[toml]>=4.1", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = "."
+write_to = "src/imageProcessor/_version.py"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."karabo.bound_device"]
+AutoCorrelator = "imageProcessor.AutoCorrelator:AutoCorrelator"
+ImageApplyMask = "imageProcessor.ImageApplyMask:ImageApplyMask"
+ImageApplyRoi = "imageProcessor.ImageApplyRoi:ImageApplyRoi"
+ImageAverager = "imageProcessor.ImageAverager:ImageAverager"
+ImageBackgroundSubtraction = "imageProcessor.ImageBackgroundSubtraction:ImageBackgroundSubtraction"
+ImageCrosshair = "imageProcessor.ImageCrosshair:ImageCrosshair"
+ImagePatternPicker = "imageProcessor.ImagePatternPicker:ImagePatternPicker"
+ImageProcessor = "imageProcessor.ImageProcessor:ImageProcessor"
+ImagePicker = "imageProcessor.ImagePicker:ImagePicker"
+ImageThumbnail = "imageProcessor.ImageThumbnail:ImageThumbnail"
+SimpleImageProcessor = "imageProcessor.SimpleImageProcessor:SimpleImageProcessor"
+TwoPeakFinder = "imageProcessor.TwoPeakFinder:TwoPeakFinder"
+
+[project.entry-points."karabo.middlelayer_device"]
+ImageToSpectrum = "imageProcessor.ImageToSpectrum:ImageToSpectrum"
+ImageNormRoi = "imageProcessor.ImageNormRoi:ImageNormRoi"
+BeamShapeCoarse = "imageProcessor.BeamShapeCoarse:BeamShapeCoarse"
+ImageNonLinearCorrection = "imageProcessor.ImageNonLinearCorrection:ImageNonLinearCorrection"
+
+[project]
+dynamic = ["version"]
+name = "ImageProcessor"
+authors = [
+    {name = "parenti"},
+]
+description = ""
+readme = "README.md"
+dependencies = [
+    "imageProcessing >= 2.7.7",
+    "processingUtils >= 1.4.2",
+]

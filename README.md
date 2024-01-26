@@ -1,26 +1,21 @@
-ImageProcessor Devices (Python)
-*******************************
+# ImageProcessor Devices
 
-Overview
-========
+## Overview
 
 Set of bound and middlelayer devices to process image data.
 
-Contact
-========
+
+## Contact
 
 For questions, please contact opensource@xfel.eu.
 
 
-License and Contributing
-=========================
+## License and Contributing
 
 This software is released by the European XFEL GmbH as is and without any warranty under the GPLv3 license. If you have questions on contributing to the project, please get in touch at opensource@xfel.eu.
 
 
-
-Dependencies
-============
+## Dependencies
 
 External dependencies:
 - PIL
