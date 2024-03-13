@@ -477,7 +477,7 @@ class ImagePatternPicker(PythonDevice):
             .key('data.image')
             .displayedName("Image")
             .setDimensions(list(shape))
-            .setType(Types.values[k_type])
+            .setType(k_type)
             .commit(),
 
             UINT64_ELEMENT(data_out)
