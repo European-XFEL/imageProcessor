@@ -149,8 +149,6 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
             self.updateState(State.PROCESSING)
             first_image = True
 
-        self.refresh_frame_rate_in()
-
         try:
             image_path = self['imagePath']
             if data.has(image_path):
@@ -167,13 +165,13 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
 
         if first_image:
             self.is_image_data = isinstance(image_data, ImageData)
-            self.is_ndarray = isinstance(image_data, np.ndarray)
 
         self.process_image(image_data, ts, first_image)  # Process image
 
     def onEndOfStream(self, inputChannel):
         self.log.INFO("onEndOfStream called")
         self['inFrameRate'] = 0.
+        self['outFrameRate'] = 0.
         # Signals end of stream
         self.signalEndOfStreams()
         self.updateState(State.ON)
@@ -181,7 +179,6 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
 
     def process_image(self, image_data, ts, first_image):
         self.refresh_frame_rate_in()
-
         try:
             if not self.is_image_data:
                 image_data = ImageData(image_data)
@@ -198,18 +195,19 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
             nb_pix_a = int(np.nansum(max_image > self.get("alarmThreshold")))
             nb_pix_w = int(np.nansum(max_image > self.get("warnThreshold")))
             nb_max = float(np.nanmax(max_image))
-            # image with pixel above alarm threshold
-            max_image[max_image <= self.get("alarmThreshold")] = 0
+
             h = Hash()
 
             if nb_pix_a > self.get("alarmMaxCount"):
                 h["saturationMonitor.alarm"] = True
-                # TODO: does it work? Always 0 on test with dataGenerator
+                h["saturationMonitor.alarmCount"] = int(nb_pix_a)
                 h["trainID"] = ts.getTrainId()
                 # only update image if above threshold
                 # that means last offending image will always be shown
                 # TODO: check if that is good behaviour or misleading,
                 # maybe image should always update
+                # image with pixel above alarm threshold
+                max_image[max_image <= self.get("alarmThreshold")] = 0
                 image_data.setData(max_image)
                 if first_image:
                     self.updateOutputSchema(image_data)
@@ -217,13 +215,12 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
 
             else:
                 h["saturationMonitor.alarm"] = False
-
+                h["saturationMonitor.warnCount"] = int(nb_pix_w)
             if nb_pix_w > self.get("warnMaxCount"):
                 h["saturationMonitor.warning"] = True
             else:
                 h["saturationMonitor.warning"] = False
-            h["saturationMonitor.alarmCount"] = int(nb_pix_a)
-            h["saturationMonitor.warnCount"] = int(nb_pix_w)
+
             h["saturationMonitor.maxValue"] = int(nb_max)
 
             self.set(h, ts)
