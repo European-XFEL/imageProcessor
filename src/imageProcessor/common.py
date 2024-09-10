@@ -101,7 +101,7 @@ class ImageProcOutputInterface(NoFsm):
             IMAGEDATA_ELEMENT(outputData).key("data.image")
             .displayedName("Image")
             .setDimensions(list(shape))
-            .setType(Types.values[self.kType])
+            .setType(Types(self.kType))
             .commit(),
 
             OUTPUT_CHANNEL(schema).key(outputNodeKey)
