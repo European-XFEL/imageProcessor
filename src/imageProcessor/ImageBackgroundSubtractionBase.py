@@ -141,6 +141,10 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
                 data = np.asarray(image_data)
                 dims = Dims(len(image_data))
                 image_data = ImageData(data, dims)
+            elif isinstance(image_data, np.ndarray):
+                # Convert to ImageData
+                dims = Dims(*image_data.shape)
+                image_data = ImageData(image_data, dims)
 
         except Exception as e:
             msg = f"Exception caught in onData: {e}"
