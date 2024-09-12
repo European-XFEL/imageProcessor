@@ -39,6 +39,6 @@ authors = [
 description = ""
 readme = "README.md"
 dependencies = [
-    "imageProcessing >= 2.8.0",
+    "imageProcessing >= 2.8.1",
     "processingUtils >= 1.4.2",
 ]
