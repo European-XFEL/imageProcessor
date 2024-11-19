@@ -61,7 +61,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             BOOL_ELEMENT(expected).key("warnOnFitOutOfBounds")
             .displayedName("Enable Warning if fit center is out of bound")
             .description("If the fitted center position is outside the "
-                         "image size, raise an alarm")
+                         "image size, raise an alarm.")
             .assignmentOptional().defaultValue(False)
             .init()
             .commit(),
@@ -109,6 +109,18 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .reconfigurable()
             .commit(),
 
+            VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
+            .displayedName("User-Defined Range")
+            .description("The user-defined range for centre-of-mass, "
+                         "gaussian fit(s) and integrals along the x & y "
+                         "axes. "
+                         "Region [lowX, highX) x [lowY, highY) "
+                         "specified as [lowX, highX, lowY, highY].")
+            .assignmentOptional().defaultValue([0, 400, 0, 400])
+            .minSize(4).maxSize(4)
+            .reconfigurable()
+            .commit(),
+
             # Enabling Features
 
             BOOL_ELEMENT(expected).key("doMinMaxMean")
@@ -128,9 +140,19 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .commit(),
 
             BOOL_ELEMENT(expected).key("doXYSum")
-            .displayedName("Integrate along Axes")
+            .displayedName("Integrate Along Axes")
             .description("Integrate the image along the x- and y-axes.")
             .assignmentOptional().defaultValue(False)
+            .reconfigurable()
+            .commit(),
+
+            STRING_ELEMENT(expected).key("xySumRange")
+            .displayedName("X- and Y-Integration Range")
+            .description("The range to be used for integration along the x- "
+                         "and y-axes. Can be the full range or the "
+                         "user-defined one.")
+            .assignmentOptional().defaultValue("full")
+            .options("full user-defined")
             .reconfigurable()
             .commit(),
 
@@ -185,17 +207,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .reconfigurable()
             .commit(),
 
-            VECTOR_INT32_ELEMENT(expected).key("userDefinedRange")
-            .displayedName("User Defined Range")
-            .description("The user-defined range for centre-of-mass, "
-                         "gaussian fit(s) and integrals along the x & y "
-                         "axes."
-                         " Region [lowX, highX) x [lowY, highY)"
-                         " specified as [lowX, highX, lowY, highY]")
-            .assignmentOptional().defaultValue([0, 400, 0, 400])
-            .minSize(4).maxSize(4)
-            .reconfigurable()
-            .commit(),
 
             FLOAT_ELEMENT(expected).key("absThreshold")
             .displayedName("Pixel Absolute threshold")
@@ -916,6 +927,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
         filter_images_by_threshold = self.get("filterImagesByThreshold")
         image_threshold = self.get("imageThreshold")
+        xysum_range = self.get("xySumRange")
         com_range = self.get("comRange")
         fit_range = self.get("fitRange")
         sigmas = self.get("rangeForAuto")
@@ -1113,7 +1125,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
         if self.get("doXYSum") and is_2d_image:
             t0 = time.time()
             try:
-                if com_range == "user-defined":
+                if xysum_range == "user-defined":
                     x_min = np.maximum(user_defined_range[0], 0)
                     x_max = np.minimum(user_defined_range[1], image_width)
                     y_min = np.maximum(user_defined_range[2], 0)
