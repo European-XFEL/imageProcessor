@@ -1,7 +1,13 @@
+variables:
+  DOC_DIRECTORY: doc/source
+
 include:
   - project: karabo/gitlabci
     file: .python-ci.yml
     ref: main
   - project: karabo/gitlabci
     file: .mirror-device.yml
+    ref: main
+  - project: karabo/gitlabci
+    file: .pages-sphinx-ci.yml
     ref: main

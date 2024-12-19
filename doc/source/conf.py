@@ -45,7 +45,7 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'default'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -63,24 +63,6 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'XFELControlDocumentationdoc'
 
-#we add a custom function to work with intersphinx
-import slumber
-
-# the RTDHOST should be set to localhost if you only compile on RTD
-# otherwise it needs to be set to the server hosting the internal RTD
-RTDHOST = 'https://rtd.xfel.eu'
-api = slumber.API(base_url='{}/api/v2/'.format(RTDHOST))
-projects = api.project.get()['results']
-isphinx = {'python': ('http://python.readthedocs.io/en/latest/', None),
-           'numpy': ('http://numpy.readthedocs.io/en/latest/', None),
-           'scipy': ('http://scipy.readthedocs.io/en/latest/', None)}
-
-for proj in projects:
-    isphinx[proj['slug'].replace('-', '')] = \
-     ('{}/docs/{}/en/latest'.format(RTDHOST, proj['slug']), None)
-
-
-intersphinx_mapping = isphinx
 
 def setup(app):
     app.add_config_value('includeDevInfo', 'false', 'env')
