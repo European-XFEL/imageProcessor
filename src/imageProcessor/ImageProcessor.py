@@ -957,10 +957,10 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             if first_image:
                 # Update warning levels
                 if self["warnOnFitOutOfBounds"]:
-                    self.update_warn_levels(0, image_height, 0, image_width)
+                    self.update_warn_levels(0, image_width, 0, image_height)
 
                 bpp = image_data.getBitsPerPixel()
-                self.update_output_schema(image_height, image_width, bpp)
+                self.update_output_schema(image_width, image_height, bpp)
 
             if image_width != self.get("imageWidth"):
                 h.set("imageWidth", image_width)
