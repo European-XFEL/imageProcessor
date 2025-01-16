@@ -1154,8 +1154,8 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             t1 = time.time()
             self.averagers["xYSumTime"].append(t1 - t0)
 
-            out_hash.set("data.imgX", img_x.astype(np.float).tolist())
-            out_hash.set("data.imgY", img_y.astype(np.float).tolist())
+            out_hash.set("data.imgX", img_x.astype(np.float64).tolist())
+            out_hash.set("data.imgY", img_y.astype(np.float64).tolist())
             self.log.DEBUG("Image X-Y sums: done!")
         else:
             out_hash.set("data.imgX", [0.0])
