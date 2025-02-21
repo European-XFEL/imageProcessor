@@ -9,7 +9,13 @@ from random import randint
 from time import sleep, time
 
 from karabo.bound import Hash, State
-from karabo.integration_tests.utils import BoundDeviceTestCase
+
+try:
+    # For Karabo <= 2.20
+    from karabo.integration_tests.utils import BoundDeviceTestCase
+except ModuleNotFoundError:
+    # Karabo >= 2.21
+    from karabo.bound.testing import BoundDeviceTestCase
 
 RANDIT = randint(0, 1000000)
 SERVER_ID = "testServerImageProcessor_{}".format(RANDIT)
