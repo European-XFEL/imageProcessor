@@ -66,10 +66,6 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
         self.update_avg = False  # Average needs update
         self.avg_lock = Lock()  # Lock for bkg image and avg
 
-        # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
         # Register additional slots
         self.KARABO_SLOT(self.resetBackgroundImage)
         self.KARABO_SLOT(self.useAsBackgroundImage)
@@ -155,12 +151,6 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
             metaData.getAttributes('timestamp'))
 
         self.process_image(image_data, ts, first_image)
-
-    def onEndOfStream(self, inputChannel):
-        self.log.INFO("onEndOfStream called")
-        self['inFrameRate'] = 0.
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts, first_image):
         raise NotImplementedError(

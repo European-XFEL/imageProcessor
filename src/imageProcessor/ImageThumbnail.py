@@ -92,11 +92,3 @@ class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
             msg = f"Exception caught in onData: {e}"
             self.update_count(error=True, status=msg)
             return
-
-    def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream")
-        self['inFrameRate'] = 0.
-        # Signals end of stream
-        self.signalEndOfStreams()
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
