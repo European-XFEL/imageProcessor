@@ -5,9 +5,9 @@
 #############################################################################
 
 from karabo.middlelayer import (
-    AccessLevel, AccessMode, Assignment, Configurable, DaqPolicy, Device,
-    Double, InputChannel, Node, Slot, State, String, UInt32, Unit,
-    VectorString, get_timestamp)
+    AccessLevel, AccessMode, Assignment, Configurable, Device, Double,
+    InputChannel, Node, Slot, State, String, UInt32, Unit, VectorString,
+    get_timestamp)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -127,7 +127,6 @@ class ImageProcessorBase(Device):
         displayedName="Interfaces",
         defaultValue=["Processor"],
         accessMode=AccessMode.READONLY,
-        daqPolicy=DaqPolicy.OMIT
     )
 
     frameRate = Double(

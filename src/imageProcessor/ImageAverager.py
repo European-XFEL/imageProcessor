@@ -131,15 +131,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
             self.update_count(error=True, status=msg)
             return
 
-    def onEndOfStream(self, inputChannel):
-        self.log.INFO("onEndOfStream called")
-        self['inFrameRate'] = 0.
-        self['outFrameRate'] = 0.
-        # Signals end of stream
-        self.signalEndOfStreams()
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
-
     def process_image(self, input_image, ts, first_image):
         try:
             pixels = input_image.getData()

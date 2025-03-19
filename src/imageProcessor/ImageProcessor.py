@@ -15,7 +15,7 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, INT32_ELEMENT,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, SLOT_ELEMENT,
     STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, DaqDataType,
-    Hash, MetricPrefix, Schema, Unit)
+    Hash, MetricPrefix, Schema, State, Unit)
 
 from ._version import version as deviceVersion
 from .ImageBackgroundSubtractionBase import ImageBackgroundSubtractionBase
@@ -826,6 +826,10 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                           'integrationTime': Average()
                           }
 
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
+
         self.registerInitialFunction(self.initialization)
 
         udr = self["userDefinedRange"]
@@ -915,9 +919,11 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
         self.set(h)
 
     def onEndOfStream(self, inputChannel):
-        super().onEndOfStream(inputChannel)
+        self['inFrameRate'] = 0.
         # Signals end of stream
         self.signalEndOfStream("output")
+        self.updateState(State.ON)
+        self['status'] = 'Idle'
 
     def process_image(self, image_data, ts, first_image):
 

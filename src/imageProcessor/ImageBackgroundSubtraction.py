@@ -82,6 +82,10 @@ class ImageBackgroundSubtraction(
         self.KARABO_SLOT(self.save)
         self.KARABO_SLOT(self.load)
 
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
+
         if 'imageFilename' not in configuration:
             device_id = self['deviceId']
             fname = device_id.replace('/', '_')
@@ -100,11 +104,6 @@ class ImageBackgroundSubtraction(
     ##############################################
     #   Implementation of Callbacks              #
     ##############################################
-
-    def onEndOfStream(self, inputChannel):
-        super().onEndOfStream(inputChannel)
-        # Signals end of streams
-        self.signalEndOfStreams()
 
     def process_image(self, image_data, ts, first_image):
         self.refresh_frame_rate_in()

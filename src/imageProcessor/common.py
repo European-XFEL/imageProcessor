@@ -10,11 +10,12 @@ import numpy as np
 
 from karabo.bound import (
     DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, NDARRAY_ELEMENT, NODE_ELEMENT,
-    OUTPUT_CHANNEL, DaqDataType, Hash, ImageData, NoFsm, Schema, Types, Unit)
+    OUTPUT_CHANNEL, DaqDataType, Hash, ImageData, PythonDevice, Schema, State,
+    Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 
-class ImageProcOutputInterface(NoFsm):
+class ImageProcOutputInterface(PythonDevice):
     """Interface for processor output channels"""
     def __init__(self, configuration):
         # always call PythonDevice constructor first!
@@ -160,6 +161,15 @@ class ImageProcOutputInterface(NoFsm):
         """Signals end-of-stream to all the output channels"""
         self.signalEndOfStream("ppOutput")
         self.signalEndOfStream("daqOutput")
+
+    def onEndOfStream(self, inputChannel):
+        self.log.INFO("onEndOfStream called")
+        self['inFrameRate'] = 0.
+        self['outFrameRate'] = 0.
+        # Signals end of stream
+        self.signalEndOfStreams()
+        self.updateState(State.ON)
+        self['status'] = 'Idle'
 
     def refresh_frame_rate_out(self):
         self.frame_rate_out.update()

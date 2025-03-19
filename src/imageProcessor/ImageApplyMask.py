@@ -119,14 +119,6 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
         self.process_image(image_data, ts)  # Process image
 
-    def onEndOfStream(self, inputChannel):
-        self.log.INFO("onEndOfStream called")
-        self['inFrameRate'] = 0.
-        # Signals end of stream
-        self.signalEndOfStreams()
-        self.updateState(State.ON)
-        self['status'] = 'Idle'
-
     def process_image(self, image_data, ts):
         self.refresh_frame_rate_in()
 
