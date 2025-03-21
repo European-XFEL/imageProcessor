@@ -23,6 +23,7 @@ ImageThumbnail = "imageProcessor.ImageThumbnail:ImageThumbnail"
 SimpleImageProcessor = "imageProcessor.SimpleImageProcessor:SimpleImageProcessor"
 TwoPeakFinder = "imageProcessor.TwoPeakFinder:TwoPeakFinder"
 SaturationMonitor = "imageProcessor.SaturationMonitor:SaturationMonitor"
+ImageFlipAndRotate = "imageProcessor.ImageFlipAndRotate:ImageFlipAndRotate"
 
 [project.entry-points."karabo.middlelayer_device"]
 ImageToSpectrum = "imageProcessor.ImageToSpectrum:ImageToSpectrum"
