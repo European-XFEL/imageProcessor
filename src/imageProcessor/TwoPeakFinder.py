@@ -3,12 +3,13 @@
 # Created on November 14, 2018
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import numpy as np
 
 from image_processing.image_processing import (
     imageSumAlongY, peakParametersEval)
 from karabo.bound import (
     DOUBLE_ELEMENT, KARABO_CLASSINFO, UINT32_ELEMENT, VECTOR_UINT32_ELEMENT,
-    Hash, State, Timestamp, Unit)
+    Hash, ImageData, State, Timestamp, Unit)
 
 from ._version import version as deviceVersion
 from .ImageProcessorBase import ImageProcessorBase
@@ -154,7 +155,15 @@ class TwoPeakFinder(ImageProcessorBase):
         self.refresh_frame_rate_in()
 
         try:
-            img = image_data.getData()  # np.ndarray
+            if isinstance(image_data, np.ndarray):
+                img = image_data
+            elif isinstance(image_data, list):
+                img = np.asarray(image_data)
+            elif isinstance(image_data, ImageData):
+                img = image_data.getData()
+            else:
+                raise RuntimeError(
+                    f"Unsupported input data type {type(image_data)}")
             zero_point = self['zeroPoint']
             roi = self['roi']
 
@@ -164,8 +173,14 @@ class TwoPeakFinder(ImageProcessorBase):
                 if zero_point <= low_x or zero_point >= high_x:
                     raise RuntimeError("zero_point is outside ROI.")
 
-                # sum along y axis
-                img_x = imageSumAlongY(img[:, low_x:high_x + 1])
+                if img.ndim == 2:
+                    # sum along y axis
+                    img_x = imageSumAlongY(img[:, low_x:high_x + 1])
+                elif img.ndim == 1:
+                    img_x = img
+                else:
+                    raise RuntimeError(f"{img.ndim}-d data are not supported")
+
             else:
                 # No valid ROI
                 low_x = 0
