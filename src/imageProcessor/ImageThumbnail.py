@@ -6,8 +6,7 @@
 
 from image_processing.image_processing import thumbnail
 from karabo.bound import (
-    BOOL_ELEMENT, KARABO_CLASSINFO, VECTOR_INT32_ELEMENT, ImageData, State,
-    Timestamp)
+    BOOL_ELEMENT, KARABO_CLASSINFO, VECTOR_INT32_ELEMENT, ImageData)
 
 from ._version import version as deviceVersion
 from .common import ImageProcOutputInterface
@@ -44,51 +43,18 @@ class ImageThumbnail(ImageProcessorBase, ImageProcOutputInterface):
         super().__init__(configuration)
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
-    def onData(self, data, metaData):
-        first_image = False
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
-            first_image = True
+    # Overrides ImageProcessorBase.process_image
+    def process_image(self, image_data, ts):
+        data = image_data.getData()  # np.ndarray
+        bpp = image_data.getBitsPerPixel()
+        encoding = image_data.getEncoding()
+        d_type = str(data.dtype)
 
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                raise RuntimeError("data does not contain any image")
+        canvas = self['thumbCanvas']
+        resample = self['resample']
+        thumb_array = thumbnail(
+            data, canvas, resample=resample).astype(d_type)
 
-            ts = Timestamp.fromHashAttributes(
-                metaData.getAttributes('timestamp'))
-
-            self.refresh_frame_rate_in()
-
-            data = image_data.getData()  # np.ndarray
-            bpp = image_data.getBitsPerPixel()
-            encoding = image_data.getEncoding()
-            d_type = str(data.dtype)
-
-            canvas = self['thumbCanvas']
-            resample = self['resample']
-            thumb_array = thumbnail(data, canvas,
-                                    resample=resample).astype(d_type)
-
-            thumb_img = ImageData(thumb_array, bitsPerPixel=bpp,
-                                  encoding=encoding)
-
-            if first_image:
-                # Update schema
-                self.updateOutputSchema(thumb_img)
-
-            self.writeImageToOutputs(thumb_img, ts)
-            self.update_count()  # Success
-            self.refresh_frame_rate_out()
-            return
-
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-            return
+        return ImageData(thumb_array, bitsPerPixel=bpp, encoding=encoding)

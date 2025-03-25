@@ -83,7 +83,6 @@ class ImageBackgroundSubtraction(
         self.KARABO_SLOT(self.load)
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         if 'imageFilename' not in configuration:
@@ -106,8 +105,6 @@ class ImageBackgroundSubtraction(
     ##############################################
 
     def process_image(self, image_data, ts, first_image):
-        self.refresh_frame_rate_in()
-
         try:
             self.current_image = image_data.getData()  # np.ndarray
             # Copy current image, before doing any processing

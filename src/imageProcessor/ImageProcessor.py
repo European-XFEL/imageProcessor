@@ -827,7 +827,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                           }
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         self.registerInitialFunction(self.initialization)
@@ -944,8 +943,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
         h = Hash()  # Device properties updates
         out_hash = Hash()  # Output channel updates
-
-        self.refresh_frame_rate_in()
 
         try:
             dims = image_data.getDimensions()

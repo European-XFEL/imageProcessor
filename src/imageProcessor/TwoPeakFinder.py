@@ -9,7 +9,7 @@ from image_processing.image_processing import (
     imageSumAlongY, peakParametersEval)
 from karabo.bound import (
     DOUBLE_ELEMENT, KARABO_CLASSINFO, UINT32_ELEMENT, VECTOR_UINT32_ELEMENT,
-    Hash, ImageData, State, Timestamp, Unit)
+    Hash, ImageData, State, Unit)
 
 from ._version import version as deviceVersion
 from .ImageProcessorBase import ImageProcessorBase
@@ -33,7 +33,6 @@ class TwoPeakFinder(ImageProcessorBase):
         super().__init__(configuration)
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
     @staticmethod
@@ -117,90 +116,54 @@ class TwoPeakFinder(ImageProcessorBase):
             .commit(),
         )
 
-    ##############################################
-    #   Implementation of Callbacks              #
-    ##############################################
-
-    def onData(self, data, metaData):
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
-
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                raise RuntimeError("data does not contain any image")
-
-            ts = Timestamp.fromHashAttributes(
-                metaData.getAttributes('timestamp'))
-            self.process_image(image_data, ts)  # Process image
-
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-
     def onEndOfStream(self, inputChannel):
         self.log.INFO("End of Stream")
         self['inFrameRate'] = 0.
         self.updateState(State.ON)
         self['status'] = 'Idle'
 
-    ##############################################
-    #   Implementation of process_image          #
-    ##############################################
-
+    # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
-        self.refresh_frame_rate_in()
+        if isinstance(image_data, np.ndarray):
+            img = image_data
+        elif isinstance(image_data, list):
+            img = np.asarray(image_data)
+        elif isinstance(image_data, ImageData):
+            img = image_data.getData()
+        else:
+            raise RuntimeError(
+                f"Unsupported input data type {type(image_data)}")
+        zero_point = self['zeroPoint']
+        roi = self['roi']
 
-        try:
-            if isinstance(image_data, np.ndarray):
-                img = image_data
-            elif isinstance(image_data, list):
-                img = np.asarray(image_data)
-            elif isinstance(image_data, ImageData):
-                img = image_data.getData()
+        if roi and len(roi) == 2 and roi[1] > roi[0] >= 0:
+            low_x = roi[0]
+            high_x = roi[1]
+            if zero_point <= low_x or zero_point >= high_x:
+                raise RuntimeError("zero_point is outside ROI.")
+
+            if img.ndim == 2:
+                # sum along y axis
+                img_x = imageSumAlongY(img[:, low_x:high_x + 1])
+            elif img.ndim == 1:
+                img_x = img
             else:
-                raise RuntimeError(
-                    f"Unsupported input data type {type(image_data)}")
-            zero_point = self['zeroPoint']
-            roi = self['roi']
+                raise RuntimeError(f"{img.ndim}-d data are not supported")
 
-            if roi and len(roi) == 2 and roi[1] > roi[0] >= 0:
-                low_x = roi[0]
-                high_x = roi[1]
-                if zero_point <= low_x or zero_point >= high_x:
-                    raise RuntimeError("zero_point is outside ROI.")
+        else:
+            # No valid ROI
+            low_x = 0
+            img_x = imageSumAlongY(img)
 
-                if img.ndim == 2:
-                    # sum along y axis
-                    img_x = imageSumAlongY(img[:, low_x:high_x + 1])
-                elif img.ndim == 1:
-                    img_x = img
-                else:
-                    raise RuntimeError(f"{img.ndim}-d data are not supported")
+        peaks = find_peaks(img_x, zero_point - low_x)
 
-            else:
-                # No valid ROI
-                low_x = 0
-                img_x = imageSumAlongY(img)
-
-            peaks = find_peaks(img_x, zero_point - low_x)
-
-            h = Hash()
-            h.set('peak1Value', peaks[0])
-            h.set('peak1Position', low_x + peaks[1])
-            h.set('peak1Fwhm', peaks[2])
-            h.set('peak2Value', peaks[3])
-            h.set('peak2Position', low_x + peaks[4])
-            h.set('peak2Fwhm', peaks[5])
-            if peaks[3] > 0.0:
-                h.set('peakRatio', peaks[0] / peaks[3])
-            self.set(h, ts)
-
-            self.update_count()  # Success
-
-        except Exception as e:
-            msg = f"Exception caught in process_image: {e}"
-            self.update_count(error=True, status=msg)
+        h = Hash()
+        h.set('peak1Value', peaks[0])
+        h.set('peak1Position', low_x + peaks[1])
+        h.set('peak1Fwhm', peaks[2])
+        h.set('peak2Value', peaks[3])
+        h.set('peak2Position', low_x + peaks[4])
+        h.set('peak2Fwhm', peaks[5])
+        if peaks[3] > 0.0:
+            h.set('peakRatio', peaks[0] / peaks[3])
+        self.set(h, ts)

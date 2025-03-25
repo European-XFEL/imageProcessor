@@ -21,6 +21,7 @@ class ImageProcOutputInterface(PythonDevice):
         # always call PythonDevice constructor first!
         super().__init__(configuration)
 
+        self.has_output_channels = True
         self.shape = None
         self.kType = None
 
