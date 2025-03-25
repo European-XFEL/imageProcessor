@@ -8,7 +8,7 @@ from image_processing.image_processing import (
     imageFlipAlongX, imageFlipAlongY, imageRotate)
 from karabo.bound import (
     BOOL_ELEMENT, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT, ImageData,
-    State, Timestamp, Unit)
+    Unit)
 
 from ._version import version as deviceVersion
 from .common import ImageProcOutputInterface
@@ -59,45 +59,8 @@ class ImageFlipAndRotate(ImageProcessorBase, ImageProcOutputInterface):
 
         # Register call-backs
         self.KARABO_ON_EOS("input", self.onEndOfStream)
-        # XXX remove this after MR !185 is done:
-        self.KARABO_ON_DATA("input", self.onData)
 
-    # XXX remove this after MR !185 is done:
-    def onData(self, data, metaData):
-        self.refresh_frame_rate_in()
-
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
-
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                raise RuntimeError("Data does not contain any image")
-
-            ts = Timestamp.fromHashAttributes(
-                metaData.getAttributes('timestamp'))
-
-            # Process image
-            proc_image_data = self.process_image(image_data, ts)
-
-            shape = proc_image_data.getData().shape
-            k_type = proc_image_data.getType()
-            if shape != self.shape or k_type == self.kType:
-                self.updateOutputSchema(proc_image_data)
-
-            # Write to the output channels
-            self.writeImageToOutputs(proc_image_data, ts)
-
-            self.update_count()  # Success
-            self.refresh_frame_rate_out()
-
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-
+    # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
         flip_x = self["flip.x"]
         flip_y = self["flip.y"]

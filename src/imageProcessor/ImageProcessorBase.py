@@ -8,7 +8,7 @@ from karabo.bound import (
     DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
     NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
     UINT32_ELEMENT, VECTOR_STRING_ELEMENT, Hash, PythonDevice, Schema, State,
-    Unit)
+    Timestamp, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -17,8 +17,6 @@ from .common import ErrorCounter
 
 @KARABO_CLASSINFO("ImageProcessorBase", deviceVersion)
 class ImageProcessorBase(PythonDevice):
-
-    # TODO: move in this class the onData registration and boilerplate code
 
     @staticmethod
     def expectedParameters(expected):
@@ -157,6 +155,9 @@ class ImageProcessorBase(PythonDevice):
         # Register additional slots
         self.KARABO_SLOT(self.resetError)
 
+        # Register call-backs
+        self.KARABO_ON_DATA("input", self.onData)
+
     def preReconfigure(self, configuration):
         need_refresh = False
 
@@ -235,3 +236,44 @@ class ImageProcessorBase(PythonDevice):
         if fps_in:
             self['inFrameRate'] = fps_in
             self.log.DEBUG(f"Input rate {fps_in} Hz")
+
+    def onData(self, data, metaData):
+        self.refresh_frame_rate_in()
+
+        if self['state'] == State.ON:
+            self.log.INFO("Start of Stream")
+            self.updateState(State.PROCESSING)
+
+        try:
+            image_path = self['imagePath']
+            if data.has(image_path):
+                image_data = data[image_path]
+            else:
+                raise RuntimeError("Data does not contain any image")
+
+            ts = Timestamp.fromHashAttributes(
+                metaData.getAttributes('timestamp'))
+
+            # Process image
+            proc_image_data = self.process_image(image_data, ts)
+
+            if "has_output_channels" in dir(self):
+                shape = proc_image_data.getData().shape
+                k_type = proc_image_data.getType()
+                if shape != self.shape or k_type == self.kType:
+                    self.updateOutputSchema(proc_image_data)
+
+                # Write to the output channels
+                self.writeImageToOutputs(proc_image_data, ts)
+
+                self.refresh_frame_rate_out()
+
+            self.update_count()  # Success
+
+        except Exception as e:
+            msg = f"Exception caught in onData: {e}"
+            self.update_count(error=True, status=msg)
+
+    def process_image(self, image_data, ts):
+        raise NotImplementedError(
+            "This function must be overridden in the derived class.")

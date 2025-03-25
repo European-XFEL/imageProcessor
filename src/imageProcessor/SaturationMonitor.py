@@ -135,7 +135,6 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
         super().__init__(configuration)
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
     ##############################################

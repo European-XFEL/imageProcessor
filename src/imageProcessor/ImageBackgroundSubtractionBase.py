@@ -107,6 +107,8 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
     ##############################################
 
     def onData(self, data, metaData):
+        self.refresh_frame_rate_in()
+
         first_image = False
         if self['state'] == State.ON:
             self.log.INFO("Start of Stream")

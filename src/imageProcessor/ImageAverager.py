@@ -80,7 +80,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.image_standard_mean = ImageStandardMean()
 
         # Register channel callback
-        self.KARABO_ON_DATA('input', self.onData)
         self.KARABO_ON_EOS('input', self.onEndOfStream)
 
         # Register additional slot
@@ -97,13 +96,13 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
     def onData(self, data, metaData):
         """ This function will be called whenever a data token is availabe"""
+        self.refresh_frame_rate_in()
+
         first_image = False
         if self['state'] == State.ON:
             self.log.INFO("Start of Stream")
             self.updateState(State.PROCESSING)
             first_image = True
-
-        self.refresh_frame_rate_in()
 
         try:
             image_path = self['imagePath']

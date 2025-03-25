@@ -8,7 +8,7 @@ from image_processing import crosshair, marker
 from karabo.bound import (
     BOOL_ELEMENT, INT32_ELEMENT, KARABO_CLASSINFO, NODE_ELEMENT,
     STRING_ELEMENT, UINT32_ELEMENT, VECTOR_STRING_ELEMENT,
-    VECTOR_UINT32_ELEMENT, Hash, ImageData, State, Timestamp, Unit)
+    VECTOR_UINT32_ELEMENT, Hash, ImageData, Unit)
 
 from ._version import version as deviceVersion
 from .common import ImageProcOutputInterface
@@ -179,7 +179,6 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
         super().__init__(configuration)
 
         # Register call-backs
-        self.KARABO_ON_DATA("input", self.onData)
         self.KARABO_ON_EOS("input", self.onEndOfStream)
 
         self.KARABO_SLOT(self.requestScene)
@@ -251,43 +250,11 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
 
         marker(image, marker_type, center, shape, color, thickness, angle)
 
-    def onData(self, data, metaData):
-        first_image = False
-        if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
-            self.updateState(State.PROCESSING)
-            first_image = True
+    # Overrides ImageProcessorBase.process_image
+    def process_image(self, image_data, ts):
+        image = image_data.getData()  # np.ndarray
 
-        try:
-            image_path = self['imagePath']
-            if data.has(image_path):
-                image_data = data[image_path]
-            else:
-                self.log.DEBUG(f"data does not have any image in {image_path}")
-                return
+        self.superimpose_crosshair(image)
+        self.superimpose_marker(image)
 
-            ts = Timestamp.fromHashAttributes(
-                metaData.getAttributes('timestamp'))
-            image = image_data.getData()  # np.ndarray
-
-            self.refresh_frame_rate_in()
-
-            self.superimpose_crosshair(image)
-
-            self.superimpose_marker(image)
-
-            image_data = ImageData(image)
-
-            if first_image:
-                # Update schema
-                self.updateOutputSchema(image_data)
-
-            self.writeImageToOutputs(image_data, ts)
-            self.update_count()  # Success
-            self.refresh_frame_rate_out()
-            return
-
-        except Exception as e:
-            msg = f"Exception caught in onData: {e}"
-            self.update_count(error=True, status=msg)
-            return
+        return ImageData(image)
