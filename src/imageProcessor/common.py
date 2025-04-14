@@ -14,6 +14,19 @@ from karabo.bound import (
     Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
+DTYPE_TO_KTYPE = {
+    'uint8': Types.UINT8,
+    'int8': Types.INT8,
+    'uint16': Types.UINT16,
+    'int16': Types.INT16,
+    'uint32': Types.UINT32,
+    'int32': Types.INT32,
+    'uint64': Types.UINT64,
+    'int64': Types.INT64,
+    'float32': Types.FLOAT,
+    'float64': Types.DOUBLE,
+    'double': Types.DOUBLE}
+
 
 class ImageProcOutputInterface(PythonDevice):
     """Interface for processor output channels"""
@@ -66,7 +79,8 @@ class ImageProcOutputInterface(PythonDevice):
         elif isinstance(imageData, np.ndarray):
             pixels = imageData
             shape = imageData.shape
-            kType = Types.NUMPY
+            kType = DTYPE_TO_KTYPE.get(imageData.dtype.name, Types.UNKNOWN)
+
             updateSchemaHelper = self.updateNDArraySchemaHelper
         else:
             raise RuntimeError("Trying to update schema with invalid "
@@ -125,6 +139,7 @@ class ImageProcOutputInterface(PythonDevice):
             NDARRAY_ELEMENT(outputData).key("data.image")
             .displayedName("Image")
             .shape(list(shape))
+            .dtype(self.kType)
             .commit(),
 
             OUTPUT_CHANNEL(schema).key(outputNodeKey)

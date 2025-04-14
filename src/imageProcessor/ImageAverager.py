@@ -212,8 +212,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
                     array = self.image_running_mean.runningMean
                 elif self['runningAvgMethod'] == 'ExponentialRunningAverage':
                     self.image_exp_running_mean.append(array, n_images)
-                    array = self.image_exp_running_mean.mean.astype
-
+                    array = self.image_exp_running_mean.mean
             else:
                 self.image_standard_mean.append(array)
                 if self.image_standard_mean.size >= n_images:
