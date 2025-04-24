@@ -11,7 +11,7 @@ from PIL import Image
 
 from image_processing.image_processing import imageApplyMask, imageSelectRegion
 from karabo.bound import (
-    BOOL_ELEMENT, KARABO_CLASSINFO, PATH_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
+    BOOL_ELEMENT, KARABO_CLASSINFO, SLOT_ELEMENT, STRING_ELEMENT,
     VECTOR_INT32_ELEMENT, ImageData, State, Unit)
 
 from ._version import version as deviceVersion
@@ -51,7 +51,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
             .reconfigurable()
             .commit(),
 
-            PATH_ELEMENT(expected).key("maskFilename")
+            STRING_ELEMENT(expected).key("maskFilename")
             .displayedName("Mask Filename")
             .description("The full path to the mask file. File format "
                          "must be 'npy', 'raw' or TIFF. Pixel value "
