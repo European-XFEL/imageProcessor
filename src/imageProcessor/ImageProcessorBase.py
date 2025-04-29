@@ -38,7 +38,7 @@ class ImageProcessorBase(PythonDevice):
             VECTOR_STRING_ELEMENT(expected).key("interfaces")
             .displayedName("Interfaces")
             .readOnly()
-            .initialValue(["Processor"])
+            .defaultValue(["Processor"])
             .commit(),
 
             NODE_ELEMENT(data).key('data')
@@ -73,7 +73,7 @@ class ImageProcessorBase(PythonDevice):
             .displayedName("Error Count")
             .description("Number of errors.")
             .unit(Unit.COUNT)
-            .readOnly().initialValue(0)
+            .readOnly().defaultValue(0)
             .commit(),
 
             UINT32_ELEMENT(expected).key('errorCounter.windowSize')
@@ -111,14 +111,14 @@ class ImageProcessorBase(PythonDevice):
             DOUBLE_ELEMENT(expected).key('errorCounter.fraction')
             .displayedName("Error Fraction")
             .description("Fraction of errors in the specified window.")
-            .readOnly().initialValue(0.)
+            .readOnly().defaultValue(0.)
             .commit(),
 
             UINT32_ELEMENT(expected).key('errorCounter.warnCondition')
             .displayedName("Warn Condition")
             .description("True if the fraction of errors exceeds the "
                          "threshold.")
-            .readOnly().initialValue(0)
+            .readOnly().defaultValue(0)
             .warnHigh(0).info("Error fraction above threshold.")
             .needsAcknowledging(False)
             .commit(),

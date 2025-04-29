@@ -170,7 +170,7 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
             .displayedName("Available Scenes")
             .description("Provides a scene for the Configuration Manager.")
             .setSpecialDisplayType("Scenes")
-            .readOnly().initialValue(['scene'])
+            .readOnly().defaultValue(['scene'])
             .commit(),
         )
 

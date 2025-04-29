@@ -761,19 +761,19 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .description("Distribution of the image pixel counts (before "
                          "background and pedestal subtraction).")
             .unit(Unit.NUMBER)
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(output_data).key("data.imgX")
             .displayedName("X Distribution")
             .description("Image integral along the Y-axis.")
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(output_data).key("data.imgY")
             .displayedName("Y Distribution")
             .description("Image integral along the X-axis.")
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             OUTPUT_CHANNEL(expected).key("output")
@@ -1748,21 +1748,21 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .description("Distribution of the image pixel counts.")
             .unit(Unit.NUMBER)
             .maxSize(min(65535, 2**bpp))
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(output_data).key("data.imgX")
             .displayedName("X Distribution")
             .description("Image sum along the Y-axis.")
             .maxSize(width)
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             VECTOR_DOUBLE_ELEMENT(output_data).key("data.imgY")
             .displayedName("Y Distribution")
             .description("Image sum along the X-axis.")
             .maxSize(height)
-            .readOnly().initialValue([0])
+            .readOnly().defaultValue([0])
             .commit(),
 
             OUTPUT_CHANNEL(new_schema).key("output")
