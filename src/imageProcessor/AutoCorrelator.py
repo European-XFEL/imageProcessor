@@ -48,7 +48,7 @@ class AutoCorrelator(PythonDevice):
 
             VECTOR_STRING_ELEMENT(expected).key('availableScenes')
             .setSpecialDisplayType(DT_SCENES)
-            .readOnly().initialValue(list(DEVICE_SCENES))
+            .readOnly().defaultValue(list(DEVICE_SCENES))
             .commit(),
 
             INPUT_CHANNEL(expected).key("input")

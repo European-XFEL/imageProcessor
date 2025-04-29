@@ -348,14 +348,14 @@ class ImagePatternPicker(PythonDevice):
 
             STRING_ELEMENT(schema).key(f"{channel}.status")
             .displayedName("Status")
-            .readOnly().initialValue("")
+            .readOnly().defaultValue("")
             .commit(),
 
             BOOL_ELEMENT(schema).key(f"{channel}.invalidTrainId")
             .displayedName("Invalid TrainId")
             .description("True if the TrainId is invalid: 0, decreasing or "
                          "not increasing.")
-            .readOnly().initialValue(False)
+            .readOnly().defaultValue(False)
             .commit(),
 
             # Old property - for backward compatibility

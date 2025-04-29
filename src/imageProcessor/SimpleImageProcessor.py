@@ -38,7 +38,7 @@ class SimpleImageProcessor(PythonDevice):
             VECTOR_STRING_ELEMENT(expected).key("interfaces")
             .displayedName("Interfaces")
             .readOnly()
-            .initialValue(["Processor"])
+            .defaultValue(["Processor"])
             .commit(),
 
             SLOT_ELEMENT(expected).key("reset")
@@ -173,7 +173,7 @@ class SimpleImageProcessor(PythonDevice):
             .displayedName("Success")
             .description("Success boolean whether the image processing "
                          "was successful or not.")
-            .readOnly().initialValue(False)
+            .readOnly().defaultValue(False)
             .commit(),
 
             DOUBLE_ELEMENT(expected).key("maxPxValue")
@@ -277,7 +277,7 @@ class SimpleImageProcessor(PythonDevice):
 
             VECTOR_STRING_ELEMENT(expected).key('availableScenes')
             .setSpecialDisplayType("Scenes")
-            .readOnly().initialValue(['scene', 'link'])
+            .readOnly().defaultValue(['scene', 'link'])
             .commit(),
         )
 
