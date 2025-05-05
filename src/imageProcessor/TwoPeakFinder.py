@@ -146,7 +146,7 @@ class TwoPeakFinder(ImageProcessorBase):
                 # sum along y axis
                 img_x = imageSumAlongY(img[:, low_x:high_x + 1])
             elif img.ndim == 1:
-                img_x = img
+                img_x = img[low_x:high_x + 1]
             else:
                 raise RuntimeError(f"{img.ndim}-d data are not supported")
 
