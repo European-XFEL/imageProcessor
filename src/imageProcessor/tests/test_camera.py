@@ -82,8 +82,7 @@ class TestCamera(PythonDevice):
         """Initial function"""
         if self._write_worker is None:
             self._write_worker = Worker(self._write_to_channel,
-                                        self.TIMEOUT, -1)
-            self._write_worker.daemon = True
+                                        self.TIMEOUT)
 
     def acquire(self):
         """Start sending images"""
