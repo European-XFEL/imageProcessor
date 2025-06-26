@@ -5,10 +5,10 @@
 #############################################################################
 
 from karabo.bound import (
-    DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL, KARABO_CLASSINFO,
-    NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT, STRING_ELEMENT,
-    UINT32_ELEMENT, VECTOR_STRING_ELEMENT, Hash, PythonDevice, Schema, State,
-    Timestamp, Unit)
+    BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
+    KARABO_CLASSINFO, NODE_ELEMENT, OVERWRITE_ELEMENT, SLOT_ELEMENT,
+    STRING_ELEMENT, UINT32_ELEMENT, VECTOR_STRING_ELEMENT, Hash, PythonDevice,
+    Schema, State, Timestamp, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -114,13 +114,11 @@ class ImageProcessorBase(PythonDevice):
             .readOnly().defaultValue(0.)
             .commit(),
 
-            UINT32_ELEMENT(expected).key('errorCounter.warnCondition')
+            BOOL_ELEMENT(expected).key('errorCounter.warnCondition')
             .displayedName("Warn Condition")
             .description("True if the fraction of errors exceeds the "
                          "threshold.")
-            .readOnly().defaultValue(0)
-            .warnHigh(0).info("Error fraction above threshold.")
-            .needsAcknowledging(False)
+            .readOnly().defaultValue(False)
             .commit(),
 
             SLOT_ELEMENT(expected).key('resetError')

@@ -5,7 +5,7 @@
 #############################################################################
 
 from karabo.middlelayer import (
-    AccessLevel, AccessMode, Assignment, Configurable, Device, Double,
+    AccessLevel, AccessMode, Assignment, Bool, Configurable, Device, Double,
     InputChannel, Node, Slot, State, String, UInt32, Unit, VectorString,
     get_timestamp)
 from processing_utils.rate_calculator import RateCalculator
@@ -75,13 +75,12 @@ class ErrorNode(Configurable):
         defaultValue=0
     )
 
-    warnCondition = UInt32(
+    warnCondition = Bool(
         displayedName="Warn Condition",
         description="True if the fraction of errors exceeds the "
                     "threshold.",
         accessMode=AccessMode.READONLY,
-        defaultValue=0,
-        warnHigh=0
+        defaultValue=False
     )
 
     def __init__(self, configuration):
@@ -171,7 +170,7 @@ class ImageProcessorBase(Device):
                 self.status = "PROCESSING"
 
         except Exception as e:
-            if self.errorCounter.warnCondition == 0:
+            if not self.errorCounter.warnCondition:
                 # Only update if not yet in WARN
                 msg = f"Exception while processing input image: {e}"
                 self.status = msg
