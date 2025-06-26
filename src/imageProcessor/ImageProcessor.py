@@ -402,8 +402,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .description("The maximum image pixel value.")
             .unit(Unit.NUMBER)
             .readOnly()
-            # As pixels are usually UINT16, default alarmHigh will never fire
-            .alarmHigh(65536).needsAcknowledging(False)
             .commit(),
 
             DOUBLE_ELEMENT(expected).key("meanPxValue")
@@ -411,8 +409,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .description("The mean image pixel value.")
             .unit(Unit.NUMBER)
             .readOnly()
-            # As pixels are usually UINT16, default alarmHigh will never fire
-            .alarmHigh(65536).needsAcknowledging(False)
             .commit(),
 
             # Image processing times
@@ -1690,8 +1686,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 .description("x0 from 1D Fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .warnLow(x_min).needsAcknowledging(False)
-                .warnHigh(x_max).needsAcknowledging(False)
                 .commit(),
 
                 DOUBLE_ELEMENT(new_schema).key("x02d")
@@ -1699,8 +1693,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 .description("x0 from 2D Fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .warnLow(x_min).needsAcknowledging(False)
-                .warnHigh(x_max).needsAcknowledging(False)
                 .commit(),
             )
             self.x_min = x_min
@@ -1714,8 +1706,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 .description("y0 from 1D Fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .warnLow(y_min).needsAcknowledging(False)
-                .warnHigh(y_max).needsAcknowledging(False)
                 .commit(),
 
                 DOUBLE_ELEMENT(new_schema).key("y02d")
@@ -1723,8 +1713,6 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 .description("y0 from 2D Fit.")
                 .unit(Unit.PIXEL)
                 .readOnly()
-                .warnLow(y_min).needsAcknowledging(False)
-                .warnHigh(y_max).needsAcknowledging(False)
                 .commit(),
             )
             self.y_min = y_min

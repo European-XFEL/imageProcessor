@@ -36,13 +36,13 @@ class BeamShapeTestCase(DeviceTest):
             self.dev.errorCounter.update_count(True)
 
             # error fraction == threshold == 0.10 -> no warn yet
-            self.assertEqual(self.dev.errorCounter.warnCondition, 0)
+            self.assertFalse(self.dev.errorCounter.warnCondition)
 
             # lower threshold -> warn
             proc.errorCounter.threshold = 0.05  # call setter function
             await sleep(0.01)  # wait for setter function
-            self.assertEqual(self.dev.errorCounter.warnCondition, 1)
+            self.assertTrue(self.dev.errorCounter.warnCondition)
 
             # call 'resetError'
             await self.dev.resetError()
-            self.assertEqual(self.dev.errorCounter.warnCondition, 0)
+            self.assertFalse(self.dev.errorCounter.warnCondition)
