@@ -84,7 +84,7 @@ class SimpleImageProcessor(PythonDevice):
             .displayedName("Image Offset X")
             .description("The image offset in X direction, i.e. the X "
                          "position of its top-left corner.")
-            .adminAccess()
+            .expertAccess()
             .unit(Unit.PIXEL)
             .readOnly()
             .commit(),
@@ -93,7 +93,7 @@ class SimpleImageProcessor(PythonDevice):
             .displayedName("Image Offset Y")
             .description("The image offset in Y direction, i.e. the Y "
                          "position of its top-left corner.")
-            .adminAccess()
+            .expertAccess()
             .unit(Unit.PIXEL)
             .readOnly()
             .commit(),
