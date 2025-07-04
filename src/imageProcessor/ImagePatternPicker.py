@@ -364,7 +364,7 @@ class ImagePatternPicker(PythonDevice):
             .description("The X position of the crosshair.")
             .assignmentOptional().defaultValue(0)
             .unit(Unit.PIXEL)
-            .adminAccess()
+            .expertAccess()
             .reconfigurable()
             .commit(),
 
@@ -373,7 +373,7 @@ class ImagePatternPicker(PythonDevice):
             .displayedName("Crosshair Y position")
             .description("The Y position of the crosshair.")
             .assignmentOptional().defaultValue(0)
-            .adminAccess()
+            .expertAccess()
             .unit(Unit.PIXEL)
             .reconfigurable()
             .commit(),
@@ -385,7 +385,7 @@ class ImagePatternPicker(PythonDevice):
             .description("The position of the crosshair: [X, Y].")
             .assignmentOptional().defaultValue([0, 0])
             .minSize(2).maxSize(2)
-            .adminAccess()
+            .expertAccess()
             .unit(Unit.PIXEL)
             .reconfigurable()
             .commit(),
