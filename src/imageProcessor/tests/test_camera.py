@@ -12,7 +12,7 @@ from karabo.bound import (
     PythonDevice, Schema, State, Worker)
 
 
-@KARABO_CLASSINFO("TestCamera", "2.2")
+@KARABO_CLASSINFO("TestCamera", "1.0")
 class TestCamera(PythonDevice):
     TIMEOUT = 0.1  # interval between images
 

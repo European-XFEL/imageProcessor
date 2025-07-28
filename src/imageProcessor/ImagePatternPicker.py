@@ -94,7 +94,7 @@ class ImagePatternPicker(PythonDevice):
                             self.on_camera_schema_update)
                         self.device_client.getDeviceSchemaNoWait(device_id)
             except Exception as e:
-                self.log.ERROR(f"Error Exception: {e}")
+                self.logger.error(f"Error Exception: {e}")
 
         # Set alarm condition according to the initial settings
         self.check_alarm_conditions()
@@ -181,7 +181,7 @@ class ImagePatternPicker(PythonDevice):
         update_dev, update_pipe = channel.split(":")
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
-        train_id = ts.getTrainId()
+        train_id = ts.getTid()
 
         # find which node the updating device belongs to
         # loop over dictionary of input devices
@@ -263,7 +263,7 @@ class ImagePatternPicker(PythonDevice):
 
             if device_id == dev.split(":")[0]:
                 node = f"chan_{key}"
-                self.log.INFO("onEndOfStream called")
+                self.logger.info("onEndOfStream called")
                 self[f"{node}.status"] = "Idle"
                 self[f"{node}.inFrameRate"] = 0.
                 self[f"{node}.outFrameRate"] = 0.
@@ -281,7 +281,7 @@ class ImagePatternPicker(PythonDevice):
         fps_in = frame_rate.refresh()
         if fps_in:
             self[f"chan_{channel_idx}.inFrameRate"] = fps_in
-            self.log.DEBUG(f"Channel {channel_idx}: Input rate {fps_in} Hz")
+            self.logger.debug(f"Channel {channel_idx}: Input rate {fps_in} Hz")
 
     def refresh_frame_rate_out(self, channel_idx):
         frame_rate = self.frame_rate_out[channel_idx]
@@ -289,7 +289,8 @@ class ImagePatternPicker(PythonDevice):
         fps_out = frame_rate.refresh()
         if fps_out:
             self[f"chan_{channel_idx}.outFrameRate"] = fps_out
-            self.log.DEBUG(f"Channel {channel_idx}: Output rate {fps_out} Hz")
+            self.logger.debug(
+                f"Channel {channel_idx}: Output rate {fps_out} Hz")
 
     def on_camera_schema_update(self, deviceId, schema):
         # find all inputs connected to this updating schema device
@@ -462,7 +463,6 @@ class ImagePatternPicker(PythonDevice):
                 INPUT_CHANNEL(schema)
                 .key(f"{channel}.input")
                 .displayedName("Input")
-                .dataSchema(data_in)
                 .commit(),
             )
 

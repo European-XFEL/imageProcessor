@@ -50,7 +50,6 @@ class ImageProcessorBase(PythonDevice):
 
             INPUT_CHANNEL(expected).key('input')
             .displayedName("Input")
-            .dataSchema(data)
             .commit(),
 
             # Images should be dropped if processor is too slow
@@ -177,7 +176,7 @@ class ImageProcessorBase(PythonDevice):
                 self.set(h)
 
     def resetError(self):
-        self.log.INFO("Called 'Reset Error'")
+        self.logger.info("Called 'Reset Error'")
 
         h = Hash('status', "Called 'Reset Error'")
         self.error_counter.clear()
@@ -203,9 +202,9 @@ class ImageProcessorBase(PythonDevice):
         if self['status'] != status:
             h['status'] = status
             if error:
-                self.log.ERROR(status)
+                self.logger.error(status)
             else:
-                self.log.INFO(status)
+                self.logger.info(status)
 
         if not h.empty():
             self.set(h)
@@ -233,13 +232,13 @@ class ImageProcessorBase(PythonDevice):
         fps_in = self.frame_rate_in.refresh()
         if fps_in:
             self['inFrameRate'] = fps_in
-            self.log.DEBUG(f"Input rate {fps_in} Hz")
+            self.logger.debug(f"Input rate {fps_in} Hz")
 
     def onData(self, data, metaData):
         self.refresh_frame_rate_in()
 
         if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
+            self.logger.info("Start of Stream")
             self.updateState(State.PROCESSING)
 
         try:

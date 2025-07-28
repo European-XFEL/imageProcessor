@@ -179,7 +179,7 @@ class ImageProcOutputInterface(PythonDevice):
         self.signalEndOfStream("daqOutput")
 
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("onEndOfStream called")
+        self.logger.info("onEndOfStream called")
         self['inFrameRate'] = 0.
         self['outFrameRate'] = 0.
         # Signals end of stream
@@ -192,7 +192,7 @@ class ImageProcOutputInterface(PythonDevice):
         fps_out = self.frame_rate_out.refresh()
         if fps_out:
             self['outFrameRate'] = fps_out
-            self.log.DEBUG(f"Output rate {fps_out} Hz")
+            self.logger.debug(f"Output rate {fps_out} Hz")
 
 
 class ErrorCounter:

@@ -100,7 +100,7 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
                 self.avg_bkg_image = self.avg_bkg_image / n_images
                 self.bkg_image = self.avg_bkg_image.astype(img.dtype)
             else:
-                self.log.DEBUG("Calculating background...")
+                self.logger.debug("Calculating background...")
 
     ##############################################
     #   Implementation of Callbacks              #
@@ -111,7 +111,7 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
 
         first_image = False
         if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
+            self.logger.info("Start of Stream")
             if self.update_avg:
                 # Calculating background average
                 self.updateState(State.ACQUIRING)
@@ -163,9 +163,9 @@ class ImageBackgroundSubtractionBase(ImageProcessorBase):
     ##############################################
 
     def resetBackgroundImage(self):
-        self.log.INFO("Reset background image")
+        self.logger.info("Reset background image")
         self.reset_background(recalculate=False)
 
     def useAsBackgroundImage(self):
-        self.log.INFO("Use current image(s) as background")
+        self.logger.info("Use current image(s) as background")
         self.reset_background()

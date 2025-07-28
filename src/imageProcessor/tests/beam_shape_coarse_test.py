@@ -14,7 +14,7 @@ from karabo.middlelayer.testing import DeviceTest, async_tst
 device_id = f"TestProc{uuid4()}"
 conf = {
     'classId': 'BeamShapeCoarse',
-    '_deviceId_': device_id,
+    "deviceId": device_id,
     'input': {}
 }
 

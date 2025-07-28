@@ -38,7 +38,6 @@ class AutoCorrelator(PythonDevice):
     @staticmethod
     def expectedParameters(expected):
 
-        data_in = Schema()
         data_out = Schema()
         (
             OVERWRITE_ELEMENT(expected).key("state")
@@ -53,7 +52,6 @@ class AutoCorrelator(PythonDevice):
 
             INPUT_CHANNEL(expected).key("input")
             .displayedName("Input")
-            .dataSchema(data_in)
             .commit(),
 
             # Images should be dropped if processor is too slow
@@ -284,7 +282,7 @@ class AutoCorrelator(PythonDevice):
                         'payload', payload))
 
     def preReconfigure(self, input_config):
-        self.log.INFO("preReconfigure")
+        self.logger.info("preReconfigure")
 
         recalculate_width = False
         calibration_factor = self.get("calibrationFactor")
@@ -306,12 +304,12 @@ class AutoCorrelator(PythonDevice):
             ew3 = self.current_e_fwhm * s_f * calibration_factor
             h = Hash("pulseWidth", w3, "ePulseWidth", ew3)
             self.set(h)
-            self.log.DEBUG("Image re-processed!!!")
+            self.logger.debug("Image re-processed!!!")
 
     def calibrate(self):
         """Calculate calibration constant"""
 
-        self.log.INFO("Calibrating auto-correlator...")
+        self.logger.info("Calibrating auto-correlator...")
 
         delay_unit = self["delayUnit"]
         if delay_unit == "fs":
@@ -352,7 +350,7 @@ class AutoCorrelator(PythonDevice):
 
         # Cut away y-side-bands and sum along Y
         img2 = image[y1:y2, :]
-        img_x = image_processing.imageSumAlongY(img2)
+        img_x = image_processing.imageSumAlongY(img2).astype(float)
 
         # perform the fit
         beam_shape = self["beamShape"]
@@ -392,7 +390,7 @@ class AutoCorrelator(PythonDevice):
             fit_func = image_processing.sqsech1d(x_axis, pars[0], x0, pars[2])
         else:
             msg = f"Error: Unknown beam shape {beam_shape} provided"
-            self.log.ERROR(msg)
+            self.logger.error(msg)
             raise ValueError(msg)
 
         # Threshold level
@@ -416,7 +414,7 @@ class AutoCorrelator(PythonDevice):
         """Use current image as calibration image 1"""
 
         if self.current_peak is None or self.current_fwhm is None:
-            self.log.ERROR("No image available")
+            self.logger.error("No image available")
             self.updateState(State.ERROR)
             return
 
@@ -427,7 +425,7 @@ class AutoCorrelator(PythonDevice):
         """Use current image as calibration image 2"""
 
         if self.current_peak is None or self.current_fwhm is None:
-            self.log.ERROR("No image available")
+            self.logger.error("No image available")
             self.updateState(State.ERROR)
             return
 
@@ -455,15 +453,15 @@ class AutoCorrelator(PythonDevice):
                 # with older versions of cameras
                 self.process_image(data['image'])
             else:
-                self.log.WARN("data does not have any image")
+                self.logger.warning("data does not have any image")
         except Exception as e:
-            self.log.ERROR("Exception caught in onData: %s" % str(e))
+            self.logger.error("Exception caught in onData: %s" % str(e))
 
     def onEndOfStream(self, inputChannel):
         connected_devices = inputChannel.getConnectedOutputChannels().keys()
         dev = [*connected_devices][0]
-        self.log.INFO(f"onEndOfStream called: Channel {dev} "
-                      "stopped streaming.")
+        self.logger.info(
+            f"onEndOfStream called: Channel {dev} stopped streaming.")
 
         # schema should be updated at next connection
         self.is_schema_updated = False
@@ -498,11 +496,11 @@ class AutoCorrelator(PythonDevice):
 
                 msg = "Image processing Ok"
                 if self["status"] != msg:
-                    self.log.DEBUG(msg)
+                    self.logger.debug(msg)
                     h.set("status", msg)
             else:
                 msg = f"Warning: Fit status is {fit_status}"
-                self.log.DEBUG(msg)
+                self.logger.debug(msg)
 
             # Set all properties at once
             self.set(h)
@@ -510,7 +508,7 @@ class AutoCorrelator(PythonDevice):
         except Exception as e:
             msg = f"In process_image: {e}"
             if self["status"] != f"ERROR: {msg}":
-                self.log.ERROR(msg)
+                self.logger.error(msg)
                 self.set("status", f"ERROR: {msg}")
 
     def update_output_schema(self, data):

@@ -3,10 +3,10 @@
 #############################################################################
 
 from karabo.common.scenemodel.api import (
-    CheckBoxModel, ComboBoxModel, DeviceSceneLinkModel, DisplayCommandModel,
-    DisplayImageModel, DisplayLabelModel, DisplayPlotModel,
-    DisplayTextLogModel, DoubleLineEditModel, IntLineEditModel, LabelModel,
-    LineModel, SceneModel, SceneTargetWindow, write_scene)
+    CheckBoxModel, DeviceSceneLinkModel, DisplayCommandModel,
+    DisplayLabelModel, DisplayTextLogModel, DoubleLineEditModel,
+    EditableComboBoxModel, ImageGraphModel, IntLineEditModel, LabelModel,
+    LineModel, SceneModel, SceneTargetWindow, VectorGraphModel, write_scene)
 
 font_label = 'Source Sans Pro,11,-1,5,50,0,0,0,0,0'
 font_log = 'Source Sans Pro,12,-1,5,75,0,0,0,0,0'
@@ -48,13 +48,13 @@ def generate_scene(device):
         parent_component='DisplayComponent', target='scene',
         text=camera_label,
         x=50, y=70, width=150, height=30))
-    widgets.append(DisplayPlotModel(
+    widgets.append(VectorGraphModel(
         x=10, y=450,
         height=320, width=550,
         keys=[f'{device_id}.output.schema.data.integralX',
               f'{device_id}.output.schema.data.integralXFit'],
         parent_component='DisplayComponent'))
-    widgets.append(DisplayImageModel(
+    widgets.append(ImageGraphModel(
         x=10, y=100, height=320, width=550,
         keys=[f'{camera_id}.{output}.schema.data.image'],
         parent_component='DisplayComponent'))
@@ -84,8 +84,8 @@ def generate_scene(device):
             parent_component='DisplayComponent'))
         y += 30
 
-    dikt = {"combo": {"model": ComboBoxModel,
-                      "klass": "EditableComboBox",
+    dikt = {"combo": {"model": EditableComboBoxModel,
+                      "klass": None,
                       "keys": {"beamShape": "Beam Shape",
                                "delayUnit": "Delay Unit"}},
             "check": {"model": CheckBoxModel,

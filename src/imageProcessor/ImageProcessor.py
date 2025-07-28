@@ -831,7 +831,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
         if not self.is_user_range_valid(udr):
             msg = (f"Invalid user defined range {udr}: please verify saved "
                    f"configuration")
-            self.log.ERROR(msg)
+            self.logger.error(msg)
             raise ValueError(msg)
 
     def initialization(self):
@@ -847,13 +847,13 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             if not self.is_user_range_valid(udr):
                 del incomingReconfiguration["userDefinedRange"]
                 msg = f"Invalid user defined range {udr} has been discarded."
-                self.log.WARN(msg)
+                self.logger.warning(msg)
                 self["status"] = msg
 
         if 'subtractBkgImage' in incomingReconfiguration:
             is_enabled = incomingReconfiguration['subtractBkgImage']
             text = "enabled" if is_enabled else "disabled"
-            self.log.INFO(f"Background subtraction is {text}")
+            self.logger.info(f"Background subtraction is {text}")
 
     def is_user_range_valid(self, rng):
         return 0 <= rng[0] <= rng[1] and rng[2] <= rng[3]
@@ -951,7 +951,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 image_width = dims[0]
                 is_2d_image = False
             else:
-                self.log.DEBUG(f"Neither image nor spectrum: dims={dims}")
+                self.logger.debug(f"Neither image nor spectrum: dims={dims}")
 
             if first_image:
                 # Update warning levels
@@ -995,10 +995,10 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             img = self.current_image  # Shallow copy
             if img.ndim == 3 and img.shape[2] == 1:
                 # Image has 3rd dimension (channel), but it's 1
-                self.log.DEBUG("Reshaping image...")
+                self.logger.debug("Reshaping image...")
                 img = img.squeeze()
 
-            self.log.DEBUG("Image loaded!!!")
+            self.logger.debug("Image loaded!!!")
 
         except Exception as e:
             msg = f"Exception when opening image: {e}"
@@ -1019,8 +1019,8 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
         # Filter by Threshold
         if filter_images_by_threshold:
             if img.max() < image_threshold:
-                self.log.DEBUG("Max pixel value below threshold: image "
-                               "discarded!!!")
+                self.logger.debug(
+                    "Max pixel value below threshold: image discarded!!!")
                 return
 
         # Frequency of Pixel Values
@@ -1029,7 +1029,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             try:
                 px_freq = image_processing.imagePixelValueFrequencies(img)
 
-                self.log.DEBUG("Pixel values distribution: done!")
+                self.logger.debug("Pixel values distribution: done!")
             except Exception as e:
                 msg = f"Exception caught whilst counting value frequency: {e}"
                 self.update_count(error=True, status=msg)
@@ -1070,7 +1070,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
                 t1 = time.time()
                 self.averagers["subtractBkgImageTime"].append(t1 - t0)
-                self.log.DEBUG("Background image subtraction: done!")
+                self.logger.debug("Background image subtraction: done!")
 
         # Pedestal subtraction
         if self.get("subtractImagePedestal"):  # was "doBackground"
@@ -1092,7 +1092,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
             t1 = time.time()
             self.averagers["subtractPedestalTime"].append(t1 - t0)
-            self.log.DEBUG("Image pedestal subtraction: done!")
+            self.logger.debug("Image pedestal subtraction: done!")
 
         # Get pixel min/max/mean values
         if self.get("doMinMaxMean"):
@@ -1112,7 +1112,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             h.set("minPxValue", float(img_min))
             h.set("maxPxValue", float(img_max))
             h.set("meanPxValue", float(img_mean))
-            self.log.DEBUG("Pixel min/max/mean: done!")
+            self.logger.debug("Pixel min/max/mean: done!")
         else:
             set_property(h, "minPxValue", 0.0)
             set_property(h, "maxPxValue", 0.0)
@@ -1147,7 +1147,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 return
 
             if img_x is None or img_y is None:
-                self.log.WARN("Could not sum image along x or y axis.")
+                self.logger.warning("Could not sum image along x or y axis.")
                 return
 
             t1 = time.time()
@@ -1155,7 +1155,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
             out_hash.set("data.imgX", img_x.astype(np.float64).tolist())
             out_hash.set("data.imgY", img_y.astype(np.float64).tolist())
-            self.log.DEBUG("Image X-Y sums: done!")
+            self.logger.debug("Image X-Y sums: done!")
         else:
             out_hash.set("data.imgX", [0.0])
             out_hash.set("data.imgY", [0.0])
@@ -1235,7 +1235,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 h.set("y0", y0)
             h.set("sx", sx)
             h.set("sy", sy)
-            self.log.DEBUG("Centre-of-mass and widths: done!")
+            self.logger.debug("Centre-of-mass and widths: done!")
 
         else:
             set_property(h, "x0", 0.0)
@@ -1367,8 +1367,9 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 # Successful fit
 
                 if c_x is None:
-                    self.log.WARN("Successful X fit with singular covariance "
-                                  "matrix. Resetting initial fit values.")
+                    self.logger.warning(
+                        "Successful X fit with singular covariance matrix. "
+                        "Resetting initial fit values.")
                     self.ax1d = None
                     self.x01d = None
                     self.sx1d = None
@@ -1409,9 +1410,9 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                     # Successful fit
 
                     if c_y is None:
-                        self.log.WARN("Successful Y fit with singular "
-                                      "covariance matrix."
-                                      " Resetting initial fit values.")
+                        self.logger.warning(
+                            "Successful Y fit with singular covariance "
+                            "matrix. Resetting initial fit values.")
                         self.ay1d = None
                         self.y01d = None
                         self.sy1d = None
@@ -1454,7 +1455,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 if success_x in (1, 2, 3, 4):
                     h.set("ax1d", p_x[0])
 
-            self.log.DEBUG("1D gaussian fit: done!")
+            self.logger.debug("1D gaussian fit: done!")
         else:
             set_property(h, "xFitSuccess", 0)
             set_property(h, "ax1d", 0.0)
@@ -1550,8 +1551,9 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 h.set("a2d", p_xy[0])
 
                 if c_xy is None:
-                    self.log.WARN("Successful XY fit with singular covariance "
-                                  "matrix. Resetting initial fit values.")
+                    self.logger.warning(
+                        "Successful XY fit with singular covariance matrix. "
+                        "Resetting initial fit values.")
                     self.a2d = None
                     self.x02d = None
                     self.y02d = None
@@ -1598,7 +1600,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                     h.set("theta2d", 0.0)
                     h.set("etheta2d", 0.0)
 
-            self.log.DEBUG("2D gaussian fit: done!")
+            self.logger.debug("2D gaussian fit: done!")
         else:
             set_property(h, "fitSuccess", 0)
             set_property(h, "a2d", 0.0)
@@ -1646,7 +1648,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
                 t1 = time.time()
                 self.averagers["integrationTime"].append(t1 - t0)
                 integration_done = True
-                self.log.DEBUG("Region integration: done!")
+                self.logger.debug("Region integration: done!")
             except Exception as e:
                 msg = f"Exception caught during region integration: {e}"
                 self.update_count(error=True, status=msg)

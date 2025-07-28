@@ -13,8 +13,8 @@ from karabo.bound import (
     SLOT_ELEMENT, STRING_ELEMENT, VECTOR_STRING_ELEMENT, Hash, MetricPrefix,
     PythonDevice, Schema, State, Timestamp, Unit)
 from karabo.common.scenemodel.api import (
-    BoxLayoutModel, CheckBoxModel, ComboBoxModel, DisplayLabelModel,
-    DisplayStateColorModel, DoubleLineEditModel, ErrorBoolModel, LabelModel,
+    BoxLayoutModel, CheckBoxModel, DisplayLabelModel, DisplayStateColorModel,
+    DoubleLineEditModel, EditableComboBoxModel, ErrorBoolModel, LabelModel,
     LineModel, ScatterGraphModel, SceneModel, StickerModel, TrendGraphModel,
     write_scene)
 
@@ -51,7 +51,6 @@ class SimpleImageProcessor(PythonDevice):
 
             INPUT_CHANNEL(expected).key("input")
             .displayedName("Input")
-            .dataSchema(data)
             .commit(),
 
             # Images should be dropped if processor is too slow
@@ -330,7 +329,7 @@ class SimpleImageProcessor(PythonDevice):
         if self["pixelThreshold"] >= 1 and self["thresholdType"] == "Relative":
             msg = "Cannot initialize a device with a relative threshold " \
                   "greater than 1."
-            self.log.ERROR(msg)
+            self.logger.error(msg)
             raise ValueError(msg)
 
     def requestScene(self, params):
@@ -374,7 +373,7 @@ class SimpleImageProcessor(PythonDevice):
 
     def onData(self, data, metaData):
         if self.get("state") == State.ON:
-            self.log.INFO("Start of Stream")
+            self.logger.info("Start of Stream")
             self.updateState(State.PROCESSING)
 
         ts = Timestamp.fromHashAttributes(
@@ -387,10 +386,10 @@ class SimpleImageProcessor(PythonDevice):
             # with older versions of cameras
             self.processImage(data['image'], ts)
         else:
-            self.log.INFO("data does not have any image")
+            self.logger.info("data does not have any image")
 
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream")
+        self.logger.info("End of Stream")
         self.set("frameRate", 0.)
         self.updateState(State.ON)
 
@@ -411,7 +410,7 @@ class SimpleImageProcessor(PythonDevice):
         elif self.lastTime and (currentTime - self.lastTime) > 1.:
             fps = self.counter / (currentTime - self.lastTime)
             self.set("frameRate", fps)
-            self.log.DEBUG("Acquisition rate %f Hz" % fps)
+            self.logger.debug("Acquisition rate %f Hz" % fps)
             self.counter = 0
             self.lastTime = currentTime
 
@@ -450,16 +449,16 @@ class SimpleImageProcessor(PythonDevice):
         img = self.currentImage  # Shallow copy
         if img.ndim == 3 and img.shape[2] == 1:
             # Image has 3rd dimension (channel), but it's 1
-            self.log.DEBUG("Reshaping image...")
+            self.logger.debug("Reshaping image...")
             img = img.squeeze()
 
-        self.log.DEBUG("Image loaded!!!")
+        self.logger.debug("Image loaded!!!")
 
         # ---------------------
         # Filter by Threshold
         if img.max() < img_threshold:
-            self.log.DEBUG("Max pixel value below threshold: image "
-                           "discarded!")
+            self.logger.debug(
+                "Max pixel value below threshold: image discarded!")
             # set the hash for no success!
             self.set(h)
             return
@@ -468,7 +467,7 @@ class SimpleImageProcessor(PythonDevice):
         # Get pixel max value
         img_max = img.max()
         h.set("maxPxValue", float(img_max))
-        self.log.DEBUG("Pixel max: done!")
+        self.logger.debug("Pixel max: done!")
 
         # ---------------------
         # Pedestal subtraction
@@ -482,15 +481,15 @@ class SimpleImageProcessor(PythonDevice):
                 # Subtract image pedestal
                 img -= imgMin
 
-            self.log.DEBUG("Image pedestal subtraction: done!")
+            self.logger.debug("Image pedestal subtraction: done!")
 
         # ---------------------
         # Remove Noise
 
         if thr_type == "Absolute":
             if img.max() < pix_thr:
-                self.log.DEBUG("Max pixel value below threshold: image "
-                               "discarded!")
+                self.logger.debug(
+                    "Max pixel value below threshold: image discarded!")
                 # set the hash for no success!
                 self.set(h)
                 return
@@ -523,7 +522,7 @@ class SimpleImageProcessor(PythonDevice):
             # center found
             if not self._exception_log:
                 self._exception_log = True
-                self.log.ERROR(f"Error in fitting gaussian: {e}")
+                self.logger.error(f"Error in fitting gaussian: {e}")
             self.set(h)
             return
 
@@ -592,7 +591,7 @@ class SimpleImageProcessor(PythonDevice):
 
             h.set("amplitudeY", paramY[0] / paramX[2] / math.sqrt(2 * math.pi))
 
-        self.log.DEBUG("1-d Gaussian fit: done!")
+        self.logger.debug("1-d Gaussian fit: done!")
 
         # Update device parameters (all at once)
         self.set(h, ts)
@@ -600,7 +599,7 @@ class SimpleImageProcessor(PythonDevice):
     def _is_threshold_valid(self, t_type, threshold):
         if t_type == "Relative" and threshold > 1:
             msg = "Cannot set a relative threshold greater than 1."
-            self.log.ERROR(msg)
+            self.logger.error(msg)
             self["status"] = msg
             raise ValueError(msg)
 
@@ -722,9 +721,8 @@ def get_scene(deviceId):
     scene4 = BoxLayoutModel(
         direction=2, height=112.0, width=71.0,
         x=150.0, y=300.0, children=[scene40, scene41, scene42, scene43])
-    scene50 = ComboBoxModel(
+    scene50 = EditableComboBoxModel(
         height=26.0, keys=[f'{deviceId}.thresholdType'],
-        klass='EditableComboBox',
         parent_component='EditableApplyLaterComponent',
         width=81.0, x=220.0, y=360.0)
     scene51 = DoubleLineEditModel(

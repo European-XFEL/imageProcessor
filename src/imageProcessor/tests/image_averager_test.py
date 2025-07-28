@@ -1,48 +1,26 @@
 #############################################################################
-# Author: <andrea.parenti@xfel.eu>
-# Created on October 10, 2013
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import json
 
-import time
-import unittest
+import pytest
 
-from karabo.bound import Configurator, Hash, PythonDevice
+from karabo.bound.testing import ServerContext, sleepUntil
 
-from ..ImageAverager import ImageAverager
+from ..ImageAverager import ImageAverager  # noqa: F401
 
-
-class ImageAverages_TestCase(unittest.TestCase):
-    def test_proc(self):
-        proc = Configurator(PythonDevice).create(ImageAverager.__name__, Hash(
-            "Logger.priority", "WARN",
-            "deviceId", "ImageAverages_0"))
-        proc.startFsm()
+_DEVICE_ID = "TestDeviceImageAverager"
+_DEVICE_CONFIG = {
+    _DEVICE_ID: {"classId": "ImageAverager"},
+}
 
 
-class ImageAverage_ExpAverage_TestCase(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_instantiation(self):
-        self.imavg = Configurator(PythonDevice).create("ImageAverager", Hash(
-            "Logger.priority", "WARN",
-            "deviceId", "ImageAverages_1",
-            "runningAverage", True,
-            "runningAvgMethod", "ExponentialRunningAverage"
-        ))
-        self.imavg.startFsm()
-
-        self.imavg.log.INFO("Instantiated ImageAverager instance in "
-                            "exponential running average mode.")
-        time.sleep(1)
-        self.imavg.log.INFO("\n###########################################")
-        self.imavg.log.INFO("##       Averager Instantiated           ##")
-        self.imavg.log.INFO("###########################################\n")
-
-
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.timeout(30)
+def test_device(eventLoop):
+    init = json.dumps(_DEVICE_CONFIG)
+    server = ServerContext(
+        "testServerImageAverager",
+        ["log.level=DEBUG", f"init={init}"])
+    with server:
+        remote = server.remote()
+        sleepUntil(lambda: _DEVICE_ID in remote.getDevices(), timeout=10)

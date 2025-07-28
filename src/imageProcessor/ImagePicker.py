@@ -9,7 +9,7 @@ from threading import Lock
 
 from karabo.bound import (
     BOOL_ELEMENT, INPUT_CHANNEL, INT32_ELEMENT, KARABO_CLASSINFO,
-    OVERWRITE_ELEMENT, UINT32_ELEMENT, Schema, State, Timestamp)
+    OVERWRITE_ELEMENT, UINT32_ELEMENT, State, Timestamp)
 
 from ._version import version as deviceVersion
 from .common import ImageProcOutputInterface
@@ -32,7 +32,6 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         (
             INPUT_CHANNEL(expected).key("inputTrainId")
             .displayedName("Input Train ID")
-            .dataSchema(Schema())
             .commit(),
 
             BOOL_ELEMENT(expected).key("isDisabled")
@@ -113,7 +112,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
         if self.is_channel_active['inputImage'] is False:
             self.is_channel_active['inputImage'] = True
-            self.log.INFO("Start of Image Stream")
+            self.logger.info("Start of Image Stream")
         if self['state'] == State.ON:
             self.updateState(State.PROCESSING)
 
@@ -163,13 +162,13 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
         if self.is_channel_active['inputTrainId'] is False:
             self.is_channel_active['inputTrainId'] = True
-            self.log.INFO("Start of Train ID Stream")
+            self.logger.info("Start of Train ID Stream")
         if self['state'] == State.ON:
             self.updateState(State.PROCESSING)
 
         ts = Timestamp.fromHashAttributes(
             metaData.getAttributes('timestamp'))
-        tid = ts.getTrainId()
+        tid = ts.getTid()
 
         with self.buffer_lock:
             self.tid_buffer.append(tid)
@@ -196,10 +195,10 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         offset = self['trainIdOffset']
         if isinstance(item, Timestamp):
             # item is a train id: look for matches with image_buffer
-            tid = item.getTrainId()
+            tid = item.getTid()
             with self.buffer_lock:
                 for img in self.image_buffer:
-                    img_tid = img['ts'].getTrainId()
+                    img_tid = img['ts'].getTid()
                     if img_tid == tid + offset:
                         match_found = True
                         self.writeImageToOutputs(img['imageData'], img['ts'])
@@ -211,7 +210,7 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
         else:  # item is an image: look for matches with tids in tid_buffer
             try:
                 img = item
-                img_tid = img['ts'].getTrainId()
+                img_tid = img['ts'].getTid()
                 for tid in self.tid_buffer:
                     if img_tid == tid + offset:
                         match_found = True
@@ -232,13 +231,13 @@ class ImagePicker(ImageProcessorBase, ImageProcOutputInterface):
 
         should be called with self.buffer_lock acquired
         """
-        while self.image_buffer[0]['ts'].getTrainId() <= tid:
+        while self.image_buffer[0]['ts'].getTid() <= tid:
             self.image_buffer.popleft()
             if not self.image_buffer:
                 break
 
     def onEndOfStream(self, inputChannel):
-        self.log.INFO(f"End of Stream on channel {inputChannel}")
+        self.logger.info(f"End of Stream on channel {inputChannel}")
 
         self.is_channel_active[inputChannel] = False
         self['errorCount'] = 0

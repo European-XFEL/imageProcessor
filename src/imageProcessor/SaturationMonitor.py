@@ -144,7 +144,7 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
     def onData(self, data, metaData):
         first_image = False
         if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
+            self.logger.info("Start of Stream")
             self.updateState(State.PROCESSING)
             first_image = True
 
@@ -191,7 +191,7 @@ class SaturationMonitor(ImageProcessorBase, ImageProcOutputInterface):
             if nb_pix_a > self.get("alarmMaxCount"):
                 h["saturationMonitor.alarm"] = True
                 h["saturationMonitor.alarmCount"] = int(nb_pix_a)
-                h["trainID"] = ts.getTrainId()
+                h["trainID"] = ts.getTid()
                 # only update image if above threshold
                 # that means last offending image will always be shown
                 # TODO: check if that is good behaviour or misleading,

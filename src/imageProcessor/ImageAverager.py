@@ -100,7 +100,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
 
         first_image = False
         if self['state'] == State.ON:
-            self.log.INFO("Start of Stream")
+            self.logger.info("Start of Stream")
             self.updateState(State.PROCESSING)
             first_image = True
 
@@ -237,7 +237,7 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
     ##############################################
 
     def resetAverage(self):
-        self.log.INFO('Reset image average and fps')
+        self.logger.info('Reset image average and fps')
         self.image_running_mean.clear()
         self.image_exp_running_mean.clear()
         self.image_standard_mean.clear()
