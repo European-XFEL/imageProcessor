@@ -50,7 +50,7 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
         valid = self.valid_roi(roi)
         if not valid:
             self['disable'] = True
-            self.log.ERROR("Initial ROI is invalid -> disabled")
+            self.logger.error("Initial ROI is invalid -> disabled")
 
     def preReconfigure(self, incomingReconfiguration):
         # always call ImageProcessorBase preReconfigure first!
@@ -61,15 +61,15 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
             valid = self.valid_roi(roi)
             if valid:
                 self['disable'] = False
-                self.log.INFO(f"Applying new roi {roi}")
+                self.logger.info(f"Applying new roi {roi}")
             else:
                 incomingReconfiguration.erase("roi")
-                self.log.ERROR("New ROI is invalid -> rejected")
+                self.logger.error("New ROI is invalid -> rejected")
 
     # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
         if self['disable']:
-            self.log.DEBUG("ROI disabled!")
+            self.logger.debug("ROI disabled!")
             return image_data
 
         low_x, high_x, low_y, high_y = self['roi']

@@ -1,23 +1,26 @@
 #############################################################################
-# Author: <andrea.parenti@xfel.eu>
-# Created on October 10, 2013
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import json
 
-import unittest
+import pytest
 
-from karabo.bound import Configurator, Hash, PythonDevice
+from karabo.bound.testing import ServerContext, sleepUntil
 
-from ..ImageThumbnail import ImageThumbnail
+from ..ImageThumbnail import ImageThumbnail  # noqa: F401
 
-
-class ImageThumbnail_TestCase(unittest.TestCase):
-    def test_proc(self):
-        proc = Configurator(PythonDevice).create(ImageThumbnail.__name__, Hash(
-            "Logger.priority", "WARN",
-            "deviceId", "ImageThumbnail_0"))
-        proc.startFsm()
+_DEVICE_ID = "TestDeviceImageThumbnail"
+_DEVICE_CONFIG = {
+    _DEVICE_ID: {"classId": "ImageThumbnail"},
+}
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.timeout(30)
+def test_device(eventLoop):
+    init = json.dumps(_DEVICE_CONFIG)
+    server = ServerContext(
+        "testServerImageThumbnail",
+        ["log.level=DEBUG", f"init={init}"])
+    with server:
+        remote = server.remote()
+        sleepUntil(lambda: _DEVICE_ID in remote.getDevices(), timeout=10)

@@ -5,8 +5,8 @@
 #############################################################################
 
 from karabo.common.scenemodel.api import (
-    BoxLayoutModel, CheckBoxModel, ComboBoxModel, DisplayLabelModel,
-    DisplayListModel, DisplayStateColorModel, EditableListModel,
+    BoxLayoutModel, CheckBoxModel, DisplayLabelModel, DisplayListModel,
+    DisplayStateColorModel, EditableComboBoxModel, EditableListModel,
     IntLineEditModel, LabelModel, LineModel, RectangleModel, SceneModel,
     UnknownWidgetDataModel, write_scene)
 
@@ -434,7 +434,7 @@ def get_scene(deviceId):
                             width=149.0,
                             x=960.0,
                             y=430.0)
-    scene91 = ComboBoxModel(
+    scene91 = EditableComboBoxModel(
         height=24.0,
         keys=[f'{deviceId}.marker.type'],
         parent_component='EditableApplyLaterComponent',

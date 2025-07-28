@@ -117,7 +117,7 @@ class TwoPeakFinder(ImageProcessorBase):
         )
 
     def onEndOfStream(self, inputChannel):
-        self.log.INFO("End of Stream")
+        self.logger.info("End of Stream")
         self['inFrameRate'] = 0.
         self.updateState(State.ON)
         self['status'] = 'Idle'

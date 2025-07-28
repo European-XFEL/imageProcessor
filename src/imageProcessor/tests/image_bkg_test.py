@@ -1,24 +1,27 @@
 #############################################################################
-# Author: <andrea.parenti@xfel.eu>
-# Created on October 10, 2013
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import json
 
-import unittest
+import pytest
 
-from karabo.bound import Configurator, Hash, PythonDevice
+from karabo.bound.testing import ServerContext, sleepUntil
 
-from ..ImageBackgroundSubtraction import ImageBackgroundSubtraction
+from ..ImageBackgroundSubtraction import (  # noqa: F401
+    ImageBackgroundSubtraction)
 
-
-class ImageBackgroundSubtraction_TestCase(unittest.TestCase):
-    def test_proc(self):
-        proc = Configurator(PythonDevice).create(
-            ImageBackgroundSubtraction.__name__,
-            Hash("Logger.priority", "WARN", "deviceId",
-                 "ImageBackgroundSubtraction_0"))
-        proc.startFsm()
+_DEVICE_ID = "TestDeviceImageBackgroundSubtraction"
+_DEVICE_CONFIG = {
+    _DEVICE_ID: {"classId": "ImageBackgroundSubtraction"},
+}
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.timeout(30)
+def test_device(eventLoop):
+    init = json.dumps(_DEVICE_CONFIG)
+    server = ServerContext(
+        "testServerImageBackgroundSubtraction",
+        ["log.level=DEBUG", f"init={init}"])
+    with server:
+        remote = server.remote()
+        sleepUntil(lambda: _DEVICE_ID in remote.getDevices(), timeout=10)

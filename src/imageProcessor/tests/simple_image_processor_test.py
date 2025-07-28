@@ -1,24 +1,26 @@
 #############################################################################
-# Author: <andrea.parenti@xfel.eu>
-# Created on May  3, 2023
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import json
 
-import unittest
+import pytest
 
-from karabo.bound import Configurator, Hash, PythonDevice
+from karabo.bound.testing import ServerContext, sleepUntil
 
-from ..SimpleImageProcessor import SimpleImageProcessor
+from ..SimpleImageProcessor import SimpleImageProcessor  # noqa: F401
 
-
-class SimpleImageProcessor_TestCase(unittest.TestCase):
-    def test_simple_image_processor(self):
-        proc = Configurator(PythonDevice).create(
-            SimpleImageProcessor.__name__, Hash(
-                "Logger.priority", "WARN",
-                "deviceId", "SimpleImageProcessor_0"))
-        proc.startFsm()
+_DEVICE_ID = "TestDeviceSimpleImageProcessor"
+_DEVICE_CONFIG = {
+    _DEVICE_ID: {"classId": "SimpleImageProcessor"},
+}
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.timeout(30)
+def test_device(eventLoop):
+    init = json.dumps(_DEVICE_CONFIG)
+    server = ServerContext(
+        "testServerSimpleImageProcessor",
+        ["log.level=DEBUG", f"init={init}"])
+    with server:
+        remote = server.remote()
+        sleepUntil(lambda: _DEVICE_ID in remote.getDevices(), timeout=10)

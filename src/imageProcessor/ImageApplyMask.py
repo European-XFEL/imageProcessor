@@ -91,12 +91,12 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
     # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
         if self['disable']:
-            self.log.DEBUG("Mask disabled!")
+            self.logger.debug("Mask disabled!")
             return image_data
 
         self.current_image = image_data.getData()  # np.ndarray
         img = self.current_image  # Shallow copy
-        self.log.DEBUG("Image loaded")
+        self.logger.debug("Image loaded")
 
         mask_type = self['maskType']
         if mask_type == "fromFile":
@@ -106,7 +106,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                 if self.mask_image.shape == img.shape:
                     img = imageApplyMask(img, self.mask_image, copy=True)
 
-                    self.log.DEBUG("Mask applied")
+                    self.logger.debug("Mask applied")
                     return ImageData(img)
 
                 else:
@@ -123,7 +123,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                        f"image.ndim: {img.ndim}")
                 raise RuntimeError(msg)
 
-            self.log.DEBUG("Rectangular region selected")
+            self.logger.debug("Rectangular region selected")
             return ImageData(img)
 
         else:
@@ -135,12 +135,12 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
     ##############################################
 
     def resetMask(self):
-        self.log.INFO("Reset mask")
+        self.logger.info("Reset mask")
         self.mask_image = None
         self['maskType'] = 'fromFile'
 
     def loadMask(self):
-        self.log.INFO("Load mask")
+        self.logger.info("Load mask")
 
         try:
             # Try to load image file
@@ -149,7 +149,7 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
 
             if extension == '.npy':
                 data = np.load(filename)
-                self.log.INFO('Mask loaded from file ' + filename)
+                self.logger.info('Mask loaded from file ' + filename)
                 self.mask_image = data
 
             elif extension in ('.raw', ".RAW"):
@@ -162,13 +162,13 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                     shape = self.current_image.shape
                     data = np.fromfile(filename, dtype=self.current_image.dtype
                                        ).reshape(shape)
-                    self.log.INFO('Mask loaded from file ' + filename)
+                    self.logger.info('Mask loaded from file ' + filename)
                     self.mask_image = data
 
             elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                 pil_image = Image.open(filename)
                 data = np.array(pil_image)
-                self.log.INFO(f"Mask loaded from file {filename}")
+                self.logger.info(f"Mask loaded from file {filename}")
                 self.mask_image = data
 
             else:
@@ -176,6 +176,6 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
                                    "unsupported image format")
 
         except Exception as e:
-            self.log.ERROR(f"Exception caught in loadMask: {e}")
+            self.logger.error(f"Exception caught in loadMask: {e}")
             if self['state'] != State.ERROR:
                 self.updateState(State.ERROR)

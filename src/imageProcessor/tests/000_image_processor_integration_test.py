@@ -39,7 +39,7 @@ class TestImageProcessor(BoundDeviceTestCase):
 
     def test_in_sequence(self):
         config1 = Hash(
-            'Logger.priority', 'ERROR',
+            'log.level', 'ERROR',
             'deviceId', PROCESSOR_ID,
             'input.connectedOutputChannels', ['{}:output'.format(CAMERA_ID)]
         )
@@ -51,7 +51,7 @@ class TestImageProcessor(BoundDeviceTestCase):
         ok, msg = self.dc.instantiate(SERVER_ID, class_config1, 30)
         self.assertTrue(ok, msg)
 
-        config2 = Hash('Logger.priority', 'ERROR',
+        config2 = Hash('log.level', 'ERROR',
                        'deviceId', CAMERA_ID)
 
         class_config2 = Hash('classId', 'TestCamera',

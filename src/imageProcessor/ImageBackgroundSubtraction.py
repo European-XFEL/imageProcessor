@@ -98,7 +98,7 @@ class ImageBackgroundSubtraction(
         if 'disable' in incomingReconfiguration:
             is_disabled = incomingReconfiguration['disable']
             text = "disabled" if is_disabled else "enabled"
-            self.log.INFO(f"Background subtraction is {text}")
+            self.logger.info(f"Background subtraction is {text}")
 
     ##############################################
     #   Implementation of Callbacks              #
@@ -169,11 +169,11 @@ class ImageBackgroundSubtraction(
                         min=min_value, max=max_value)
                     if img.dtype != out_dtype:
                         img = img.astype(out_dtype)
-                    self.log.DEBUG("Background image subtracted")
+                    self.logger.debug("Background image subtracted")
 
                     image_data.setData(img)
                     self.write_image(image_data, ts, first_image)
-                    self.log.DEBUG("Image sent to output channel")
+                    self.logger.debug("Image sent to output channel")
 
                 else:
                     msg = ("Cannot subtract background image... shapes are "
@@ -202,7 +202,7 @@ class ImageBackgroundSubtraction(
     ##############################################
 
     def save(self):
-        self.log.DEBUG("Save background image to file")
+        self.logger.debug("Save background image to file")
 
         with self.avg_lock:
             try:
@@ -215,17 +215,19 @@ class ImageBackgroundSubtraction(
 
                 if extension in ('.npy', '.NPY'):
                     self.bkg_image.dump(filename)
-                    self.log.INFO('Background image saved to file ' + filename)
+                    self.logger.info(
+                        'Background image saved to file ' + filename)
 
                 elif extension in ('.raw', ".RAW"):
                     self.bkg_image.tofile(filename)
-                    self.log.INFO('Background image saved to file ' + filename)
+                    self.logger.info(
+                        'Background image saved to file ' + filename)
 
                 elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                     if self.bkg_image.dtype == 'uint8':
                         pilImage = Image.fromarray(self.bkg_image)
                         pilImage.save(filename)
-                        self.log.INFO(
+                        self.logger.info(
                             'Background image saved to file ' + filename)
                     else:
                         raise RuntimeError("dtype must be uint8 but is "
@@ -241,7 +243,7 @@ class ImageBackgroundSubtraction(
                 raise
 
     def load(self):
-        self.log.DEBUG("Load background image from file")
+        self.logger.debug("Load background image from file")
 
         try:
             # Try to load image file
@@ -250,7 +252,8 @@ class ImageBackgroundSubtraction(
 
             if extension in ('.npy', '.NPY'):
                 data = np.load(filename, allow_pickle=True)
-                self.log.INFO(f"Background image loaded from file {filename}")
+                self.logger.info(
+                    f"Background image loaded from file {filename}")
                 with self.avg_lock:
                     self.bkg_image = data
 
@@ -265,7 +268,7 @@ class ImageBackgroundSubtraction(
                     shape = self.current_image.shape
                     d_type = self.current_image.dtype
                     data = np.fromfile(filename, dtype=d_type).reshape(shape)
-                    self.log.INFO(
+                    self.logger.info(
                         f"Background image loaded from file {filename}")
                     with self.avg_lock:
                         self.bkg_image = data
@@ -273,7 +276,8 @@ class ImageBackgroundSubtraction(
             elif extension in ('.tif', '.tiff', '.TIF', '.TIFF'):
                 pil_image = Image.open(filename)
                 data = np.array(pil_image)
-                self.log.INFO(f"Background image loaded from file {filename}")
+                self.logger.info(
+                    f"Background image loaded from file {filename}")
                 with self.avg_lock:
                     self.bkg_image = data
 

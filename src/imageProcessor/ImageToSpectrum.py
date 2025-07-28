@@ -66,7 +66,7 @@ class ImageToSpectrum(ImageProcessorBase):
 
         except Exception:
             spectrum = np.full((1,), np.nan)
-            self.spectrumIntegral = QuantityValue(np.NaN, timestamp=ts)
+            self.spectrumIntegral = QuantityValue(np.nan, timestamp=ts)
             raise
 
         finally:
