@@ -39,7 +39,4 @@ authors = [
 ]
 description = ""
 readme = "README.md"
-dependencies = [
-    "imageProcessing >= 2.8.1",
-    "processingUtils >= 1.4.2",
-]
+dependencies = ["imageProcessing ~= 2.8.4", "processingUtils ~= 1.4.2"]
