@@ -3,46 +3,57 @@
 # Created on October 10, 2013
 # Copyright (C) European XFEL GmbH Schenefeld. All rights reserved.
 #############################################################################
+import pytest
+import pytest_asyncio
 
-from contextlib import contextmanager
-from uuid import uuid4
+from karabo.middlelayer import State, getDevice, sleep
+from karabo.middlelayer.testing import AsyncDeviceContext
 
-from imageProcessor.BeamShapeCoarse import BeamShapeCoarse
-from karabo.middlelayer import getDevice, sleep
-from karabo.middlelayer.testing import DeviceTest, async_tst
-
-device_id = f"TestProc{uuid4()}"
-conf = {
-    'classId': 'BeamShapeCoarse',
-    "deviceId": device_id,
-    'input': {}
-}
+from ..BeamShapeCoarse import BeamShapeCoarse
 
 
-class BeamShapeTestCase(DeviceTest):
-    @classmethod
-    @contextmanager
-    def lifetimeManager(cls):
-        cls.dev = BeamShapeCoarse(conf)
+@pytest_asyncio.fixture(loop_scope="function")
+@pytest.mark.asyncio
+async def instantiate_devices():
+    conf = {
+        "deviceId": "TEST_PROC",
+        "input": {}
+    }
 
-        with cls.deviceManager(cls.dev, lead=cls.dev):
-            yield
+    dev = BeamShapeCoarse(conf)
 
-    @async_tst
-    async def test_warn(self):
-        with (await getDevice(device_id)) as proc:
-            for _ in range(9):
-                self.dev.errorCounter.update_count()
-            self.dev.errorCounter.update_count(True)
+    async with AsyncDeviceContext(dev=dev) as ctx:
+        yield ctx
 
-            # error fraction == threshold == 0.10 -> no warn yet
-            self.assertFalse(self.dev.errorCounter.warnCondition)
 
-            # lower threshold -> warn
-            proc.errorCounter.threshold = 0.05  # call setter function
-            await sleep(0.01)  # wait for setter function
-            self.assertTrue(self.dev.errorCounter.warnCondition)
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_instantiation(instantiate_devices):
+    dev = instantiate_devices["dev"]
 
-            # call 'resetError'
-            await self.dev.resetError()
-            self.assertFalse(self.dev.errorCounter.warnCondition)
+    assert dev.state == State.ON
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_warn(instantiate_devices):
+    dev = instantiate_devices["dev"]
+
+    # Set error fraction to 0.1
+    for _ in range(9):
+        dev.errorCounter.update_count()
+    dev.errorCounter.update_count(True)
+
+    async with getDevice(dev.deviceId) as proxy:
+
+        # error fraction == threshold == 0.10 -> no warn yet
+        assert not proxy.errorCounter.warnCondition
+
+        # lower threshold -> warn
+        proxy.errorCounter.threshold = 0.05
+        await sleep(0.01)  # need some time to update the warn condition
+        assert proxy.errorCounter.warnCondition
+
+        # call 'resetError'
+        await proxy.resetError()
+        assert not proxy.errorCounter.warnCondition

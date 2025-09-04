@@ -1,5 +1,6 @@
 variables:
   DOC_DIRECTORY: doc/source
+  USE_LEGACY_PYTEST: "false"
 
 include:
   - project: karabo/gitlabci
