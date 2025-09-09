@@ -91,15 +91,12 @@ class ImageProcOutputInterface(PythonDevice):
 
         self.shape = shape
         self.kType = kType
-        self.daqShape = tuple(reversed(shape))
 
         newSchema = Schema()
 
-        # update output Channel
+        # update channels
         updateSchemaHelper(newSchema, "ppOutput", "Output", self.shape)
-
-        # update DAQ output Channel
-        updateSchemaHelper(newSchema, "daqOutput", "DAQ Output", self.daqShape)
+        updateSchemaHelper(newSchema, "daqOutput", "DAQ Output", self.shape)
 
         # update schema
         self.appendSchema(newSchema)
@@ -154,14 +151,10 @@ class ImageProcOutputInterface(PythonDevice):
             raise RuntimeError(
                 "Trying to feed writeImageToOutputs with invalid imageData")
 
-        # write data to output channel
-        self.writeChannel('ppOutput', Hash("data.image", img), timestamp)
-
-        # swap image dimensions for DAQ compatibility
-        daqImg = ImageData(img.getData().reshape(self.daqShape))
-
-        # send data to DAQ output channel
-        self.writeChannel('daqOutput', Hash("data.image", daqImg), timestamp)
+        # write data to output channels
+        h = Hash("data.image", img)
+        self.writeChannel('ppOutput', h, timestamp)
+        self.writeChannel('daqOutput', h, timestamp)
 
     def writeNDArrayToOutputs(self, array, timestamp=None):
         """Write the array to all the output channels"""
@@ -169,9 +162,9 @@ class ImageProcOutputInterface(PythonDevice):
             raise RuntimeError(
                 "Trying to feed writeNDArrayToOutputs with invalid "
                 "NDArray data")
-        self.writeChannel('ppOutput', Hash("data.image", array), timestamp)
-        daqArray = array.reshape(self.daqShape)
-        self.writeChannel('daqOutput', Hash("data.image", daqArray), timestamp)
+        h = Hash("data.image", array)
+        self.writeChannel('ppOutput', h, timestamp)
+        self.writeChannel('daqOutput', h, timestamp)
 
     def signalEndOfStreams(self):
         """Signals end-of-stream to all the output channels"""
