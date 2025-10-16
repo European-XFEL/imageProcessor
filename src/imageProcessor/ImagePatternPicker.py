@@ -11,8 +11,8 @@ from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, IMAGEDATA_ELEMENT, INPUT_CHANNEL,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, OVERWRITE_ELEMENT,
     STRING_ELEMENT, UINT32_ELEMENT, UINT64_ELEMENT, VECTOR_UINT32_ELEMENT,
-    AlarmCondition, DaqDataType, DeviceClient, Hash, ImageData, PythonDevice,
-    Schema, State, Timestamp, Types, Unit)
+    AlarmCondition, DaqDataType, Hash, ImageData, PythonDevice, Schema, State,
+    Timestamp, Types, Unit)
 from processing_utils.rate_calculator import RateCalculator
 
 from ._version import version as deviceVersion
@@ -40,8 +40,6 @@ class ImagePatternPicker(PythonDevice):
         # always call PythonDevice constructor first!
         super(ImagePatternPicker, self).__init__(configuration)
 
-        self.device_client = DeviceClient()
-
         self.frame_rate_in = []
         self.frame_rate_out = []
         self.connections = {}
@@ -55,7 +53,7 @@ class ImagePatternPicker(PythonDevice):
         self.registerInitialFunction(self.initialization)
 
     def initialization(self):
-        self.device_client.getDevices()  # Somehow needed to connect
+        self.remote().getDevices()  # Somehow needed to connect
 
         for idx in range(NR_OF_CHANNELS):
             chan = f"chan_{idx}"
@@ -90,9 +88,10 @@ class ImagePatternPicker(PythonDevice):
                             # the corresponding output image
                             "output_image": output_image,
                         }
-                        self.device_client.registerSchemaUpdatedMonitor(
+                        self.remote().registerSchemaUpdatedMonitor(
                             self.on_camera_schema_update)
-                        self.device_client.getDeviceSchemaNoWait(device_id)
+                        self.remote().getDeviceSchemaNoWait(device_id)
+
             except Exception as e:
                 self.logger.error(f"Error Exception: {e}")
 
@@ -205,7 +204,6 @@ class ImagePatternPicker(PythonDevice):
 
                 if ((train_id % self[f'{node}.nBunchPatterns'])
                         == self[f'{node}.patternOffset']):
-                    data['data.trainId'] = train_id
 
                     need_processing = (
                         self[f'{node}.enableCrosshair']
@@ -247,6 +245,8 @@ class ImagePatternPicker(PythonDevice):
 
                         image_data = ImageData(image)
                         output_data = Hash('data.image', image_data)
+
+                    output_data.setAs('data.trainId', train_id, Types.UINT64)
 
                     self.writeChannel(f"{node}.output", output_data, ts)
                     self.refresh_frame_rate_out(key)
@@ -292,11 +292,11 @@ class ImagePatternPicker(PythonDevice):
             self.logger.debug(
                 f"Channel {channel_idx}: Output rate {fps_out} Hz")
 
-    def on_camera_schema_update(self, deviceId, schema):
+    def on_camera_schema_update(self, device_id, schema):
         # find all inputs connected to this updating schema device
-        channels_key = [key for key in list(self.connections.keys())
-                        if deviceId
-                        == self.connections[key]["device_id"]]
+        channels_key = [
+            key for key in list(self.connections.keys())
+            if device_id == self.connections[key]["device_id"]]
 
         # loop over connected inputs
         for key in channels_key:
@@ -306,12 +306,12 @@ class ImagePatternPicker(PythonDevice):
             if schema.has(path):
                 sub = schema.subSchema(path)
                 shape = sub.getDefaultValue('dims')
-                k_type = sub.getDefaultValue('pixels.type')
+                k_type = Types(sub.getDefaultValue('pixels.type'))
                 self.update_output_schema(node, shape, k_type)
 
     @staticmethod
-    def create_channel_node(schema, channel,
-                            shape=(), k_type=Types.NONE, skip_input=False):
+    def create_channel_node(
+            schema, channel, shape=(), k_type=Types.NONE, skip_input=False):
         data_in = Schema()
         data_out = Schema()
         idx = channel.replace("chan_", "")
@@ -494,8 +494,8 @@ class ImagePatternPicker(PythonDevice):
         )
 
     def update_output_schema(self, channel, shape, k_type):
-        newSchema = Schema()
-        ImagePatternPicker.create_channel_node(newSchema, channel, shape,
-                                               k_type, skip_input=True)
+        new_schema = Schema()
+        ImagePatternPicker.create_channel_node(
+            new_schema, channel, shape, k_type, skip_input=True)
 
-        self.appendSchema(newSchema)
+        self.appendSchema(new_schema)
