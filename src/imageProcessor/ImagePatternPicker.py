@@ -53,7 +53,8 @@ class ImagePatternPicker(PythonDevice):
         self.registerInitialFunction(self.initialization)
 
     def initialization(self):
-        self.remote().getDevices()  # Somehow needed to connect
+        remote = self.remote()
+        remote.getDevices()  # Somehow needed to connect
 
         for idx in range(NR_OF_CHANNELS):
             chan = f"chan_{idx}"
@@ -88,9 +89,14 @@ class ImagePatternPicker(PythonDevice):
                             # the corresponding output image
                             "output_image": output_image,
                         }
-                        self.remote().registerSchemaUpdatedMonitor(
+                        remote.registerSchemaUpdatedMonitor(
                             self.on_camera_schema_update)
-                        self.remote().getDeviceSchemaNoWait(device_id)
+                        remote.getDeviceSchemaNoWait(device_id)
+                        # The following is needed to keep the schema updates
+                        # coming for longer than 15 s
+                        if "registerDeviceForMonitoring" in dir(remote):
+                            # Only available in Karabo >= 3.0.9
+                            remote.registerDeviceForMonitoring(device_id)
 
             except Exception as e:
                 self.logger.error(f"Error Exception: {e}")
