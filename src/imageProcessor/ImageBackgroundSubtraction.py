@@ -82,9 +82,6 @@ class ImageBackgroundSubtraction(
         self.KARABO_SLOT(self.save)
         self.KARABO_SLOT(self.load)
 
-        # Register call-backs
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
         if 'imageFilename' not in configuration:
             device_id = self['deviceId']
             fname = device_id.replace('/', '_')
