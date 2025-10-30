@@ -39,9 +39,6 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
         # always call superclass constructor first!
         super().__init__(configuration)
 
-        # Register call-backs
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
         self.registerInitialFunction(self.initialization)
 
     def initialization(self):

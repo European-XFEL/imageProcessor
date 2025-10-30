@@ -79,9 +79,6 @@ class ImageAverager(ImageProcessorBase, ImageProcOutputInterface):
         self.image_exp_running_mean = ImageExponentialRunnningAverage()
         self.image_standard_mean = ImageStandardMean()
 
-        # Register channel callback
-        self.KARABO_ON_EOS('input', self.onEndOfStream)
-
         # Register additional slot
         self.KARABO_SLOT(self.resetAverage)
 

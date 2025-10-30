@@ -41,6 +41,8 @@ class ImageProcOutputInterface(PythonDevice):
         # Output frame rate
         self.frame_rate_out = RateCalculator(refresh_interval=1.0)
 
+        self.KARABO_ON_EOS("input", self.onEndOfStream)
+
     @staticmethod
     def expectedParameters(expected):
         outputData = Schema()

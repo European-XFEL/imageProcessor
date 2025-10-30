@@ -178,9 +178,6 @@ class ImageCrosshair(ImageProcessorBase, ImageProcOutputInterface):
         # always call superclass constructor first!
         super().__init__(configuration)
 
-        # Register call-backs
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
         self.KARABO_SLOT(self.requestScene)
 
     def requestScene(self, params):

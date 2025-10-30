@@ -53,13 +53,6 @@ class ImageFlipAndRotate(ImageProcessorBase, ImageProcOutputInterface):
             .commit(),
         )
 
-    def __init__(self, configuration):
-        # always call superclass constructor first!
-        super().__init__(configuration)
-
-        # Register call-backs
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
     # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
         flip_x = self["flip.x"]

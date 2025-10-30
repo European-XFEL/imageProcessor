@@ -85,9 +85,6 @@ class ImageApplyMask(ImageProcessorBase, ImageProcOutputInterface):
         self.KARABO_SLOT(self.resetMask)
         self.KARABO_SLOT(self.loadMask)
 
-        # Register call-backs
-        self.KARABO_ON_EOS("input", self.onEndOfStream)
-
     # Overrides ImageProcessorBase.process_image
     def process_image(self, image_data, ts):
         if self['disable']:
