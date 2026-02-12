@@ -14,8 +14,8 @@ from image_processing import image_processing
 from karabo.bound import (
     BOOL_ELEMENT, DOUBLE_ELEMENT, FLOAT_ELEMENT, INT32_ELEMENT,
     KARABO_CLASSINFO, NODE_ELEMENT, OUTPUT_CHANNEL, SLOT_ELEMENT,
-    STRING_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT, DaqDataType,
-    Hash, MetricPrefix, Schema, State, Unit)
+    STRING_ELEMENT, TABLE_ELEMENT, VECTOR_DOUBLE_ELEMENT, VECTOR_INT32_ELEMENT,
+    DaqDataType, Hash, MetricPrefix, Schema, State, Unit)
 
 from ._version import version as deviceVersion
 from .ImageBackgroundSubtractionBase import ImageBackgroundSubtractionBase
@@ -38,6 +38,28 @@ class Average():
 
     def __len__(self):
         return self.counter
+
+
+roiTableSchema = Schema()
+(
+    STRING_ELEMENT(roiTableSchema).key("label")
+    .displayedName("Label")
+    .assignmentOptional().defaultValue("roi")
+    .commit(),
+    VECTOR_INT32_ELEMENT(roiTableSchema).key("roi")
+    .displayedName("Integration Region")
+    .description("The region to be integrated over, as [x1, x2, y1, y2].")
+    .assignmentOptional().defaultValue([0, 100, 0, 100])
+    .minSize(4).maxSize(4)
+    .commit(),
+    BOOL_ELEMENT(roiTableSchema).key("go")
+    .displayedName("Apply")
+    .setSpecialDisplayType("TableBoolButton")
+    .description("Set integration region to this label.")
+    .readOnly()
+    .defaultValue(True)
+    .commit(),
+)
 
 
 @KARABO_CLASSINFO("ImageProcessor", deviceVersion)
@@ -338,6 +360,22 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
             .minSize(2).maxSize(2)
             .reconfigurable()
             .commit(),
+
+            TABLE_ELEMENT(expected).key("rois")
+            .displayedName("ROIs for Integrations")
+            .description("Table to specify the "
+                         "'Integration Region' graphically.")
+            .setNodeSchema(roiTableSchema)
+            .assignmentOptional().defaultValue([])
+            .reconfigurable()
+            .commit(),
+
+            # TODO: this should be part of
+            # TABLE_ELEMENT(expected).key("rois")
+            # .setSpecialDisplayType(..),
+            # but that requires Karabo >= 3.0.11
+            # Change to that setup after Karabo's update
+            expected.setDisplayType("rois", "TableRoiValues"),
 
             # Output - General Properties
 
@@ -807,6 +845,7 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
         # Register additional slots
         self.KARABO_SLOT(self.reset)
+        self.KARABO_SLOT(self.requestAction)
 
         # Processing time averages
         self.last_update_time = time.time()
@@ -912,6 +951,65 @@ class ImageProcessor(ImageBackgroundSubtractionBase):
 
         # Reset device parameters (all at once)
         self.set(h)
+
+    def requestAction(self, params):
+        """
+        Executed when the RoI table boolean property
+        `go` is selected.
+
+        Args:
+          params: Parameters Hash containing action,
+                  path, and table to indicate
+                  the action that triggered this.
+
+        Returns: Hash the type of action, the origin,
+                 and the payload informing the status
+        """
+        payload = Hash("success", False, "reason", "Unknown")
+        action = params.get("action", "missing")
+
+        # only TableButton Action is implemented
+        if action != "TableButton":
+            payload.set("reason", f"Unexpected action {action}")
+            self.reply(Hash("type", "requestAction",
+                            "origin", self.deviceId,
+                            "payload", payload))
+            return
+        path = params["path"]
+        if path != "rois":
+            payload.set("reason", f"Unexpected path {path}")
+            self.reply(Hash("type", "requestAction",
+                            "origin", self.deviceId,
+                            "payload", payload))
+            return
+        data = params["table"]
+        row_data = data["rowData"]
+        label = row_data["label"]
+
+        # get roi value
+        roi_table = {row['label']: row['roi']
+                     for row in self.get("rois")}
+
+        # does it exist in the table?
+        if label not in roi_table:
+            self.update_count(error=True,
+                              status=f"Label chosen ({label}) "
+                                     "not in table.")
+            payload.set("reason", f"Label chosen ({label}) not in table.")
+            self.reply(Hash("type", "requestAction",
+                            "origin", self.deviceId,
+                            "payload", payload))
+            return
+        # fetch the RoI
+        roi = [int(item) for item in roi_table[label]]
+        # set it
+        self["integrationRegion"] = roi
+
+        # return success
+        r = Hash("type", "requestAction",
+                 "origin", self.deviceId,
+                 "payload", Hash("success", True, "reason", ""))
+        self.reply(r)
 
     def onEndOfStream(self, inputChannel):
         self['inFrameRate'] = 0.
