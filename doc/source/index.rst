@@ -30,6 +30,7 @@ Contents:
    user_docu_beam_shape_coarse
    user_docu_thumbnail
    user_docu_two_peak_finder
+   user_docu_beam_processor
    :maxdepth: 2
 
 Expert Contact
