@@ -45,6 +45,7 @@ ImageToSpectrum = "imageProcessor.ImageToSpectrum:ImageToSpectrum"
 ImageNormRoi = "imageProcessor.ImageNormRoi:ImageNormRoi"
 BeamShapeCoarse = "imageProcessor.BeamShapeCoarse:BeamShapeCoarse"
 ImageNonLinearCorrection = "imageProcessor.ImageNonLinearCorrection:ImageNonLinearCorrection"
+BeamProcessor = "imageProcessor.BeamProcessor:BeamProcessor"
 
 [project.optional-dependencies]
 test = ["simulatedCameraPy"]
