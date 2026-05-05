@@ -186,7 +186,7 @@ class BeamProcessor(Device):
         # roi = params.roi.value if params.has_roi else None
 
         # Subtract inhomogeneous background
-        raw_image -= self._calc_imhomogeneous_background(raw_image)
+        raw_image = raw_image - self._calc_imhomogeneous_background(raw_image)
 
         # Detect the beam
         beam = await background(self.detect_beam, raw_image)
