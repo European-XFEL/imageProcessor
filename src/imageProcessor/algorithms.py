@@ -405,7 +405,7 @@ def calc_ellipticity(a, b):
 
 
 def ellipse_mask(shape, centroid, widths, angle=0):
-    widths = (int(w) for w in widths)
+    widths = tuple(int(w) for w in widths)
 
     overlay = Image.new("L", widths, color=0)
     draw = ImageDraw.Draw(overlay)
