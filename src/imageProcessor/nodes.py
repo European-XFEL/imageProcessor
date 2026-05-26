@@ -193,6 +193,18 @@ class PropertiesNode(Configurable):
         accessMode=AccessMode.READONLY,
     )
 
+    ex01d = Double(
+        displayedName="sigma(x0)",
+        description="Uncertainty on x0 estimation.",
+        accessMode=AccessMode.READONLY,
+    )
+
+    ey01d = Double(
+        displayedName="sigma(y0)",
+        description="Uncertainty on y0 estimation.",
+        accessMode=AccessMode.READONLY,
+    )
+
 
 class GaussianNode(Configurable):
     pos = Double(
@@ -210,10 +222,14 @@ class GaussianNode(Configurable):
         accessMode=AccessMode.READONLY,
     )
 
+    uncertainty = Double(
+        unitSymbol=Unit.NUMBER,
+        accessMode=AccessMode.READONLY,
+    )
+
 
 # -----------------------------------------------------------------------------
 # Output channel nodes
-
 
 class ReadOnlyTransformNode(Configurable):
     pixelScale = Double(

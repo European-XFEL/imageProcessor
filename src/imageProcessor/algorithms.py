@@ -45,6 +45,7 @@ class Beam:
         # Initial values
         self.centroid = (np.nan, np.nan)
         self.widths = (np.nan, np.nan)
+        self.uncertainties = (np.nan, np.nan)
         self.energy = 0
         self.angle = 0  # radians
 
@@ -92,6 +93,7 @@ class Beam:
             self.widths = results["widths"]
             self.angle = results["angle"]
             self.count += 1
+            self.uncertainties = results["uncertainties"]
         else:
             if _divergent(self._deltas):
                 raise RuntimeError("Beam not found.")
@@ -126,6 +128,14 @@ class Beam:
         # 4. Calculate beam parameters from moments
         energy, centroid, variances = calc_moments(masked, *self.centroid)
 
+        # 5. Calculate uncertainty on centroid calculation
+        # Centroid uncertainty from propagation of pixel intensity noise.
+        # Assuming Poisson-limited noise (pixel variance ≈ intensity),
+        # the centroid uncertainty decreases with increasing total intensity.
+
+        ex01d = np.sqrt(variances[0] / energy)
+        ey01d = np.sqrt(variances[1] / energy)
+
         # Energy is 1 when the image contains only zeros
         # (fallback to avoid division by zero)
         if energy == 1:
@@ -143,6 +153,7 @@ class Beam:
             "centroid": centroid,
             "widths": (major_axis, minor_axis),
             "angle": angle,
+            "uncertainties": (ex01d, ey01d)
         }
 
     def maximum(self):
@@ -169,6 +180,7 @@ class Ellipse:
     centroid: tuple = (np.nan, np.nan)
     widths: tuple = (np.nan, np.nan)
     angle: float = np.nan
+    uncertainties: tuple = (np.nan, np.nan)
 
     _is_processed = False
 
@@ -484,7 +496,7 @@ def gaussian_filter(image, size=None, normalized=False):
 
 
 def fit_gaussian(x, y, super_gaussian=False):
-    pos, width, r2 = np.nan, np.nan, np.nan
+    pos, width, r2, uncertainty = np.nan, np.nan, np.nan, np.nan
     p0 = None
 
     if not x.size:
@@ -506,13 +518,13 @@ def fit_gaussian(x, y, super_gaussian=False):
         max_bounds += [5]
 
     try:
-        p0, _ = curve_fit(
+        p0, pcov = curve_fit(
             gaussian,
             x,
             y,
             p0=p0,
             bounds=(min_bounds, max_bounds),
-            sigma=1 / (y ** 2),
+            sigma=1 / y**2,
             maxfev=100,
         )
 
@@ -523,11 +535,12 @@ def fit_gaussian(x, y, super_gaussian=False):
         pos = p0[1]
         width = fwhm(p0[2], p0[-1] if super_gaussian else 2)
         r2 = r_squared(expected=fit, actual=y)
+        uncertainty = np.sqrt(pcov[1, 1])
     except (TypeError, RuntimeError, ValueError) as e:
         print("Fit did not converge:", e)
         p0 = None
 
-    return pos, width, p0, r2
+    return pos, width, p0, r2, uncertainty
 
 
 def initial_p0(x, y):

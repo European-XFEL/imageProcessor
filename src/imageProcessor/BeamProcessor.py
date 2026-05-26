@@ -87,6 +87,9 @@ class BeamProcessor(Device):
         centroid = np.add(beam.centroid, pixel_translate) * pixel_scale
         widths = np.multiply(beam.widths, pixel_scale)
 
+        # Uncertainty on x0, y0 estimation.
+        uncertainties = np.multiply(beam.uncertainties, pixel_scale)
+
         # Get max value and position
         max_value, max_pos = beam.maximum()
         max_pos = np.add(max_pos, pixel_translate) * pixel_scale
@@ -109,6 +112,9 @@ class BeamProcessor(Device):
             'peakX': create_value(max_pos[0], timestamp),
             'peakY': create_value(max_pos[1], timestamp),
             'peak': create_value(max_value, timestamp),
+
+            'ex01d': create_value(uncertainties[0], timestamp),
+            'ey01d': create_value(uncertainties[1], timestamp)
         }
 
         self._set_beam(props)
@@ -139,7 +145,7 @@ class BeamProcessor(Device):
         super_gaussian = self.parameters.isSuperGaussian
 
         x_fit, y_fit = np.array([]), np.array([])
-        pos, width, r2 = np.nan, np.nan, np.nan
+        pos, width, r2, uncertainty = np.nan, np.nan, np.nan, np.nan
 
         x_raw, y_raw = data
         if len(x_raw) and len(y_raw):
@@ -147,8 +153,8 @@ class BeamProcessor(Device):
             x_raw = (x_raw + translate) * pixel_scale
 
             # Fit gaussian to data
-            pos, width, p0, r2 = fit_gaussian(x_raw, y_raw,
-                                              super_gaussian=super_gaussian)
+            pos, width, p0, r2, uncertainty = (
+                fit_gaussian(x_raw, y_raw, super_gaussian=super_gaussian))
 
             if p0 is not None:
                 x_fit = elongate(x_raw)
@@ -158,6 +164,7 @@ class BeamProcessor(Device):
         node.pos = pos
         node.width = width * width_scale
         node.r2 = r2
+        node.uncertainty = uncertainty
 
         hash_list = [
             Hash("label", "beam",
@@ -209,7 +216,7 @@ class BeamProcessor(Device):
             ellipse = Ellipse.from_beam(beam,
                                         scale=params.axisScale.value)
 
-            _, _, p0, _ = fit_gaussian(*ellipse.major_axis)
+            _, _, p0, _, _ = fit_gaussian(*ellipse.major_axis)
             invalid = p0 is None
 
         self.isBeamDetected = not invalid
