@@ -72,11 +72,11 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
         low_x, high_x, low_y, high_y = self['roi']
 
         data = image_data.getData()  # np.ndarray
-        y_off, x_off = image_data.getROIOffsets()  # input image offset
-        y_off += low_y  # output image offset
-        x_off += low_x  # output image offset
+        roi_offsets = list(image_data.getROIOffsets())  # input image offset
+        roi_offsets[0] += low_y
+        roi_offsets[1] += low_x
         cropped_image = ImageData(data[low_y:high_y, low_x:high_x])
-        cropped_image.setROIOffsets((y_off, x_off))
+        cropped_image.setROIOffsets(roi_offsets)
         return cropped_image
 
     @staticmethod
