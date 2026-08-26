@@ -73,9 +73,33 @@ class ImageApplyRoi(ImageProcessorBase, ImageProcOutputInterface):
 
         data = image_data.getData()  # np.ndarray
         roi_offsets = list(image_data.getROIOffsets())  # input image offset
-        roi_offsets[0] += low_y
-        roi_offsets[1] += low_x
-        cropped_image = ImageData(data[low_y:high_y, low_x:high_x])
+
+        if data.ndim == 2:
+            # GRAY image
+            cropped_image = ImageData(data[low_y:high_y, low_x:high_x])
+            # Output image offsets
+            roi_offsets[0] += low_y
+            roi_offsets[1] += low_x
+
+        elif data.ndim == 3 and (data.shape[2] in (2, 3, 4)):
+            # YUV, RGB, RGBA and similar formats
+            cropped_image = ImageData(data[low_y:high_y, low_x:high_x, :])
+            # Output image offsets
+            roi_offsets[0] += low_y
+            roi_offsets[1] += low_x
+
+        elif data.ndim == 3:
+            # Stack of GRAY images
+            cropped_image = ImageData(data[:, low_y:high_y, low_x:high_x])
+            # Output image offsets
+            roi_offsets[1] += low_y
+            roi_offsets[2] += low_x
+
+        else:
+            raise RuntimeError(
+                "Cannot apply ROI due to unrecognized image shape: "
+                f"{data.shape}")
+
         cropped_image.setROIOffsets(roi_offsets)
         return cropped_image
 
